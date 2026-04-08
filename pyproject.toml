@@ -20,6 +20,11 @@ dev = [
 [tool.pyright]
 typeCheckingMode = "strict"
 
+executionEnvironments = [
+    { root = "tests", reportPrivateUsage = false }
+]
+
+
 [tool.ruff]
 src = ["src", "tests"]
 line-length = 88
@@ -39,6 +44,7 @@ lint.select = [
     "INP001", # missing __init__.py - https://docs.astral.sh/ruff/rules/implicit-namespace-package/
 ]
 
+lint.per-file-ignores = {"tests/**" = ["SLF001"]}
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
