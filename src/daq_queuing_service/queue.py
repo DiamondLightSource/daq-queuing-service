@@ -12,11 +12,6 @@ class TaskQueue:
         self.condition = asyncio.Condition(self.lock)
         self.paused: bool = False
 
-    def _task_available(self) -> bool:
-        if self.paused or not self.queue:
-            return False
-        return self._tasks[self.queue[0]].status == Status.WAITING
-
     async def claim_next_task_once_available(self) -> Task:
         async with self.condition:
             while not self._task_available():
@@ -26,7 +21,7 @@ class TaskQueue:
             self.condition.notify_all()
             return task
 
-    async def complete_task(self, task_id: TaskID, blueapi_info: str):
+    async def complete_task(self, task_id: TaskID, blueapi_info: str | None = None):
         async with self.condition:
             task = self._tasks.get(task_id)
             assert task is not None, f"Cannot find task with ID: {task_id}"
@@ -82,17 +77,6 @@ class TaskQueue:
             self.queue[position:position] = task_ids
             self.condition.notify_all()
 
-    def _validate_position(self, position: int) -> int:
-        if position < 0:
-            raise ValueError(f"Position must be >= 0, got {position}")
-        if (
-            self.length
-            and position == 0
-            and self._tasks[self.queue[0]].status != Status.WAITING
-        ):
-            return 1
-        return position
-
     async def remove_tasks(self, task_ids: list[TaskID]) -> list[Task]:
         async with self.condition:
             task_ids = self._remove_tasks_from_queue(task_ids)
@@ -106,6 +90,31 @@ class TaskQueue:
                 self._tasks.pop(task_id)
             self.history.clear()
             self.condition.notify_all()
+
+    async def pause(self):
+        async with self.condition:
+            self.paused = True
+
+    async def unpause(self):
+        async with self.condition:
+            self.paused = False
+            self.condition.notify_all()
+
+    def _task_available(self) -> bool:
+        if self.paused or not self.queue:
+            return False
+        return self._tasks[self.queue[0]].status == Status.WAITING
+
+    def _validate_position(self, position: int) -> int:
+        if position < 0:
+            raise ValueError(f"Position must be >= 0, got {position}")
+        if (
+            self.length
+            and position == 0
+            and self._tasks[self.queue[0]].status != Status.WAITING
+        ):
+            return 1
+        return position
 
     def _add_tasks(self, tasks: list[Task], position: int | None) -> None:
         task_ids = [task.id for task in tasks]
@@ -144,15 +153,6 @@ class TaskQueue:
             if task.id not in removed_ids
         }
         return removed
-
-    async def pause(self):
-        async with self.condition:
-            self.paused = True
-
-    async def unpause(self):
-        async with self.condition:
-            self.paused = False
-            self.condition.notify_all()
 
     @property
     def length(self):
