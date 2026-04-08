@@ -1,12 +1,11 @@
 import asyncio
-from uuid import UUID
 
 from daq_queuing_service.task import Status, Task, TaskID
 
 
 class TaskQueue:
     def __init__(self):
-        self.tasks: dict[str | UUID, Task] = {}
+        self._tasks: dict[TaskID, Task] = {}
         self.queue: list[TaskID] = []
         self.history: list[TaskID] = []
         self.lock = asyncio.Lock()
@@ -16,20 +15,20 @@ class TaskQueue:
     def _task_available(self) -> bool:
         if self.paused or not self.queue:
             return False
-        return self.tasks[self.queue[0]].status == Status.WAITING
+        return self._tasks[self.queue[0]].status == Status.WAITING
 
     async def claim_next_task_once_available(self) -> Task:
         async with self.condition:
             while not self._task_available():
                 await self.condition.wait()
-            task = self.tasks[self.queue[0]]
+            task = self._tasks[self.queue[0]]
             task.update_status(Status.IN_PROGRESS)
             self.condition.notify_all()
             return task
 
     async def complete_task(self, task_id: TaskID):
         async with self.condition:
-            task = self.tasks.get(task_id)
+            task = self._tasks.get(task_id)
             assert task is not None, f"Cannot find task with ID: {task_id}"
             assert task_id in self.queue, f"This task is not in the queue: {task}"
             assert self.queue[0] == task_id, (
@@ -44,10 +43,10 @@ class TaskQueue:
             self.condition.notify_all()
 
     async def get_task_by_id(self, task_id: str) -> Task | None:
-        return self.tasks.get(task_id)
+        return self._tasks.get(task_id)
 
     async def get_task_by_position(self, position: int) -> Task | None:
-        return self.tasks[self.queue[position]] if position < self.length else None
+        return self._tasks[self.queue[position]] if position < self.length else None
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
         async with self.condition:
@@ -74,24 +73,24 @@ class TaskQueue:
         else:
             self.queue[position:position] = task_ids
         for task in tasks:
-            self.tasks[task.id] = task
+            self._tasks[task.id] = task
 
     def _remove_tasks(self, task_ids: list[str]) -> list[Task]:
         #  Only removes tasks in the queue (not history)
         def should_be_removed(task_id: TaskID):
             return (
                 task_id in self.queue
-                and self.tasks[task_id].status != Status.IN_PROGRESS
+                and self._tasks[task_id].status != Status.IN_PROGRESS
             )
 
         removed = [
-            self.tasks[task_id] for task_id in task_ids if should_be_removed(task_id)
+            self._tasks[task_id] for task_id in task_ids if should_be_removed(task_id)
         ]
         removed_ids = [task.id for task in removed]
         self.queue = [task_id for task_id in self.queue if task_id not in removed_ids]
-        self.tasks = {
+        self._tasks = {
             task_id: task
-            for task_id, task in self.tasks.items()
+            for task_id, task in self._tasks.items()
             if task_id not in removed_ids
         }
         return removed
@@ -113,5 +112,5 @@ class TaskQueue:
         if position and position < 0:
             raise ValueError(f"Position: {position} cannot be less than 0.")
         for task in tasks:
-            if task.id in self.tasks:
+            if task.id in self._tasks:
                 raise ValueError(f"TaskID '{task.id}' already in use!")
