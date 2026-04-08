@@ -1,13 +1,14 @@
 import asyncio
 from uuid import UUID
 
-from daq_queuing_service.task import Status, Task
+from daq_queuing_service.task import Status, Task, TaskID
 
 
 class TaskQueue:
     def __init__(self):
-        self.queue: list[Task] = []
         self.tasks: dict[str | UUID, Task] = {}
+        self.queue: list[TaskID] = []
+        self.history: list[TaskID] = []
         self.lock = asyncio.Lock()
         self.condition = asyncio.Condition(self.lock)
         self.paused: bool = False
@@ -15,62 +16,94 @@ class TaskQueue:
     def _task_available(self) -> bool:
         if self.paused or not self.queue:
             return False
-        return self.queue[0].status == Status.WAITING
+        return self.tasks[self.queue[0]].status == Status.WAITING
 
     async def claim_next_task_once_available(self) -> Task:
         async with self.condition:
             while not self._task_available():
                 await self.condition.wait()
-            self.queue[0].update_status(Status.IN_PROGRESS)
-            return self.queue[0]
+            task = self.tasks[self.queue[0]]
+            task.update_status(Status.IN_PROGRESS)
+            self.condition.notify_all()
+            return task
+
+    async def complete_task(self, task_id: TaskID):
+        async with self.condition:
+            task = self.tasks.get(task_id)
+            assert task is not None, f"Cannot find task with ID: {task_id}"
+            assert task_id in self.queue, f"This task is not in the queue: {task}"
+            assert self.queue[0] == task_id, (
+                f"This task is not at the front of the queue: {task}"
+            )
+            assert task.status == Status.IN_PROGRESS, (
+                f"This task is not currently in progress: {task}"
+            )
+            self.queue.pop(0)
+            task.update_status(Status.COMPLETED)
+            self.history.insert(0, task_id)
+            self.condition.notify_all()
 
     async def get_task_by_id(self, task_id: str) -> Task | None:
         return self.tasks.get(task_id)
 
     async def get_task_by_position(self, position: int) -> Task | None:
-        return self.queue[position] if position < self.length else None
+        return self.tasks[self.queue[position]] if position < self.length else None
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
-        async with self.lock:
+        async with self.condition:
             self._verify_new_tasks(tasks, position)
             self._add_tasks(tasks, position)
             self.condition.notify_all()
 
     async def move_task(self, task_id: str, position: int):
-        async with self.lock:
+        async with self.condition:
             task = self._remove_tasks([task_id])
             self._add_tasks(task, position)
+            self.condition.notify_all()
 
     async def remove_tasks(self, task_ids: list[str]) -> list[Task]:
-        async with self.lock:
+        async with self.condition:
             tasks = self._remove_tasks(task_ids)
             self.condition.notify_all()
             return tasks
 
     def _add_tasks(self, tasks: list[Task], position: int | None) -> None:
+        task_ids = [task.task_id for task in tasks]
         if position is None:
-            self.queue.extend(tasks)
+            self.queue.extend(task_ids)
         else:
-            self.queue[position:position] = tasks
+            self.queue[position:position] = task_ids
         for task in tasks:
             self.tasks[task.task_id] = task
 
     def _remove_tasks(self, task_ids: list[str]) -> list[Task]:
-        removed = [self.tasks[task_id] for task_id in task_ids if task_id in self.tasks]
-        self.queue = [task for task in self.queue if task.task_id not in task_ids]
+        #  Only removes tasks in the queue (not history)
+        def should_be_removed(task_id: TaskID):
+            return (
+                task_id in self.queue
+                and self.tasks[task_id].status != Status.IN_PROGRESS
+            )
+
+        removed = [
+            self.tasks[task_id] for task_id in task_ids if should_be_removed(task_id)
+        ]
+        removed_ids = [task.task_id for task in removed]
+        self.queue = [task_id for task_id in self.queue if task_id not in removed_ids]
         self.tasks = {
             task_id: task
             for task_id, task in self.tasks.items()
-            if task_id not in task_ids
+            if task_id not in removed_ids
         }
         return removed
 
-    def pause(self):
-        self.paused = True
+    async def pause(self):
+        async with self.condition:
+            self.paused = True
 
-    def unpause(self):
-        self.paused = False
-        self.condition.notify_all()
+    async def unpause(self):
+        async with self.condition:
+            self.paused = False
+            self.condition.notify_all()
 
     @property
     def length(self):
@@ -82,11 +115,3 @@ class TaskQueue:
         for task in tasks:
             if task.task_id in self.tasks:
                 raise ValueError(f"TaskID '{task.task_id}' already in use!")
-
-    async def change_task_status(self, task_id: str, status: Status):
-        if task := await self.get_task_by_id(task_id):
-            task.update_status(status)
-
-    def print_queue(self):
-        for task in self.queue:
-            print(task)

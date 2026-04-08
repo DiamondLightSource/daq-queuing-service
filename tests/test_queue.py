@@ -19,7 +19,7 @@ def tasks() -> list[Task]:
 async def test_queue_can_have_tasks_added(tasks: list[Task]):
     queue = TaskQueue()
     await queue.add_tasks(tasks)
-    assert queue.queue == tasks
+    assert queue.queue == ["0", "1", "2"]
     assert list(queue.tasks.keys()) == ["0", "1", "2"]
 
 
@@ -36,6 +36,9 @@ async def test_queue_can_have_tasks_added(tasks: list[Task]):
 async def test_queue_can_move_multiple_tasks_at_once(
     task_to_move: int, new_position: int, expected_order: list[int]
 ):
+    a = 5 + 1
+    b = a
+    a = b
     queue = TaskQueue()
     tasks = [
         Task(
@@ -46,6 +49,6 @@ async def test_queue_can_move_multiple_tasks_at_once(
     await queue.add_tasks(tasks)
     task = str(task_to_move)
     await queue.move_task(task, new_position)
-    result_order = [int(task.task_id) for task in queue.queue]
+    result_order = [int(task_id) for task_id in queue.queue]
     print(result_order)
     assert result_order == expected_order
