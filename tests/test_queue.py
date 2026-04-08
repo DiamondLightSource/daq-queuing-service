@@ -9,9 +9,7 @@ pytest_plugins = ("pytest_asyncio",)
 @pytest.fixture
 def tasks() -> list[Task]:
     return [
-        Task(
-            experiment_definition=ExperimentDefinition(sample_id=str(i)), task_id=str(i)
-        )
+        Task(experiment_definition=ExperimentDefinition(sample_id=str(i)), id=str(i))
         for i in range(3)
     ]
 
@@ -41,14 +39,11 @@ async def test_queue_can_move_multiple_tasks_at_once(
     a = b
     queue = TaskQueue()
     tasks = [
-        Task(
-            experiment_definition=ExperimentDefinition(sample_id=str(i)), task_id=str(i)
-        )
+        Task(experiment_definition=ExperimentDefinition(sample_id=str(i)), id=str(i))
         for i in range(10)
     ]
     await queue.add_tasks(tasks)
     task = str(task_to_move)
     await queue.move_task(task, new_position)
     result_order = [int(task_id) for task_id in queue.queue]
-    print(result_order)
     assert result_order == expected_order

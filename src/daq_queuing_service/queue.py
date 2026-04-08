@@ -68,13 +68,13 @@ class TaskQueue:
             return tasks
 
     def _add_tasks(self, tasks: list[Task], position: int | None) -> None:
-        task_ids = [task.task_id for task in tasks]
+        task_ids = [task.id for task in tasks]
         if position is None:
             self.queue.extend(task_ids)
         else:
             self.queue[position:position] = task_ids
         for task in tasks:
-            self.tasks[task.task_id] = task
+            self.tasks[task.id] = task
 
     def _remove_tasks(self, task_ids: list[str]) -> list[Task]:
         #  Only removes tasks in the queue (not history)
@@ -87,7 +87,7 @@ class TaskQueue:
         removed = [
             self.tasks[task_id] for task_id in task_ids if should_be_removed(task_id)
         ]
-        removed_ids = [task.task_id for task in removed]
+        removed_ids = [task.id for task in removed]
         self.queue = [task_id for task_id in self.queue if task_id not in removed_ids]
         self.tasks = {
             task_id: task
@@ -113,5 +113,5 @@ class TaskQueue:
         if position and position < 0:
             raise ValueError(f"Position: {position} cannot be less than 0.")
         for task in tasks:
-            if task.task_id in self.tasks:
-                raise ValueError(f"TaskID '{task.task_id}' already in use!")
+            if task.id in self.tasks:
+                raise ValueError(f"TaskID '{task.id}' already in use!")

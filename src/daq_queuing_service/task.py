@@ -25,7 +25,7 @@ class ExperimentDefinition(BaseModel):
 
 class Task(BaseModel):
     experiment_definition: ExperimentDefinition
-    task_id: UUID | str = Field(default_factory=uuid4)
+    id: TaskID = Field(default_factory=uuid4)
     status: Status = Status.WAITING
     time_started: float | None = None
     time_completed: float | None = None
