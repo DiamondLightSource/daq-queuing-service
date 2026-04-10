@@ -3,7 +3,7 @@ import copy
 
 import pytest
 
-from daq_queuing_service.queue import TaskQueue
+from daq_queuing_service.queue import TaskQueue, TaskWithPosition
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 
 pytest_plugins = ("pytest_asyncio",)
@@ -259,8 +259,12 @@ async def test_get_task_by_id_returns_task_in_queue_or_history(
         "4" in task_queue_with_history.queue
         and "4" not in task_queue_with_history.history
     )
-    assert isinstance(await task_queue_with_history.get_task_by_id("0"), Task)
-    assert isinstance(await task_queue_with_history.get_task_by_id("4"), Task)
+    assert isinstance(
+        await task_queue_with_history.get_task_by_id("0"), TaskWithPosition
+    )
+    assert isinstance(
+        await task_queue_with_history.get_task_by_id("4"), TaskWithPosition
+    )
 
 
 async def test_get_task_by_id_returns_none_if_task_id_does_not_exist(
@@ -272,7 +276,9 @@ async def test_get_task_by_id_returns_none_if_task_id_does_not_exist(
 async def test_get_task_by_pos_returns_task_in_queue(
     task_queue_with_history: TaskQueue,
 ):
-    assert isinstance(await task_queue_with_history.get_task_by_position(2), Task)
+    task = await task_queue_with_history.get_task_by_position(2)
+    assert isinstance(task, TaskWithPosition)
+    assert task.position == 2
 
 
 async def test_get_task_by_pos_returns_none_if_position_not_in_queue(

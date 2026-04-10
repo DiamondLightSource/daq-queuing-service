@@ -1,6 +1,15 @@
 import asyncio
+from typing import Self
 
 from daq_queuing_service.task import Status, Task, TaskID
+
+
+class TaskWithPosition(Task):
+    position: int | None
+
+    @classmethod
+    def from_task(cls, task: Task, position: int | None = None) -> Self:
+        return cls.model_validate({**task.model_dump(), "position": position})
 
 
 class TaskRegistry(dict[TaskID, Task]):
@@ -29,6 +38,11 @@ class TaskQueue:
             self.condition.notify_all()
             return task
 
+    async def wait_until_task_available(self) -> None:
+        async with self.condition:
+            while not self._task_available():
+                await self.condition.wait()
+
     async def return_task_to_queue(self, task: Task) -> None:
         self._check_task_valid_to_be_returned(task)
         async with self.condition:
@@ -43,11 +57,6 @@ class TaskQueue:
                     )
             self.condition.notify_all()
 
-    async def wait_until_task_available(self) -> None:
-        async with self.condition:
-            while not self._task_available():
-                await self.condition.wait()
-
     async def complete_task(self, task: Task, error: str | None = None):
         async with self.condition:
             self._check_task_valid_to_be_returned(task)
@@ -57,22 +66,30 @@ class TaskQueue:
             assert task.status == Status.IN_PROGRESS, (
                 f"This task is not currently in progress: {task}"
             )
+
             if error is not None:
                 task.add_error(error)
                 task.update_status(Status.ERROR)
             else:
                 task.update_status(Status.COMPLETED)
+
             self.queue.pop(0)
             self.history.append(task.id)
             self.condition.notify_all()
 
-    async def get_task_by_id(self, task_id: str) -> Task | None:
+    async def get_task_by_id(self, task_id: str) -> TaskWithPosition | None:
         async with self.lock:
-            return self._tasks.get(task_id)
+            if (task := self._tasks.get(task_id)) is not None:
+                position = self.queue.index(task.id) if task.id in self.queue else None
+                return TaskWithPosition.from_task(task, position)
 
-    async def get_task_by_position(self, position: int) -> Task | None:
+    async def get_task_by_position(self, position: int) -> TaskWithPosition | None:
         async with self.lock:
-            return self._tasks[self.queue[position]] if position < self.length else None
+            if position < -self.length or position >= self.length:
+                return None
+            return TaskWithPosition.from_task(
+                self._tasks[self.queue[position]], position
+            )
 
     async def get_queue(self) -> list[str]:
         async with self.lock:
