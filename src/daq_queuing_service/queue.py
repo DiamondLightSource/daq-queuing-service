@@ -3,9 +3,17 @@ import asyncio
 from daq_queuing_service.task import Status, Task, TaskID
 
 
+class TaskRegistry(dict[TaskID, Task]):
+    def get_must_exist(self, task_id: TaskID) -> Task:
+        task = self.get(task_id)
+        if task is None:
+            raise KeyError(f"No task found matching id: {task_id}")
+        return task
+
+
 class TaskQueue:
     def __init__(self):
-        self._tasks: dict[TaskID, Task] = {}
+        self._tasks: TaskRegistry = TaskRegistry()
         self.queue: list[TaskID] = []
         self.history: list[TaskID] = []
         self.lock = asyncio.Lock()
@@ -21,20 +29,41 @@ class TaskQueue:
             self.condition.notify_all()
             return task
 
-    async def complete_task(self, task_id: TaskID, blueapi_info: str | None = None):
+    async def return_task_to_queue(self, task: Task) -> None:
+        self._check_task_valid_to_be_returned(task)
         async with self.condition:
-            task = self._tasks.get(task_id)
-            assert task is not None, f"Cannot find task with ID: {task_id}"
-            assert task_id in self.queue, f"This task is not in the queue: {task}"
-            assert self.queue[0] == task_id, (
+            match task.status:
+                case Status.IN_PROGRESS:
+                    assert task.id == self.queue[0]
+                    task.update_status(Status.WAITING)
+                case _:
+                    raise ValueError(
+                        f"Cannot return task {task.id}, "
+                        + "it is already owned by the queue."
+                    )
+            self.condition.notify_all()
+
+    async def wait_until_task_available(self) -> None:
+        async with self.condition:
+            while not self._task_available():
+                await self.condition.wait()
+
+    async def complete_task(self, task: Task, error: str | None = None):
+        async with self.condition:
+            self._check_task_valid_to_be_returned(task)
+            assert self.queue[0] == task.id, (
                 f"This task is not at the front of the queue: {task}"
             )
             assert task.status == Status.IN_PROGRESS, (
                 f"This task is not currently in progress: {task}"
             )
+            if error is not None:
+                task.add_error(error)
+                task.update_status(Status.ERROR)
+            else:
+                task.update_status(Status.COMPLETED)
             self.queue.pop(0)
-            task.update_status(Status.COMPLETED)
-            self.history.append(task_id)
+            self.history.append(task.id)
             self.condition.notify_all()
 
     async def get_task_by_id(self, task_id: str) -> Task | None:
@@ -105,6 +134,10 @@ class TaskQueue:
             return False
         return self._tasks[self.queue[0]].status == Status.WAITING
 
+    def _check_task_valid_to_be_returned(self, task: Task):
+        assert task is self._tasks.get_must_exist(task.id)
+        assert task.id in self.queue, f"This task is not in the queue: {task}"
+
     def _validate_position(self, position: int) -> int:
         if position < 0:
             raise ValueError(f"Position must be >= 0, got {position}")
@@ -126,7 +159,7 @@ class TaskQueue:
             self._tasks[task.id] = task
 
     def _remove_tasks_from_queue(self, task_ids: list[TaskID]) -> list[TaskID]:
-        #  Only removes tasks in the queue (not history)
+        #  Only removes tasks in the queue (not history or registry)
         def should_be_removed(task_id: TaskID):
             return (
                 task_id in self.queue
@@ -147,11 +180,13 @@ class TaskQueue:
 
         removed_ids = [task_id for task_id in task_ids if should_be_removed(task_id)]
         removed = [self._tasks[task_id] for task_id in removed_ids]
-        self._tasks = {
-            task_id: task
-            for task_id, task in self._tasks.items()
-            if task.id not in removed_ids
-        }
+        self._tasks = TaskRegistry(
+            {
+                task_id: task
+                for task_id, task in self._tasks.items()
+                if task.id not in removed_ids
+            }
+        )
         return removed
 
     @property

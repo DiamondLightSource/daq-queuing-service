@@ -33,7 +33,7 @@ async def task_queue_in_progress(task_queue: TaskQueue):
 async def task_queue_with_history(task_queue: TaskQueue):
     for _ in range(2):
         task = await task_queue.claim_next_task_once_available()
-        await task_queue.complete_task(task.id)
+        await task_queue.complete_task(task)
     # By this point should have 3 tasks in queue and 2 in history
     for i, task_id in enumerate(task_queue.history):
         # Real timestamps will break tests
@@ -174,9 +174,9 @@ async def test_get_queue_only_returns_tasks_in_queue(
     assert task_queue_with_history.history == ["0", "1"]
     result = await task_queue_with_history.get_queue()
     assert result == [
-        '{"experiment_definition":{"sample_id":"2"},"id":"2","status":"Waiting","time_started":null,"time_completed":null}',
-        '{"experiment_definition":{"sample_id":"3"},"id":"3","status":"Waiting","time_started":null,"time_completed":null}',
-        '{"experiment_definition":{"sample_id":"4"},"id":"4","status":"Waiting","time_started":null,"time_completed":null}',
+        '{"experiment_definition":{"sample_id":"2"},"id":"2","status":"Waiting","time_started":null,"time_completed":null,"errors":[]}',
+        '{"experiment_definition":{"sample_id":"3"},"id":"3","status":"Waiting","time_started":null,"time_completed":null,"errors":[]}',
+        '{"experiment_definition":{"sample_id":"4"},"id":"4","status":"Waiting","time_started":null,"time_completed":null,"errors":[]}',
     ]
 
 
@@ -186,8 +186,8 @@ async def test_get_history_only_returns_tasks_in_history(
     assert task_queue_with_history.queue == ["2", "3", "4"]
     result = await task_queue_with_history.get_history()
     assert result == [
-        '{"experiment_definition":{"sample_id":"0"},"id":"0","status":"Completed","time_started":1.0,"time_completed":1.9}',
-        '{"experiment_definition":{"sample_id":"1"},"id":"1","status":"Completed","time_started":2.0,"time_completed":2.9}',
+        '{"experiment_definition":{"sample_id":"0"},"id":"0","status":"Completed","time_started":1.0,"time_completed":1.9,"errors":[]}',
+        '{"experiment_definition":{"sample_id":"1"},"id":"1","status":"Completed","time_started":2.0,"time_completed":2.9,"errors":[]}',
     ]
 
 
@@ -198,9 +198,9 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
     assert task_queue_with_history.history == ["0", "1"]
     result = await task_queue_with_history.get_tasks()
     assert result == [
-        '{"experiment_definition":{"sample_id":"0"},"id":"0","status":"Completed","time_started":1.0,"time_completed":1.9}',
-        '{"experiment_definition":{"sample_id":"1"},"id":"1","status":"Completed","time_started":2.0,"time_completed":2.9}',
-        '{"experiment_definition":{"sample_id":"2"},"id":"2","status":"Waiting","time_started":null,"time_completed":null}',
-        '{"experiment_definition":{"sample_id":"3"},"id":"3","status":"Waiting","time_started":null,"time_completed":null}',
-        '{"experiment_definition":{"sample_id":"4"},"id":"4","status":"Waiting","time_started":null,"time_completed":null}',
+        '{"experiment_definition":{"sample_id":"0"},"id":"0","status":"Completed","time_started":1.0,"time_completed":1.9,"errors":[]}',
+        '{"experiment_definition":{"sample_id":"1"},"id":"1","status":"Completed","time_started":2.0,"time_completed":2.9,"errors":[]}',
+        '{"experiment_definition":{"sample_id":"2"},"id":"2","status":"Waiting","time_started":null,"time_completed":null,"errors":[]}',
+        '{"experiment_definition":{"sample_id":"3"},"id":"3","status":"Waiting","time_started":null,"time_completed":null,"errors":[]}',
+        '{"experiment_definition":{"sample_id":"4"},"id":"4","status":"Waiting","time_started":null,"time_completed":null,"errors":[]}',
     ]

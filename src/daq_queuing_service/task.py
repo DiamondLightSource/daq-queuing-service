@@ -8,11 +8,11 @@ type TaskID = str | UUID
 
 
 class Status(StrEnum):
-    WAITING = "Waiting"
-    IN_PROGRESS = "In progress"
-    COMPLETED = "Completed"
-    FAILED = "Failed"
-    CANCELLED = "Cancelled"
+    WAITING = "Waiting"  # Waiting in the queue
+    IN_PROGRESS = "In progress"  # Claimed by the worker
+    COMPLETED = "Completed"  # Completed successfully
+    CANCELLED = "Cancelled"  # Cancelled before being run
+    ERROR = "Error"  # Error while trying to run
 
 
 class ExperimentDefinition(BaseModel):
@@ -29,10 +29,28 @@ class Task(BaseModel):
     status: Status = Status.WAITING
     time_started: float | None = None
     time_completed: float | None = None
+    errors: list[str] = Field(default_factory=list[str])
+
+    @property
+    def _locked(self):
+        return self.status in [Status.COMPLETED, Status.ERROR, Status.CANCELLED]
+
+    def _check_lock(self):
+        if self._locked:
+            raise ValueError(
+                f"Task is locked and read-only due to status: {self.status}"
+            )
 
     def update_status(self, new_status: Status):
+        self._check_lock()
         self.status = new_status
         if new_status == Status.IN_PROGRESS:
             self.time_started = time.time()
-        elif new_status == Status.COMPLETED:
+        elif new_status in [Status.COMPLETED, Status.ERROR]:
             self.time_completed = time.time()
+        elif new_status == Status.WAITING:
+            self.time_started = None
+
+    def add_error(self, error: str):
+        self._check_lock()
+        self.errors.append(error)
