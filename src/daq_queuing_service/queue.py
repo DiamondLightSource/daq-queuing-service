@@ -205,11 +205,13 @@ class TaskQueue:
         return removed_ids
 
     def _remove_tasks_from_registry(self, task_ids: list[TaskID]) -> list[Task]:
-        # Should NOT remove tasks form registry without also removing from queue/history
-        def should_be_removed(task_id: TaskID):
+        # Should remove tasks from queue/history before removing from registry
+        def should_be_removed(task_id: TaskID) -> bool:
             return (
                 task_id in self._tasks
                 and self._tasks[task_id].status != Status.IN_PROGRESS
+                and task_id not in self.queue
+                and task_id not in self.history
             )
 
         removed_ids = [task_id for task_id in task_ids if should_be_removed(task_id)]

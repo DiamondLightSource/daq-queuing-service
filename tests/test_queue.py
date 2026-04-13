@@ -216,8 +216,20 @@ async def test_remove_tasks_does_not_remove_task_that_is_in_progress(
 
 
 async def test_remove_tasks_does_not_error_if_wrong_task_id_used(task_queue: TaskQueue):
-    await task_queue.remove_tasks(["4", "2", "10"])
+    await task_queue.remove_tasks(["4", "11", "2", "10"])
     assert task_queue.queue == ["0", "1", "3"]
+
+
+async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_history(
+    task_queue_with_history: TaskQueue,
+):
+    assert "0" in task_queue_with_history.history
+    assert "4" in task_queue_with_history.queue
+
+    task_queue_with_history._remove_tasks_from_registry(["0", "4"])
+
+    assert "0" in task_queue_with_history._tasks
+    assert "4" in task_queue_with_history._tasks
 
 
 async def test_get_queue_only_returns_tasks_in_queue(
