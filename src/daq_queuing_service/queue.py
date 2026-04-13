@@ -77,16 +77,20 @@ class TaskQueue:
             self.history.append(task.id)
             self.condition.notify_all()
 
-    async def get_task_by_id(self, task_id: str) -> TaskWithPosition | None:
-        # Returns a copy so don't have to be worried about status of task
+    async def get_task_by_id(self, task_id: TaskID) -> TaskWithPosition | None:
+        # Returns copy so don't have to be worried about caller modifying task.
         # Maybe should return json?
         async with self.lock:
-            if (task := self._tasks.get(task_id)) is not None:
-                position = self.queue.index(task.id) if task.id in self.queue else None
-                return TaskWithPosition.from_task(task, position)
+            if task_id in self._tasks:
+                return self._get_task_by_id(task_id)
+
+    def _get_task_by_id(self, task_id: TaskID) -> TaskWithPosition:
+        task = self._tasks.get_must_exist(task_id)
+        position = self.queue.index(task.id) if task.id in self.queue else None
+        return TaskWithPosition.from_task(task, position)
 
     async def get_task_by_position(self, position: int) -> TaskWithPosition | None:
-        # Returns a copy so don't have to be worried about status of task.
+        # Returns copy so don't have to be worried about caller modifying task.
         # Maybe should return json?
         async with self.lock:
             if position < -self.length or position >= self.length:
@@ -95,22 +99,25 @@ class TaskQueue:
                 self._tasks[self.queue[position]], position
             )
 
-    async def get_queue(self) -> list[str]:
+    async def get_queue(self) -> list[TaskWithPosition]:
+        # Returns copies so don't have to be worried about caller modifying tasks.
+        # Maybe should return json?
         async with self.lock:
-            tasks = [self._tasks[task_id] for task_id in self.queue]
-        return [task.model_dump_json() for task in tasks]
+            return [self._get_task_by_id(task_id) for task_id in self.queue]
 
-    async def get_history(self) -> list[str]:
+    async def get_history(self) -> list[TaskWithPosition]:
+        # Returns copies so don't have to be worried about caller modifying tasks.
+        # Maybe should return json?
         async with self.lock:
-            tasks = [self._tasks[task_id] for task_id in self.history]
-        return [task.model_dump_json() for task in tasks]
+            return [self._get_task_by_id(task_id) for task_id in self.history]
 
-    async def get_tasks(self) -> list[str]:
+    async def get_tasks(self) -> list[TaskWithPosition]:
+        # Returns copies so don't have to be worried about caller modifying tasks.
+        # Maybe should return json?
         async with self.lock:
-            tasks = [self._tasks[task_id] for task_id in self.history] + [
-                self._tasks[task_id] for task_id in self.queue
+            return [
+                self._get_task_by_id(task_id) for task_id in self.history + self.queue
             ]
-        return [task.model_dump_json() for task in tasks]
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
         async with self.condition:
@@ -167,7 +174,7 @@ class TaskQueue:
     def _get_valid_position(self, position: int) -> int:
         if position < 0:
             raise ValueError(f"Position must be >= 0, got {position}")
-        if (  # if position 0 requested but something in progress, return position 1
+        if (  # if position 0 requested but a task is in progress, return position 1
             self.length
             and position == 0
             and self._tasks[self.queue[0]].status != Status.WAITING
