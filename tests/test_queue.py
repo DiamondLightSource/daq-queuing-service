@@ -26,7 +26,7 @@ async def task_queue(tasks: list[Task]):
 
 @pytest.fixture
 async def task_queue_in_progress(task_queue: TaskQueue):
-    first_task_id = task_queue.queue[0]
+    first_task_id = task_queue._queue[0]
     first_task = task_queue._tasks[first_task_id]  # type: ignore  # noqa
     first_task.update_status(Status.IN_PROGRESS)
     return task_queue
@@ -38,7 +38,7 @@ async def task_queue_with_history(task_queue: TaskQueue):
         task = await task_queue.claim_next_task_once_available()
         await task_queue.complete_task(task)
     # By this point should have 3 tasks in queue and 2 in history
-    for i, task_id in enumerate(task_queue.history):
+    for i, task_id in enumerate(task_queue._history):
         # Real timestamps will break tests
         task_queue._tasks[task_id].time_started = 1 + i
         task_queue._tasks[task_id].time_completed = 1 + i + 0.9
@@ -50,7 +50,7 @@ async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueu
         experiment_definition=ExperimentDefinition(sample_id="new"), id="new"
     )
     await task_queue.add_tasks([new_task])
-    assert task_queue.queue == ["0", "1", "2", "3", "4", "new"]
+    assert task_queue._queue == ["0", "1", "2", "3", "4", "new"]
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}  # type: ignore  # noqa
 
 
@@ -59,7 +59,7 @@ async def test_add_tasks_with_position_works_as_expected(task_queue: TaskQueue):
         experiment_definition=ExperimentDefinition(sample_id="new"), id="new"
     )
     await task_queue.add_tasks([new_task], 2)
-    assert task_queue.queue == ["0", "1", "new", "2", "3", "4"]
+    assert task_queue._queue == ["0", "1", "new", "2", "3", "4"]
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}  # type: ignore  # noqa
 
 
@@ -70,7 +70,7 @@ async def test_add_tasks_adds_to_the_end_if_position_bigger_than_queue_length(
         experiment_definition=ExperimentDefinition(sample_id="new"), id="new"
     )
     await task_queue.add_tasks([new_task], 20)
-    assert task_queue.queue == ["0", "1", "2", "3", "4", "new"]
+    assert task_queue._queue == ["0", "1", "2", "3", "4", "new"]
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}  # type: ignore  # noqa
 
 
@@ -86,7 +86,7 @@ async def test_add_task_to_position_0_adds_to_position_1_if_first_task_in_progre
 
     await task_queue_in_progress.add_tasks(new_tasks, 0)
 
-    assert task_queue_in_progress.queue == ["0", "new", "new_2", "1", "2", "3", "4"]
+    assert task_queue_in_progress._queue == ["0", "new", "new_2", "1", "2", "3", "4"]
     assert set(task_queue_in_progress._tasks.keys()) == {  # pyright: ignore[reportPrivateUsage]
         "0",
         "1",
@@ -110,7 +110,7 @@ async def test_add_task_to_position_0_adds_to_position_0_if_first_task_waiting(
 
     await task_queue.add_tasks(new_tasks, 0)
 
-    assert task_queue.queue == ["new", "new_2", "0", "1", "2", "3", "4"]
+    assert task_queue._queue == ["new", "new_2", "0", "1", "2", "3", "4"]
     assert set(task_queue._tasks.keys()) == {  # pyright: ignore[reportPrivateUsage]
         "0",
         "1",
@@ -154,7 +154,7 @@ async def test_move_task_works_as_expected(
     await queue.add_tasks(tasks)
     task = str(task_to_move)
     await queue.move_task(task, new_position)
-    result_order = [int(task_id) for task_id in queue.queue]
+    result_order = [int(task_id) for task_id in queue._queue]
     assert result_order == expected_order
 
 
@@ -165,7 +165,7 @@ async def test_move_task_to_position_0_moves_to_position_1_if_first_task_in_prog
     assert task and task.status == Status.IN_PROGRESS
 
     await task_queue_in_progress.move_task("4", 0)
-    assert task_queue_in_progress.queue == ["0", "4", "1", "2", "3"]
+    assert task_queue_in_progress._queue == ["0", "4", "1", "2", "3"]
 
 
 async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting(
@@ -175,7 +175,7 @@ async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting
     assert task and task.status == Status.WAITING
 
     await task_queue.move_task("4", 0)
-    assert task_queue.queue == ["4", "0", "1", "2", "3"]
+    assert task_queue._queue == ["4", "0", "1", "2", "3"]
 
 
 async def test_move_task_does_not_move_task_that_is_in_progress(
@@ -185,7 +185,7 @@ async def test_move_task_does_not_move_task_that_is_in_progress(
     assert task and task.status == Status.IN_PROGRESS
 
     await task_queue_in_progress.move_task("0", 3)
-    assert task_queue_in_progress.queue == ["0", "1", "2", "3", "4"]
+    assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
     assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
@@ -196,12 +196,12 @@ async def test_move_task_does_not_error_if_wrong_task_id_given(
     assert task and task.status == Status.IN_PROGRESS
 
     await task_queue_in_progress.move_task("10", 3)
-    assert task_queue_in_progress.queue == ["0", "1", "2", "3", "4"]
+    assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
 
 
 async def test_remove_tasks_works_as_expected(task_queue: TaskQueue):
     await task_queue.remove_tasks(["4", "2"])
-    assert task_queue.queue == ["0", "1", "3"]
+    assert task_queue._queue == ["0", "1", "3"]
 
 
 async def test_remove_tasks_does_not_remove_task_that_is_in_progress(
@@ -211,20 +211,20 @@ async def test_remove_tasks_does_not_remove_task_that_is_in_progress(
     assert task and task.status == Status.IN_PROGRESS
 
     await task_queue_in_progress.remove_tasks(["0", "2"])
-    assert task_queue_in_progress.queue == ["0", "1", "3", "4"]
+    assert task_queue_in_progress._queue == ["0", "1", "3", "4"]
     assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "3", "4"}
 
 
 async def test_remove_tasks_does_not_error_if_wrong_task_id_used(task_queue: TaskQueue):
     await task_queue.remove_tasks(["4", "11", "2", "10"])
-    assert task_queue.queue == ["0", "1", "3"]
+    assert task_queue._queue == ["0", "1", "3"]
 
 
 async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_history(
     task_queue_with_history: TaskQueue,
 ):
-    assert "0" in task_queue_with_history.history
-    assert "4" in task_queue_with_history.queue
+    assert "0" in task_queue_with_history._history
+    assert "4" in task_queue_with_history._queue
 
     task_queue_with_history._remove_tasks_from_registry(["0", "4"])
 
@@ -235,7 +235,7 @@ async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_
 async def test_get_queue_only_returns_tasks_in_queue(
     task_queue_with_history: TaskQueue,
 ):
-    assert task_queue_with_history.history == ["0", "1"]
+    assert task_queue_with_history._history == ["0", "1"]
     result = await task_queue_with_history.get_queue()
     assert result == [
         TaskWithPosition(
@@ -271,7 +271,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
 async def test_get_history_only_returns_tasks_in_history(
     task_queue_with_history: TaskQueue,
 ):
-    assert task_queue_with_history.queue == ["2", "3", "4"]
+    assert task_queue_with_history._queue == ["2", "3", "4"]
     result = await task_queue_with_history.get_history()
     assert result == [
         TaskWithPosition(
@@ -298,8 +298,8 @@ async def test_get_history_only_returns_tasks_in_history(
 async def test_get_tasks_returns_tasks_in_queue_and_history(
     task_queue_with_history: TaskQueue,
 ):
-    assert task_queue_with_history.queue == ["2", "3", "4"]
-    assert task_queue_with_history.history == ["0", "1"]
+    assert task_queue_with_history._queue == ["2", "3", "4"]
+    assert task_queue_with_history._history == ["0", "1"]
     result = await task_queue_with_history.get_tasks()
     assert result == [
         TaskWithPosition(
@@ -354,12 +354,12 @@ async def test_get_task_by_id_returns_task_in_queue_or_history(
     task_queue_with_history: TaskQueue,
 ):
     assert (
-        "0" not in task_queue_with_history.queue
-        and "0" in task_queue_with_history.history
+        "0" not in task_queue_with_history._queue
+        and "0" in task_queue_with_history._history
     )
     assert (
-        "4" in task_queue_with_history.queue
-        and "4" not in task_queue_with_history.history
+        "4" in task_queue_with_history._queue
+        and "4" not in task_queue_with_history._history
     )
     assert isinstance(
         await task_queue_with_history.get_task_by_id("0"), TaskWithPosition
@@ -400,12 +400,12 @@ async def test_get_task_by_pos_works_with_negative_indexing(task_queue: TaskQueu
 async def test_clear_history_removes_history_and_removes_completed_tasks_from_registry(
     task_queue_with_history: TaskQueue,
 ):
-    assert task_queue_with_history.history == ["0", "1"]
+    assert task_queue_with_history._history == ["0", "1"]
     assert {"0", "1"}.issubset(task_queue_with_history._tasks.keys())
 
     await task_queue_with_history.clear_history()
 
-    assert task_queue_with_history.history == []
+    assert task_queue_with_history._history == []
     assert not {"0", "1"}.intersection(task_queue_with_history._tasks.keys())
     assert await task_queue_with_history.get_task_by_id("0") is None
 
@@ -429,7 +429,7 @@ async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQue
 async def test_claim_next_task_once_available_puts_task_in_progress_and_returns(
     task_queue: TaskQueue,
 ):
-    next_task = task_queue._tasks[task_queue.queue[0]]
+    next_task = task_queue._tasks[task_queue._queue[0]]
     assert next_task and next_task.status == Status.WAITING
 
     claimed_task = await task_queue.claim_next_task_once_available()
@@ -483,8 +483,8 @@ async def test_complete_task_puts_task_in_history_and_updates_status_to_complete
     task = await task_queue.claim_next_task_once_available()
     assert task.status == Status.IN_PROGRESS
     await task_queue.complete_task(task)
-    assert task.id not in task_queue.queue
-    assert task.id in task_queue.history
+    assert task.id not in task_queue._queue
+    assert task.id in task_queue._history
     assert task.status == Status.SUCCESS
 
 
@@ -508,5 +508,5 @@ async def test_complete_task_with_error_adds_error_to_task_and_changes_status_to
     await task_queue.complete_task(task, error=str(error))
     assert task.status == Status.ERROR
     assert task.errors == ["This task failed"]
-    assert task.id in task_queue.history
-    assert task.id not in task_queue.queue
+    assert task.id in task_queue._history
+    assert task.id not in task_queue._queue
