@@ -86,11 +86,10 @@ class TaskQueue:
             self._history.append(task.id)
             self._condition.notify_all()
 
-    async def get_task_by_id(self, task_id: str) -> TaskWithPosition | None:
+    async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
-            if task_id in self._tasks:
-                return self._get_task_by_id(task_id)
+            return self._get_task_by_id(task_id)
 
     def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
         task = self._tasks.get_must_exist(task_id)

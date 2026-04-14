@@ -61,7 +61,7 @@ def create_api_router(queue: TaskQueue) -> APIRouter:
         return _filter_by_status(await queue.get_tasks(), status)
 
     @router.get("/tasks/{task_id}")
-    async def get_task_by_id(task_id: str) -> TaskWithPosition | None:
+    async def get_task_by_id(task_id: str) -> TaskWithPosition:
         return await queue.get_task_by_id(task_id)
 
     @router.get("/history")

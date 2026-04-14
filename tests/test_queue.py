@@ -392,10 +392,11 @@ async def test_get_task_by_id_returns_task_in_queue_or_history(
     )
 
 
-async def test_get_task_by_id_returns_none_if_task_id_does_not_exist(
+async def test_get_task_by_id_raises_error_if_task_id_does_not_exist(
     task_queue_with_history: TaskQueue,
 ):
-    assert await task_queue_with_history.get_task_by_id("fake") is None
+    with pytest.raises(TaskNotFoundError):
+        assert await task_queue_with_history.get_task_by_id("fake") is None
 
 
 async def test_get_task_by_pos_returns_task_in_queue(
@@ -430,7 +431,6 @@ async def test_clear_history_removes_history_and_removes_completed_tasks_from_re
 
     assert task_queue_with_history._history == []
     assert not {"0", "1"}.intersection(task_queue_with_history._tasks.keys())
-    assert await task_queue_with_history.get_task_by_id("0") is None
 
 
 async def test_pausing_queue_prevents_task_from_being_claimed(task_queue: TaskQueue):
