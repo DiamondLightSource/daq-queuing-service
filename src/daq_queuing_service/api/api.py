@@ -1,11 +1,26 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
-from daq_queuing_service.queue import QueueState, TaskQueue, TaskWithPosition
-from daq_queuing_service.task import ExperimentDefinition, Status, Task, TaskID
+from daq_queuing_service.api.errors import register_exception_handlers
+from daq_queuing_service.queue.queue import (
+    QueueState,
+    TaskQueue,
+    TaskWithPosition,
+)
+from daq_queuing_service.task import ExperimentDefinition, Status, Task
 
 app = FastAPI()
+register_exception_handlers(app)
+
 queue = TaskQueue()
+
+
+class QueueStateUpdate(BaseModel):
+    paused: bool | None = None
+
+
+class TaskDeleteRequest(BaseModel):
+    task_ids: list[str]
 
 
 def _filter_by_status(
@@ -22,6 +37,16 @@ def read_root(request: Request):
     return f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
 
 
+@app.patch("/queue/state")
+async def update_queue_state(payload: QueueStateUpdate) -> QueueState:
+    return await queue.update_state(**payload.model_dump(exclude_none=True))
+
+
+@app.get("/queue/state")
+def get_queue_state() -> QueueState:
+    return queue.state
+
+
 @app.get("/queue")
 async def get_queue(status: Status | None = None) -> list[TaskWithPosition]:
     return _filter_by_status(await queue.get_queue(), status)
@@ -32,13 +57,18 @@ async def get_task_by_position(position: int) -> TaskWithPosition | None:
     return await queue.get_task_by_position(position)
 
 
+@app.post("/queue/move")
+async def move_task(task_id: str, new_position: int) -> int:
+    return await queue.move_task(task_id, new_position)
+
+
 @app.get("/tasks")
 async def get_tasks(status: Status | None = None) -> list[TaskWithPosition]:
     return _filter_by_status(await queue.get_tasks(), status)
 
 
 @app.get("/tasks/{task_id}")
-async def get_task(task_id: str) -> TaskWithPosition | None:
+async def get_task_by_id(task_id: str) -> TaskWithPosition | None:
     return await queue.get_task_by_id(task_id)
 
 
@@ -50,7 +80,7 @@ async def get_history(status: Status | None = None) -> list[TaskWithPosition]:
 @app.post("/queue")
 async def add_tasks(
     experiment_definitions: list[ExperimentDefinition], position: int | None = None
-) -> list[TaskID]:
+) -> list[str]:
     tasks = [
         Task(experiment_definition=experiment_definition)
         for experiment_definition in experiment_definitions
@@ -60,34 +90,11 @@ async def add_tasks(
     return task_ids
 
 
-@app.post("/queue/move")
-async def move_task(task_id: str, new_position: int) -> int:
-    return await queue.move_task(task_id, new_position)
-
-
-class TaskDeleteRequest(BaseModel):
-    task_ids: list[str]
-
-
 @app.delete("/tasks")
 async def remove_tasks(payload: TaskDeleteRequest) -> list[Task]:
-    return await queue.remove_tasks(payload.task_ids)
+    return await queue.cancel_tasks(payload.task_ids)
 
 
 @app.delete("/history")
 async def clear_history():
     return await queue.clear_history()
-
-
-class QueueStateUpdate(BaseModel):
-    paused: bool | None = None
-
-
-@app.patch("/queue/state")
-async def update_state(payload: QueueStateUpdate) -> QueueState:
-    return await queue.update_state(**payload.model_dump(exclude_none=True))
-
-
-@app.get("/queue/state")
-def get_state() -> QueueState:
-    return queue.state

@@ -3,28 +3,15 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
+from daq_queuing_service.queue.queue_utils import (
+    NegativePositionError,
+    TaskAlreadyOwnedError,
+    TaskIdInUseError,
+    TaskInProgressError,
+    TaskNotFoundError,
+    TaskNotInQueueError,
+)
 from daq_queuing_service.task import Status, Task, TaskWithPosition
-
-
-class TaskInProgressError(Exception): ...
-
-
-class TaskNotFoundError(Exception): ...
-
-
-class TaskNotInQueueError(Exception): ...
-
-
-class NegativePositionError(Exception): ...
-
-
-class TaskIdInUseError(Exception): ...
-
-
-class TaskAlreadyOwnedError(Exception): ...
-
-
-class TaskIsCompleteError(Exception): ...
 
 
 class TaskRegistry(dict[str, Task]):
@@ -103,20 +90,19 @@ class TaskQueue:
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
             if task_id in self._tasks:
-                task = self._tasks.get_must_exist(task_id)
-                position = (
-                    self._queue.index(task.id) if task.id in self._queue else None
-                )
-                return TaskWithPosition.from_task(task, position)
+                return self._get_task_by_id(task_id)
+
+    def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
+        task = self._tasks.get_must_exist(task_id)
+        position = self._queue.index(task.id) if task.id in self._queue else None
+        return TaskWithPosition.from_task(task, position)
 
     async def get_task_by_position(self, position: int) -> TaskWithPosition | None:
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
             if position < -self.length or position >= self.length:
                 return None
-            return TaskWithPosition.from_task(
-                self._tasks[self._queue[position]], position
-            )
+            return self._get_task_by_id(self._queue[position])
 
     async def get_queue(self) -> list[TaskWithPosition]:
         # Returns copies so don't have to be worried about caller modifying tasks.
@@ -148,7 +134,7 @@ class TaskQueue:
             self._remove_tasks_from_queue([task_id])
             self._queue[position:position] = [task_id]
             self._condition.notify_all()
-            return position
+            return self._queue.index(task_id)
 
     async def cancel_tasks(self, task_ids: Sequence[str]) -> list[Task]:
         async with self._condition:

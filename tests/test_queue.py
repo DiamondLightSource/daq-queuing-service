@@ -3,12 +3,14 @@ import copy
 
 import pytest
 
-from daq_queuing_service.queue import (
+from daq_queuing_service.queue.queue import (
+    TaskQueue,
+    TaskWithPosition,
+)
+from daq_queuing_service.queue.queue_utils import (
     NegativePositionError,
     TaskInProgressError,
     TaskNotFoundError,
-    TaskQueue,
-    TaskWithPosition,
 )
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 
@@ -141,17 +143,20 @@ async def test_add_task_to_negative_position_raises_error(
 
 
 @pytest.mark.parametrize(
-    "task_to_move, new_position, expected_order",
+    "task_to_move, new_position, expected_order, expected_return_value",
     [
-        [2, 2, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]],
-        [5, 2, [0, 1, 5, 2, 3, 4, 6, 7, 8, 9]],
-        [2, 3, [0, 1, 3, 2, 4, 5, 6, 7, 8, 9]],
-        [9, 0, [9, 0, 1, 2, 3, 4, 5, 6, 7, 8]],
-        [0, 9, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]],
+        [2, 2, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 2],
+        [5, 2, [0, 1, 5, 2, 3, 4, 6, 7, 8, 9], 2],
+        [9, 0, [9, 0, 1, 2, 3, 4, 5, 6, 7, 8], 0],
+        [0, 9, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0], 9],
+        [0, 20, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0], 9],
     ],
 )
-async def test_move_task_works_as_expected(
-    task_to_move: int, new_position: int, expected_order: list[int]
+async def test_move_task_works_as_expected_and_returns_new_position(
+    task_to_move: int,
+    new_position: int,
+    expected_order: list[int],
+    expected_return_value: int,
 ):
     queue = TaskQueue()
     tasks = [
@@ -160,7 +165,10 @@ async def test_move_task_works_as_expected(
     ]
     await queue.add_tasks(tasks)
     task = str(task_to_move)
-    await queue.move_task(task, new_position)
+
+    return_value = await queue.move_task(task, new_position)
+
+    assert return_value == expected_return_value
     result_order = [int(task_id) for task_id in queue._queue]
     assert result_order == expected_order
 
@@ -171,7 +179,8 @@ async def test_move_task_to_position_0_moves_to_position_1_if_first_task_in_prog
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
 
-    await task_queue_in_progress.move_task("4", 0)
+    new_position = await task_queue_in_progress.move_task("4", 0)
+    assert new_position == 1
     assert task_queue_in_progress._queue == ["0", "4", "1", "2", "3"]
 
 
