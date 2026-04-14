@@ -39,7 +39,7 @@ class TaskQueue:
             while not self._task_available():
                 await self._condition.wait()
             task = self._tasks[self._queue[0]]
-            task.update_status(Status.IN_PROGRESS)
+            task.claim()
             self._condition.notify_all()
             return task
 
@@ -54,7 +54,7 @@ class TaskQueue:
             match task.status:
                 case Status.IN_PROGRESS:
                     assert task.id == self._queue[0]
-                    task.update_status(Status.WAITING)
+                    task.wait()
                 case _:
                     raise TaskAlreadyOwnedError(
                         f"Cannot return task {task.id}, "
@@ -62,22 +62,24 @@ class TaskQueue:
                     )
             self._condition.notify_all()
 
-    async def complete_task(self, task: Task, error: str | None = None):
+    async def complete_task(self, task: Task):
         async with self._condition:
             self._check_task_valid_to_be_returned(task)
             assert self._queue[0] == task.id, (
                 f"This task is not at the front of the queue: {task}"
             )
-            assert task.status == Status.IN_PROGRESS, (
-                f"This task is not currently in progress: {task}"
+            task.succeed()
+            self._queue.pop(0)
+            self._history.append(task.id)
+            self._condition.notify_all()
+
+    async def fail_task(self, task: Task, errors: list[str] | None = None):
+        async with self._condition:
+            self._check_task_valid_to_be_returned(task)
+            assert self._queue[0] == task.id, (
+                f"This task is not at the front of the queue: {task}"
             )
-
-            if error is not None:
-                task.add_error(error)
-                task.update_status(Status.ERROR)
-            else:
-                task.update_status(Status.SUCCESS)
-
+            task.fail(errors)
             self._queue.pop(0)
             self._history.append(task.id)
             self._condition.notify_all()
@@ -138,7 +140,7 @@ class TaskQueue:
             self._remove_tasks_from_queue(task_ids)
             tasks = self._remove_tasks_from_registry(task_ids)
             for task in tasks:
-                task.update_status(Status.CANCELLED)
+                task.cancel()
             self._condition.notify_all()
             return tasks
 

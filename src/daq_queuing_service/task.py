@@ -12,10 +12,23 @@ def _create_uuid_str() -> str:
 
 class Status(StrEnum):
     WAITING = "Waiting"  # Waiting in the queue
-    IN_PROGRESS = "In progress"  # Claimed by the worker
+    CLAIMED = "Claimed"  # Claimed by the worker
+    IN_PROGRESS = "In progress"  # In progress inside BlueAPI
     SUCCESS = "Success"  # Completed successfully
     ERROR = "Error"  # Error while trying to run
     CANCELLED = "Cancelled"  # Cancelled before being run
+
+    @property
+    def allowed_transitions(self):
+        allowed_transitions: dict[Status, set[Status]] = {  # from: to
+            Status.WAITING: {Status.CLAIMED, Status.CANCELLED},
+            Status.CLAIMED: {Status.WAITING, Status.IN_PROGRESS, Status.ERROR},
+            Status.IN_PROGRESS: {Status.SUCCESS, Status.ERROR},
+            Status.SUCCESS: set(),
+            Status.ERROR: set(),
+            Status.CANCELLED: set(),
+        }
+        return allowed_transitions[self]
 
 
 class ExperimentDefinition(BaseModel):
@@ -33,30 +46,41 @@ class Task(BaseModel):
     time_started: float | None = None
     time_completed: float | None = None
     errors: list[str] = Field(default_factory=list[str])
+    blueapi_id: str | None = None
 
-    @property
-    def _locked(self):
-        return self.status in [Status.SUCCESS, Status.ERROR, Status.CANCELLED]
-
-    def _check_lock(self):
-        if self._locked:
+    def _update_status(self, new_state: Status):
+        allowed = self.status.allowed_transitions
+        if new_state not in allowed:
             raise ValueError(
-                f"Task is locked and read-only due to status: {self.status}"
+                f"Can't go from current state '{self.status}' to '{new_state}'. "
+                + f"Allowed transitions from {self.status}: {allowed}."
             )
+        self.status = new_state
 
-    def update_status(self, new_status: Status):
-        self._check_lock()
-        self.status = new_status
-        if new_status == Status.IN_PROGRESS:
-            self.time_started = time.time()
-        elif new_status in [Status.SUCCESS, Status.ERROR]:
+    def wait(self):
+        self._update_status(Status.WAITING)
+
+    def claim(self):
+        self._update_status(Status.CLAIMED)
+
+    def put_in_progress(self, blueapi_id: str):
+        self._update_status(Status.IN_PROGRESS)
+        self.time_started = time.time()
+        self.blueapi_id = blueapi_id
+
+    def succeed(self):
+        self._update_status(Status.SUCCESS)
+        self.time_completed = time.time()
+
+    def fail(self, errors: list[str] | None = None):
+        self._update_status(Status.ERROR)
+        if errors:
+            self.errors.extend(errors)
+        if self.time_started:
             self.time_completed = time.time()
-        elif new_status == Status.WAITING:
-            self.time_started = None
 
-    def add_error(self, error: str):
-        self._check_lock()
-        self.errors.append(error)
+    def cancel(self):
+        self._update_status(Status.CANCELLED)
 
 
 class TaskWithPosition(Task):
