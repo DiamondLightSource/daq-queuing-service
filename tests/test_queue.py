@@ -3,7 +3,13 @@ import copy
 
 import pytest
 
-from daq_queuing_service.queue import TaskQueue, TaskWithPosition
+from daq_queuing_service.queue import (
+    NegativePositionError,
+    TaskInProgressError,
+    TaskNotFoundError,
+    TaskQueue,
+    TaskWithPosition,
+)
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 
 pytest_plugins = ("pytest_asyncio",)
@@ -20,6 +26,7 @@ def tasks() -> list[Task]:
 @pytest.fixture
 async def task_queue(tasks: list[Task]):
     queue = TaskQueue()
+    await queue.update_state(paused=False)
     await queue.add_tasks(tasks)
     return queue
 
@@ -129,7 +136,7 @@ async def test_add_task_to_negative_position_raises_error(
         Task(experiment_definition=ExperimentDefinition(sample_id="new"), id="new"),
         Task(experiment_definition=ExperimentDefinition(sample_id="new_2"), id="new_2"),
     ]
-    with pytest.raises(ValueError):
+    with pytest.raises(NegativePositionError):
         await task_queue_in_progress.add_tasks(new_tasks, -1)
 
 
@@ -178,46 +185,53 @@ async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting
     assert task_queue._queue == ["4", "0", "1", "2", "3"]
 
 
-async def test_move_task_does_not_move_task_that_is_in_progress(
+async def test_move_task_does_not_move_task_that_is_in_progress_and_raises_error(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
 
-    await task_queue_in_progress.move_task("0", 3)
+    with pytest.raises(TaskInProgressError):
+        await task_queue_in_progress.move_task("0", 3)
+
     assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
     assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
-async def test_move_task_does_not_error_if_wrong_task_id_given(
+async def test_move_task_raises_error_if_wrong_task_id_given(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
 
-    await task_queue_in_progress.move_task("10", 3)
+    with pytest.raises(TaskNotFoundError):
+        await task_queue_in_progress.move_task("10", 3)
+
     assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
 
 
 async def test_remove_tasks_works_as_expected(task_queue: TaskQueue):
-    await task_queue.remove_tasks(["4", "2"])
+    await task_queue.cancel_tasks(["4", "2"])
     assert task_queue._queue == ["0", "1", "3"]
 
 
-async def test_remove_tasks_does_not_remove_task_that_is_in_progress(
+async def test_remove_tasks_does_not_remove_task_that_is_in_progress_and_raises_error(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
 
-    await task_queue_in_progress.remove_tasks(["0", "2"])
-    assert task_queue_in_progress._queue == ["0", "1", "3", "4"]
-    assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "3", "4"}
+    with pytest.raises(TaskInProgressError):
+        await task_queue_in_progress.cancel_tasks(["0", "2"])
+
+    assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
+    assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
-async def test_remove_tasks_does_not_error_if_wrong_task_id_used(task_queue: TaskQueue):
-    await task_queue.remove_tasks(["4", "11", "2", "10"])
-    assert task_queue._queue == ["0", "1", "3"]
+async def test_remove_tasks_raises_error_if_wrong_task_id_used(task_queue: TaskQueue):
+    with pytest.raises(TaskNotFoundError):
+        await task_queue.cancel_tasks(["4", "11", "2", "10"])
+    assert task_queue._queue == ["0", "1", "2", "3", "4"]
 
 
 async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_history(
@@ -411,8 +425,8 @@ async def test_clear_history_removes_history_and_removes_completed_tasks_from_re
 
 
 async def test_pausing_queue_prevents_task_from_being_claimed(task_queue: TaskQueue):
-    await task_queue.pause()
-    assert task_queue.paused
+    await task_queue.update_state(paused=True)
+    assert task_queue.state.paused
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(
             task_queue.claim_next_task_once_available(), timeout=0.05
@@ -420,9 +434,8 @@ async def test_pausing_queue_prevents_task_from_being_claimed(task_queue: TaskQu
 
 
 async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQueue):
-    await task_queue.pause()
-    await task_queue.unpause()
-    assert not task_queue.paused
+    await task_queue.update_state(paused=False)
+    assert not task_queue.state.paused
     await task_queue.claim_next_task_once_available()
 
 
@@ -460,7 +473,7 @@ async def test_wait_until_task_available_waits_if_next_task_is_in_progress(
 async def test_wait_until_task_available_waits_if_queue_paused(
     task_queue: TaskQueue,
 ):
-    await task_queue.pause()
+    await task_queue.update_state(paused=True)
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_task_available(), timeout=0.05)
 

@@ -1,11 +1,13 @@
 import time
 from enum import StrEnum
 from typing import Self
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-type TaskID = str | UUID
+
+def _create_uuid_str() -> str:
+    return str(uuid4())
 
 
 class Status(StrEnum):
@@ -26,7 +28,7 @@ class ExperimentDefinition(BaseModel):
 
 class Task(BaseModel):
     experiment_definition: ExperimentDefinition
-    id: TaskID = Field(default_factory=uuid4)
+    id: str = Field(default_factory=_create_uuid_str)
     status: Status = Status.WAITING
     time_started: float | None = None
     time_completed: float | None = None

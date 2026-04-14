@@ -3,15 +3,40 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
-from daq_queuing_service.task import Status, Task, TaskID, TaskWithPosition
+from daq_queuing_service.task import Status, Task, TaskWithPosition
 
 
-class TaskRegistry(dict[TaskID, Task]):
-    def get_must_exist(self, task_id: TaskID) -> Task:
+class TaskInProgressError(Exception): ...
+
+
+class TaskNotFoundError(Exception): ...
+
+
+class TaskNotInQueueError(Exception): ...
+
+
+class NegativePositionError(Exception): ...
+
+
+class TaskIdInUseError(Exception): ...
+
+
+class TaskAlreadyOwnedError(Exception): ...
+
+
+class TaskIsCompleteError(Exception): ...
+
+
+class TaskRegistry(dict[str, Task]):
+    def get_must_exist(self, task_id: str) -> Task:
         task = self.get(task_id)
         if task is None:
-            raise KeyError(f"No task found matching id: {task_id}")
+            raise TaskNotFoundError(f"No task found matching id: {task_id}")
         return task
+
+    def assert_task_exists(self, task_id: str):
+        if task_id not in self:
+            raise TaskNotFoundError(f"No task found matching id: {task_id}")
 
 
 class QueueState(BaseModel):
@@ -21,8 +46,8 @@ class QueueState(BaseModel):
 class TaskQueue:
     def __init__(self):
         self._tasks: TaskRegistry = TaskRegistry()
-        self._queue: list[TaskID] = []
-        self._history: list[TaskID] = []
+        self._queue: list[str] = []
+        self._history: list[str] = []
         self._condition = asyncio.Condition()
         self._state: QueueState = QueueState(paused=True)
 
@@ -48,7 +73,7 @@ class TaskQueue:
                     assert task.id == self._queue[0]
                     task.update_status(Status.WAITING)
                 case _:
-                    raise ValueError(
+                    raise TaskAlreadyOwnedError(
                         f"Cannot return task {task.id}, "
                         + "it is already owned by the queue."
                     )
@@ -74,7 +99,7 @@ class TaskQueue:
             self._history.append(task.id)
             self._condition.notify_all()
 
-    async def get_task_by_id(self, task_id: TaskID) -> TaskWithPosition | None:
+    async def get_task_by_id(self, task_id: str) -> TaskWithPosition | None:
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
             if task_id in self._tasks:
@@ -110,23 +135,26 @@ class TaskQueue:
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
         async with self._condition:
-            self._verify_new_tasks(tasks, position)
+            self._validate_new_tasks(tasks)
             if position is not None:
                 position = self._get_valid_position(position)
             self._add_tasks(tasks, position)
             self._condition.notify_all()
 
-    async def move_task(self, task_id: TaskID, position: int) -> int:
+    async def move_task(self, task_id: str, position: int) -> int:
         async with self._condition:
+            self._validate_tasks_for_move_or_deletion([task_id])
             position = self._get_valid_position(position)
-            task_ids = self._remove_tasks_from_queue([task_id])
-            self._queue[position:position] = task_ids
+            self._remove_tasks_from_queue([task_id])
+            self._queue[position:position] = [task_id]
             self._condition.notify_all()
             return position
 
-    async def remove_tasks(self, task_ids: Sequence[TaskID]) -> list[Task]:
+    async def cancel_tasks(self, task_ids: Sequence[str]) -> list[Task]:
         async with self._condition:
-            task_ids = self._remove_tasks_from_queue(task_ids)
+            task_ids = list(task_ids)
+            self._validate_tasks_for_move_or_deletion(task_ids)
+            self._remove_tasks_from_queue(task_ids)
             tasks = self._remove_tasks_from_registry(task_ids)
             for task in tasks:
                 task.update_status(Status.CANCELLED)
@@ -172,7 +200,7 @@ class TaskQueue:
 
     def _get_valid_position(self, position: int) -> int:
         if position < 0:
-            raise ValueError(f"Position must be >= 0, got {position}")
+            raise NegativePositionError(f"Position must be >= 0, got {position}")
         if (  # if position 0 requested but a task is in progress, return position 1
             self.length
             and position == 0
@@ -181,12 +209,10 @@ class TaskQueue:
             return 1
         return position
 
-    def _verify_new_tasks(self, tasks: list[Task], position: int | None):
-        if position and position < 0:
-            raise ValueError(f"Position: {position} cannot be less than 0.")
+    def _validate_new_tasks(self, tasks: list[Task]):
         for task in tasks:
             if task.id in self._tasks:
-                raise ValueError(f"TaskID '{task.id}' already in use!")
+                raise TaskIdInUseError(f"str '{task.id}' already in use!")
 
     def _add_tasks(self, tasks: list[Task], position: int | None) -> None:
         task_ids = [task.id for task in tasks]
@@ -197,9 +223,9 @@ class TaskQueue:
         for task in tasks:
             self._tasks[task.id] = task
 
-    def _remove_tasks_from_queue(self, task_ids: Sequence[TaskID]) -> list[TaskID]:
+    def _remove_tasks_from_queue(self, task_ids: list[str]) -> list[str]:
         #  Only removes tasks in the queue (not history or registry)
-        def should_be_removed(task_id: TaskID):
+        def should_be_removed(task_id: str):
             return (
                 task_id in self._queue
                 and self._tasks[task_id].status != Status.IN_PROGRESS
@@ -210,9 +236,9 @@ class TaskQueue:
 
         return removed_ids
 
-    def _remove_tasks_from_registry(self, task_ids: Sequence[TaskID]) -> list[Task]:
+    def _remove_tasks_from_registry(self, task_ids: list[str]) -> list[Task]:
         # Should remove tasks from queue/history before removing from registry
-        def should_be_removed(task_id: TaskID) -> bool:
+        def should_be_removed(task_id: str) -> bool:
             return (
                 task_id in self._tasks
                 and self._tasks[task_id].status != Status.IN_PROGRESS
@@ -230,6 +256,16 @@ class TaskQueue:
             }
         )
         return removed
+
+    def _validate_tasks_for_move_or_deletion(self, task_ids: list[str]):
+        for task_id in task_ids:
+            task = self._tasks.get_must_exist(task_id)
+            if task_id not in self._queue:
+                raise TaskNotInQueueError("Task isn't present in queue")
+            if task.status == Status.IN_PROGRESS:
+                raise TaskInProgressError(
+                    f"Cannot move task '{task_id}', it is currently in progress!"
+                )
 
     def _get_queue(self) -> list[TaskWithPosition]:
         return [
