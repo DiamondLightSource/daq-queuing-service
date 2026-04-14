@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import Sequence
 
 from pydantic import BaseModel
@@ -13,17 +14,12 @@ from daq_queuing_service.queue.queue_utils import (
 )
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 
+LOGGER = logging.getLogger(__name__)
+
 
 class TaskRegistry(dict[str, Task]):
-    def get_must_exist(self, task_id: str) -> Task:
-        task = self.get(task_id)
-        if task is None:
-            raise TaskNotFoundError(f"No task found matching id: {task_id}")
-        return task
-
-    def assert_task_exists(self, task_id: str):
-        if task_id not in self:
-            raise TaskNotFoundError(f"No task found matching id: {task_id}")
+    def __missing__(self, task_id: str) -> Task:
+        raise TaskNotFoundError(f"No task found matching id: {task_id}")
 
 
 class QueueState(BaseModel):
@@ -92,7 +88,7 @@ class TaskQueue:
             return self._get_task_by_id(task_id)
 
     def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
-        task = self._tasks.get_must_exist(task_id)
+        task = self._tasks[task_id]
         position = self._queue.index(task.id) if task.id in self._queue else None
         return TaskWithPosition.from_task(task, position)
 
@@ -180,7 +176,7 @@ class TaskQueue:
         # returned that is actually still being run/modified by a different process.
         # However if the worker crashes we then lose the Task object and can't return
         # the task? Needs discussion with others.
-        assert task is self._tasks.get_must_exist(task.id)
+        assert task is self._tasks[task.id]
         assert task.id in self._queue, f"This task is not in the queue: {task}"
 
     def _get_valid_position(self, position: int) -> int:
@@ -244,7 +240,7 @@ class TaskQueue:
 
     def _validate_tasks_for_move_or_deletion(self, task_ids: list[str]):
         for task_id in task_ids:
-            task = self._tasks.get_must_exist(task_id)
+            task = self._tasks[task_id]
             if task_id not in self._queue:
                 raise TaskNotInQueueError("Task isn't present in queue")
             if task.status == Status.IN_PROGRESS:
@@ -254,12 +250,12 @@ class TaskQueue:
 
     def _get_queue(self) -> list[TaskWithPosition]:
         return [
-            TaskWithPosition.from_task(self._tasks.get_must_exist(task_id), i)
+            TaskWithPosition.from_task(self._tasks[task_id], i)
             for i, task_id in enumerate(self._queue)
         ]
 
     def _get_history(self) -> list[TaskWithPosition]:
         return [
-            TaskWithPosition.from_task(self._tasks.get_must_exist(task_id))
+            TaskWithPosition.from_task(self._tasks[task_id])
             for task_id in self._history
         ]
