@@ -12,7 +12,6 @@ from daq_queuing_service.queue.queue import TaskQueue
 from daq_queuing_service.task import Task
 
 LOGGER = logging.getLogger(__name__)
-I15_1_BLUEAPI_URL = "https://i15-1-blueapi.diamond.ac.uk/"
 
 
 def construct_blueapi_task_request(task: Task) -> TaskRequest: ...

@@ -1,7 +1,6 @@
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.queue.queue import (
     QueueState,
     TaskQueue,
@@ -9,12 +8,8 @@ from daq_queuing_service.queue.queue import (
 )
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 
-app = FastAPI()
-register_exception_handlers(app)
 
-queue = TaskQueue()
-
-
+# pyright: reportUnusedFunction=false
 class QueueStateUpdate(BaseModel):
     paused: bool | None = None
 
@@ -31,70 +26,66 @@ def _filter_by_status(
     return [task for task in tasks if task.status == status]
 
 
-@app.get("/")
-def read_root(request: Request):
-    base_url = str(request.base_url)
-    return f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
+def create_api_router(queue: TaskQueue) -> APIRouter:
+    router = APIRouter()
 
+    @router.get("/")
+    def read_root(request: Request):
+        base_url = str(request.base_url)
+        return (
+            f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
+        )
 
-@app.patch("/queue/state")
-async def update_queue_state(payload: QueueStateUpdate) -> QueueState:
-    return await queue.update_state(**payload.model_dump(exclude_none=True))
+    @router.patch("/queue/state")
+    async def update_queue_state(payload: QueueStateUpdate) -> QueueState:
+        return await queue.update_state(**payload.model_dump(exclude_none=True))
 
+    @router.get("/queue/state")
+    def get_queue_state() -> QueueState:
+        return queue.state
 
-@app.get("/queue/state")
-def get_queue_state() -> QueueState:
-    return queue.state
+    @router.get("/queue")
+    async def get_queue(status: Status | None = None) -> list[TaskWithPosition]:
+        return _filter_by_status(await queue.get_queue(), status)
 
+    @router.get("/queue/{position}")
+    async def get_task_by_position(position: int) -> TaskWithPosition | None:
+        return await queue.get_task_by_position(position)
 
-@app.get("/queue")
-async def get_queue(status: Status | None = None) -> list[TaskWithPosition]:
-    return _filter_by_status(await queue.get_queue(), status)
+    @router.post("/queue/move")
+    async def move_task(task_id: str, new_position: int) -> int:
+        return await queue.move_task(task_id, new_position)
 
+    @router.get("/tasks")
+    async def get_tasks(status: Status | None = None) -> list[TaskWithPosition]:
+        return _filter_by_status(await queue.get_tasks(), status)
 
-@app.get("/queue/{position}")
-async def get_task_by_position(position: int) -> TaskWithPosition | None:
-    return await queue.get_task_by_position(position)
+    @router.get("/tasks/{task_id}")
+    async def get_task_by_id(task_id: str) -> TaskWithPosition | None:
+        return await queue.get_task_by_id(task_id)
 
+    @router.get("/history")
+    async def get_history(status: Status | None = None) -> list[TaskWithPosition]:
+        return _filter_by_status(await queue.get_history(), status)
 
-@app.post("/queue/move")
-async def move_task(task_id: str, new_position: int) -> int:
-    return await queue.move_task(task_id, new_position)
+    @router.post("/queue")
+    async def add_tasks(
+        experiment_definitions: list[ExperimentDefinition], position: int | None = None
+    ) -> list[str]:
+        tasks = [
+            Task(experiment_definition=experiment_definition)
+            for experiment_definition in experiment_definitions
+        ]
+        task_ids = [task.id for task in tasks]
+        await queue.add_tasks(tasks, position)
+        return task_ids
 
+    @router.delete("/tasks")
+    async def remove_tasks(payload: TaskDeleteRequest) -> list[Task]:
+        return await queue.cancel_tasks(payload.task_ids)
 
-@app.get("/tasks")
-async def get_tasks(status: Status | None = None) -> list[TaskWithPosition]:
-    return _filter_by_status(await queue.get_tasks(), status)
+    @router.delete("/history")
+    async def clear_history():
+        return await queue.clear_history()
 
-
-@app.get("/tasks/{task_id}")
-async def get_task_by_id(task_id: str) -> TaskWithPosition | None:
-    return await queue.get_task_by_id(task_id)
-
-
-@app.get("/history")
-async def get_history(status: Status | None = None) -> list[TaskWithPosition]:
-    return _filter_by_status(await queue.get_history(), status)
-
-
-@app.post("/queue")
-async def add_tasks(
-    experiment_definitions: list[ExperimentDefinition], position: int | None = None
-) -> list[str]:
-    tasks = [
-        Task(experiment_definition=experiment_definition)
-        for experiment_definition in experiment_definitions
-    ]
-    task_ids = [task.id for task in tasks]
-    await queue.add_tasks(tasks, position)
-    return task_ids
-
-
-@app.delete("/tasks")
-async def remove_tasks(payload: TaskDeleteRequest) -> list[Task]:
-    return await queue.cancel_tasks(payload.task_ids)
-
-
-@app.delete("/history")
-async def clear_history():
-    return await queue.clear_history()
+    return router
