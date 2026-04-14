@@ -1,15 +1,14 @@
 import asyncio
 import logging
-import time
 
 from blueapi.client import BlueapiRestClient
 from blueapi.client.rest import ServiceUnavailableError
 from blueapi.config import RestConfig
-from blueapi.service.model import TaskRequest, WorkerTask
+from blueapi.service.model import TaskRequest, TrackableTask, WorkerTask
 from blueapi.worker import WorkerState
 from pydantic import HttpUrl
 
-from daq_queuing_service.queue import TaskQueue
+from daq_queuing_service.queue.queue import TaskQueue
 from daq_queuing_service.task import Task
 
 LOGGER = logging.getLogger(__name__)
@@ -31,13 +30,14 @@ class QueueWorker:
     async def run_loop(self):
         while True:
             await self._queue.wait_until_task_available()
-            await self._wait_until_blueapi_is_idle()
+            if not await self._is_blue_api_idle():
+                await asyncio.sleep(self.poll_time_s)
+                continue
             next_task = await self._queue.claim_next_task_once_available()
             await self._send_task_to_blue_api_and_wait_for_completion(next_task)
 
-    async def _wait_until_blueapi_is_idle(self):
-        while self._client.get_state() != WorkerState.IDLE:
-            await asyncio.sleep(self.poll_time_s)
+    async def _is_blue_api_idle(self) -> bool:
+        return self._client.get_state() == WorkerState.IDLE
 
     async def _send_task_to_blue_api_and_wait_for_completion(
         self, task: Task, timeout_s: int = 600
@@ -57,11 +57,14 @@ class QueueWorker:
             await self._queue.complete_task(task, error=str(e))
             LOGGER.error(e)
             return
-        await self.wait_for_task_to_complete(blueapi_task_id, timeout_s)
+        await self._get_blueapi_task_once_complete(blueapi_task_id, timeout_s)
         await self._queue.complete_task(task)
 
-    async def wait_for_task_to_complete(self, blueapi_task_id: str, timeout_s: int):
-        blueapi_task = self._client.get_active_task()
-        while blueapi_task.task_id == blueapi_task_id:
+    async def _get_blueapi_task_once_complete(
+        self, blueapi_task_id: str, timeout_s: int
+    ) -> TrackableTask:
+        blueapi_task: TrackableTask = self._client.get_task(blueapi_task_id)
+        while not blueapi_task.is_complete:
             await asyncio.sleep(self.poll_time_s)
-            blueapi_task = self._client.get_active_task()
+            blueapi_task = self._client.get_task(blueapi_task_id)
+        return blueapi_task
