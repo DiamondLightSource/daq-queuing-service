@@ -48,14 +48,14 @@ class Task(BaseModel):
     errors: list[str] = Field(default_factory=list[str])
     blueapi_id: str | None = None
 
-    def _update_status(self, new_state: Status):
+    def _update_status(self, new_status: Status):
         allowed = self.status.allowed_transitions
-        if new_state not in allowed:
+        if new_status not in allowed:
             raise ValueError(
-                f"Can't go from current state '{self.status}' to '{new_state}'. "
+                f"Can't go from current state '{self.status}' to '{new_status}'. "
                 + f"Allowed transitions from {self.status}: {allowed}."
             )
-        self.status = new_state
+        self.status = new_status
 
     def wait(self):
         self._update_status(Status.WAITING)
@@ -74,10 +74,9 @@ class Task(BaseModel):
 
     def fail(self, errors: list[str] | None = None):
         self._update_status(Status.ERROR)
+        self.time_completed = time.time()
         if errors:
             self.errors.extend(errors)
-        if self.time_started:
-            self.time_completed = time.time()
 
     def cancel(self):
         self._update_status(Status.CANCELLED)
