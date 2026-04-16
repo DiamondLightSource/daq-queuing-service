@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,7 +10,13 @@ from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 
+LOCAL_BLUEAPI_URL = "http://localhost:8000/"
 I15_1_BLUEAPI_URL = "https://i15-15-blueapi.diamond.ac.uk/"
+
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+)
 
 
 def create_app() -> FastAPI:
@@ -17,7 +24,7 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        worker = QueueWorker(queue=queue, blueapi_url=HttpUrl(I15_1_BLUEAPI_URL))
+        worker = QueueWorker(queue=queue, blueapi_url=HttpUrl(LOCAL_BLUEAPI_URL))
         worker_task = asyncio.create_task(worker.run_loop())
         try:
             yield

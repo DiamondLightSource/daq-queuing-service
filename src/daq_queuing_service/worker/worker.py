@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from blueapi.client import BlueapiRestClient
-from blueapi.client.rest import ServiceUnavailableError
+from blueapi.client.rest import InvalidParametersError, ServiceUnavailableError
 from blueapi.config import RestConfig
 from blueapi.service.model import TaskRequest, TrackableTask, WorkerTask
 from blueapi.worker import WorkerState
@@ -14,7 +14,12 @@ from daq_queuing_service.task import Task
 LOGGER = logging.getLogger(__name__)
 
 
-def construct_blueapi_task_request(task: Task) -> TaskRequest: ...
+def construct_blueapi_task_request(task: Task) -> TaskRequest:
+    return TaskRequest(
+        name=task.experiment_definition.plan_name,
+        params=task.experiment_definition.params,
+        instrument_session=task.experiment_definition.instrument_session,
+    )
 
 
 class QueueWorker:
@@ -42,23 +47,37 @@ class QueueWorker:
         self, task: Task, timeout_s: int = 600
     ):
         task_request = construct_blueapi_task_request(task)
+
+        if not task.blueapi_id:
+            try:
+                response = self._client.create_task(task_request)
+            except InvalidParametersError as e:
+                # Validation issue - task will not work if retried so should cancel task
+                await self._queue.fail_task(
+                    task, errors=[str(error) for error in e.errors]
+                )
+                LOGGER.error(e)
+                return
+            task.blueapi_id = response.task_id
+
         try:
-            response = self._client.create_task(task_request)
-            blueapi_task_id = response.task_id
-            self._client.update_worker_task(WorkerTask(task_id=blueapi_task_id))
-            task.put_in_progress(blueapi_task_id)
+            self._client.update_worker_task(WorkerTask(task_id=task.blueapi_id))
         except ServiceUnavailableError as e:
             # Issue with blueapi worker state or connection - should retry task later
             await self._queue.return_task_to_queue(task)
             LOGGER.error(e)
             return
-        except Exception as e:
-            # Validation issue - task will not work if retried so should cancel task
-            await self._queue.fail_task(task, errors=[str(e)])
-            LOGGER.error(e)
-            return
-        await self._get_blueapi_task_once_complete(blueapi_task_id, timeout_s)
-        await self._queue.complete_task(task)
+        LOGGER.info(f"Task {task.id} is in progress, blueapi ID: {task.blueapi_id}")
+        task.put_in_progress()
+
+        blueapi_task = await self._get_blueapi_task_once_complete(
+            task.blueapi_id, timeout_s
+        )
+
+        if blueapi_task.errors:
+            await self._queue.fail_task(task, blueapi_task.errors)
+        else:
+            await self._queue.complete_task(task)
 
     async def _get_blueapi_task_once_complete(
         self, blueapi_task_id: str, timeout_s: int

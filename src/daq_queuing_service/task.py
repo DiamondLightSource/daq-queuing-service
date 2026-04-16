@@ -1,6 +1,7 @@
-import time
+from collections.abc import Mapping
+from datetime import datetime
 from enum import StrEnum
-from typing import Self
+from typing import Any, Self
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -32,19 +33,20 @@ class Status(StrEnum):
 
 
 class ExperimentDefinition(BaseModel):
-    # match ulims
+    plan_name: str
     sample_id: str
-    # experiment_id: str
-    # something_unique: str  # then we wouldn't need task_id
-    # params: dict
+    params: Mapping[str, Any] = Field(
+        description="Values for parameters to plan, if any", default_factory=dict
+    )
+    instrument_session: str
 
 
 class Task(BaseModel):
     experiment_definition: ExperimentDefinition
     id: str = Field(default_factory=_create_uuid_str)
     status: Status = Status.WAITING
-    time_started: float | None = None
-    time_completed: float | None = None
+    time_started: str | None = None
+    time_completed: str | None = None
     errors: list[str] = Field(default_factory=list[str])
     blueapi_id: str | None = None
 
@@ -63,18 +65,17 @@ class Task(BaseModel):
     def claim(self):
         self._update_status(Status.CLAIMED)
 
-    def put_in_progress(self, blueapi_id: str):
+    def put_in_progress(self):
         self._update_status(Status.IN_PROGRESS)
-        self.time_started = time.time()
-        self.blueapi_id = blueapi_id
+        self.time_started = datetime.now().isoformat()
 
     def succeed(self):
         self._update_status(Status.SUCCESS)
-        self.time_completed = time.time()
+        self.time_completed = datetime.now().isoformat()
 
     def fail(self, errors: list[str] | None = None):
         self._update_status(Status.ERROR)
-        self.time_completed = time.time()
+        self.time_completed = datetime.now().isoformat()
         if errors:
             self.errors.extend(errors)
 

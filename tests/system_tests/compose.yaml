@@ -1,0 +1,15 @@
+include:
+  - ../../example-services/compose.yaml
+
+services:
+  rabbitmq:
+    image: docker.io/rabbitmq:4.0-management
+    ports:
+      - "1883:1883"
+      - "5672:5672"
+      - "15672:15672"
+      - "61613:61613"
+    volumes:
+      - type: bind
+        source: ./services/rabbitmq_plugins
+        target: /etc/rabbitmq/enabled_plugins
