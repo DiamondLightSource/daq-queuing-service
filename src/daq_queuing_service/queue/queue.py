@@ -121,6 +121,16 @@ class TaskQueue:
             return self._get_history() + self._get_queue()
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
+        """Add tasks to the queue. Can specify a position to add the tasks in at.
+        This position will apply to the first task in the list, with each subsequent
+        task having a position of 1 more than the previous. By default adds tasks to the
+        end of the queue.
+
+
+        Args:
+            tasks (list[Task]): List of tasks to add
+            position (int | None, optional): Position of the tasks. Defaults to None.
+        """
         async with self._condition:
             self._validate_new_tasks(tasks)
             if position is not None:
@@ -130,6 +140,17 @@ class TaskQueue:
         LOGGER.info(f"Successfully added tasks to queue: {[task.id for task in tasks]}")
 
     async def move_task(self, task_id: str, position: int) -> int:
+        """Move a task into a different position. If the requested position is
+        unavailable, will move to the closest available position. If the requested task
+        cannot be moved because it is complete or in progress, an error will be raised.
+
+        Args:
+            task_id (str): ID of the task to be moved
+            new_position (int): New position of the task
+
+        Returns:
+            int: The new position of the task (may be different to what was requested)
+        """
         async with self._condition:
             self._validate_tasks_for_move_or_deletion([task_id])
             position = self._get_valid_position(position)
@@ -141,6 +162,16 @@ class TaskQueue:
         return new_position
 
     async def cancel_tasks(self, task_ids: Sequence[str]) -> list[Task]:
+        """Remove tasks from the queue. If one or more of the requested tasks cannot be
+        cancelled as they are complete or in progress, an error will be raised and none
+        of the requested tasks will be cancelled.
+
+        Args:
+            task_ids (Sequence[str]): List of task IDs to cancel
+
+        Returns:
+            list[Task]: List of the task objects that were removed from the queue.
+        """
         async with self._condition:
             task_ids = list(task_ids)
             self._validate_tasks_for_move_or_deletion(task_ids)
@@ -255,7 +286,7 @@ class TaskQueue:
             task = self._tasks[task_id]
             if task_id not in self._queue:
                 raise TaskNotInQueueError(f"Task {task_id} isn't present in queue")
-            if task.status == Status.IN_PROGRESS:
+            if task.status != Status.WAITING:
                 raise TaskInProgressError(
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )

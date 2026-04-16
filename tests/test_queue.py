@@ -34,12 +34,19 @@ async def task_queue(tasks: list[Task]):
 
 
 @pytest.fixture
-async def task_queue_in_progress(task_queue: TaskQueue):
+async def task_queue_claimed(task_queue: TaskQueue):
     first_task_id = task_queue._queue[0]
-    first_task = task_queue._tasks[first_task_id]  # type: ignore  # noqa
+    first_task = task_queue._tasks[first_task_id]
     first_task.claim()
-    first_task.put_in_progress("blueapi_id")
     return task_queue
+
+
+@pytest.fixture
+async def task_queue_in_progress(task_queue_claimed: TaskQueue):
+    first_task_id = task_queue_claimed._queue[0]
+    first_task = task_queue_claimed._tasks[first_task_id]
+    first_task.put_in_progress("blueapi_id")
+    return task_queue_claimed
 
 
 @pytest.fixture
@@ -196,6 +203,19 @@ async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting
     assert task_queue._queue == ["4", "0", "1", "2", "3"]
 
 
+async def test_move_task_does_not_move_task_that_is_claimed_and_raises_error(
+    task_queue_claimed: TaskQueue,
+):
+    task = await task_queue_claimed.get_task_by_position(0)
+    assert task and task.status == Status.CLAIMED
+
+    with pytest.raises(TaskInProgressError):
+        await task_queue_claimed.move_task("0", 3)
+
+    assert task_queue_claimed._queue == ["0", "1", "2", "3", "4"]
+    assert set(task_queue_claimed._tasks.keys()) == {"0", "1", "2", "3", "4"}
+
+
 async def test_move_task_does_not_move_task_that_is_in_progress_and_raises_error(
     task_queue_in_progress: TaskQueue,
 ):
@@ -224,6 +244,19 @@ async def test_move_task_raises_error_if_wrong_task_id_given(
 async def test_remove_tasks_works_as_expected(task_queue: TaskQueue):
     await task_queue.cancel_tasks(["4", "2"])
     assert task_queue._queue == ["0", "1", "3"]
+
+
+async def test_remove_tasks_does_not_remove_task_that_is_claimed_and_raises_error(
+    task_queue_claimed: TaskQueue,
+):
+    task = await task_queue_claimed.get_task_by_position(0)
+    assert task and task.status == Status.CLAIMED
+
+    with pytest.raises(TaskInProgressError):
+        await task_queue_claimed.cancel_tasks(["0", "2"])
+
+    assert task_queue_claimed._queue == ["0", "1", "2", "3", "4"]
+    assert set(task_queue_claimed._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
 async def test_remove_tasks_does_not_remove_task_that_is_in_progress_and_raises_error(
