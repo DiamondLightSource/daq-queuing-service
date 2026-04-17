@@ -4,7 +4,8 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
-from daq_queuing_service.queue.queue_utils import (
+from daq_queuing_service.task import Status, Task, TaskWithPosition
+from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     TaskAlreadyOwnedError,
     TaskIdInUseError,
@@ -12,7 +13,6 @@ from daq_queuing_service.queue.queue_utils import (
     TaskNotFoundError,
     TaskNotInQueueError,
 )
-from daq_queuing_service.task import Status, Task, TaskWithPosition
 
 LOGGER = logging.getLogger(__name__)
 

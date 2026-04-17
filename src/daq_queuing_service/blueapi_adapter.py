@@ -8,6 +8,7 @@ from blueapi.client.rest import (
     InvalidParametersError,
     ServiceUnavailableError,
     TaskResponse,
+    UnknownPlanError,
 )
 from blueapi.service.model import TaskRequest, TrackableTask, WorkerTask
 from blueapi.worker import WorkerState
@@ -41,14 +42,17 @@ class BlueapiClientAdapter:
 
     def create_task(
         self, task_request: TaskRequest
-    ) -> BlueapiResult[TaskResponse, InvalidParametersError | ServiceUnavailableError]:
+    ) -> BlueapiResult[
+        TaskResponse,
+        InvalidParametersError | UnknownPlanError | ServiceUnavailableError,
+    ]:
         try:
             return BlueapiResult(value=self.client.create_task(task_request))
-        except InvalidParametersError as e:
+        except (InvalidParametersError, UnknownPlanError) as e:
             LOGGER.exception(e)
             return BlueapiResult(error=e)
         except ServiceUnavailableError as e:
-            LOGGER.error(f"Lost connection to blueapi: {e}")
+            LOGGER.error("Lost connection to blueapi")
             return BlueapiResult(error=e)
 
     def update_worker_task(
@@ -71,3 +75,10 @@ class BlueapiClientAdapter:
         except ServiceUnavailableError as e:
             LOGGER.error(f"Lost connection to blueapi: {e}")
             return BlueapiResult(error=e)
+
+
+# client = BlueapiClientAdapter(BlueapiRestClient())
+# result = client.create_task(
+#     TaskRequest(name="sleeep", params={"time": 1}, instrument_session="")
+# )
+# print(result)

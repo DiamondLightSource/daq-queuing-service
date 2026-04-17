@@ -7,7 +7,7 @@ from pydantic import HttpUrl
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.queue.queue import TaskQueue
+from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 
 LOCAL_BLUEAPI_URL = "http://localhost:8000/"

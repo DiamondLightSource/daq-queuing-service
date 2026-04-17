@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from daq_queuing_service.queue.queue import (
+from daq_queuing_service.task import ExperimentDefinition, Status, Task
+from daq_queuing_service.task_queue.queue import (
     QueueState,
     TaskQueue,
     TaskWithPosition,
 )
-from daq_queuing_service.task import ExperimentDefinition, Status, Task
 
 
 # pyright: reportUnusedFunction=false

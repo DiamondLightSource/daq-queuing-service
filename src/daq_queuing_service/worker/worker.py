@@ -5,6 +5,7 @@ from blueapi.client import BlueapiRestClient
 from blueapi.client.rest import (
     InvalidParametersError,
     ServiceUnavailableError,
+    UnknownPlanError,
 )
 from blueapi.config import RestConfig
 from blueapi.service.model import TaskRequest, TrackableTask, WorkerTask
@@ -12,8 +13,8 @@ from blueapi.worker import WorkerState
 from pydantic import HttpUrl
 
 from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter
-from daq_queuing_service.queue.queue import TaskQueue
 from daq_queuing_service.task import Task
+from daq_queuing_service.task_queue.queue import TaskQueue
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class QueueWorker:
             result = self._client.get_state()
             if result.value == WorkerState.IDLE:
                 break
-            LOGGER.debug(
+            LOGGER.info(
                 f"Waiting for BlueAPI worker to be IDLE, currently {result.value}"
             )
             await asyncio.sleep(self.poll_time_s)
@@ -57,18 +58,25 @@ class QueueWorker:
     async def _send_task_to_blue_api_and_wait_for_completion(
         self, task: Task, timeout_s: int = 600
     ):
-        task_request = construct_blueapi_task_request(task)
-
         if not task.blueapi_id:
+            task_request = construct_blueapi_task_request(task)
             result = self._client.create_task(task_request)
             if result.value:
                 task.blueapi_id = result.value.task_id
-            elif isinstance(result.error, InvalidParametersError):
-                await self._queue.fail_task(
-                    task, errors=[str(error) for error in result.error.errors]
-                )
-            elif isinstance(result.error, ServiceUnavailableError):
-                await self._queue.return_task_to_queue(task)
+            else:
+                if isinstance(result.error, InvalidParametersError):
+                    await self._queue.fail_task(
+                        task,
+                        errors=["Invalid parameters"]
+                        + [str(error) for error in result.error.errors],
+                    )
+                elif isinstance(result.error, UnknownPlanError):
+                    await self._queue.fail_task(
+                        task, ["Unknown plan", str(result.error)]
+                    )
+                elif isinstance(result.error, ServiceUnavailableError):
+                    await self._queue.return_task_to_queue(task)
+                return
 
         await self._start_blueapi_task_and_wait_for_completion(task, timeout_s)
 

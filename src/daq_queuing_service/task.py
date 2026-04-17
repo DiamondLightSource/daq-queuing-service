@@ -47,7 +47,9 @@ class Task(BaseModel):
     status: Status = Status.WAITING
     time_started: str | None = None
     time_completed: str | None = None
-    errors: list[str] = Field(default_factory=list[str])
+    errors: list[dict[str, list[str]]] = Field(
+        default_factory=list[dict[str, list[str]]]
+    )
     blueapi_id: str | None = None
 
     def _update_status(self, new_status: Status):

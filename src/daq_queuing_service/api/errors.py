@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from daq_queuing_service.queue.queue_utils import (
+from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     QueueError,
     TaskIdInUseError,
