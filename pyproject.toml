@@ -21,6 +21,8 @@ dev = [
 
 [tool.pyright]
 typeCheckingMode = "strict"
+reportMissingTypeStubs = "none"
+
 
 executionEnvironments = [
     { root = "tests", reportPrivateUsage = false }
