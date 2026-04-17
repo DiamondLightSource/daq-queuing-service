@@ -53,13 +53,13 @@ class TaskQueue:
         self._check_task_valid_to_be_returned(task)
         async with self._condition:
             match task.status:
-                case Status.IN_PROGRESS:
+                case Status.CLAIMED:
                     assert task.id == self._queue[0]
                     task.wait()
                 case _:
                     raise TaskAlreadyOwnedError(
                         f"Cannot return task {task.id}, "
-                        + "it is already owned by the queue."
+                        + f"it's status is {task.status}."
                     )
             self._condition.notify_all()
         LOGGER.info(f"Task {task.id} has been returned to the queue")

@@ -66,6 +66,7 @@ class Task(BaseModel):
         self._update_status(Status.CLAIMED)
 
     def put_in_progress(self):
+        assert self.blueapi_id is not None
         self._update_status(Status.IN_PROGRESS)
         self.time_started = datetime.now().isoformat()
 

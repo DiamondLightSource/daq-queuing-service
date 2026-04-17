@@ -41,7 +41,9 @@ def test__update_status_raises_error_when_transitioned_to_wrong_status(
     old_status: Status, new_status: Status
 ):
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=old_status,
     )
     with pytest.raises(ValueError):
@@ -64,7 +66,9 @@ def test__update_status_changes_status_when_correct_new_status_given(
     old_status: Status, new_status: Status
 ):
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=old_status,
     )
     task._update_status(new_status)
@@ -73,7 +77,9 @@ def test__update_status_changes_status_when_correct_new_status_given(
 
 def test_wait_updates_status_to_waiting():
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=Status.CLAIMED,
     )
     task.wait()
@@ -82,7 +88,9 @@ def test_wait_updates_status_to_waiting():
 
 def test_claim_updates_status_to_claimed():
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=Status.WAITING,
     )
     task.claim()
@@ -91,10 +99,13 @@ def test_claim_updates_status_to_claimed():
 
 def test_put_in_progress_updates_status_to_in_progress_and_adds_fields():
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=Status.CLAIMED,
     )
-    task.put_in_progress("blueapi_id")
+    task.blueapi_id = "blueapi_id"
+    task.put_in_progress()
     assert task.status == Status.IN_PROGRESS
     assert task.time_started is not None
     assert task.blueapi_id == "blueapi_id"
@@ -102,7 +113,9 @@ def test_put_in_progress_updates_status_to_in_progress_and_adds_fields():
 
 def test_succeed_updates_status_to_success_and_adds_time_completed():
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=Status.IN_PROGRESS,
     )
     task.succeed()
@@ -112,7 +125,9 @@ def test_succeed_updates_status_to_success_and_adds_time_completed():
 
 def test_fail_updates_status_to_error_and_adds_time_completed_and_errors():
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=Status.IN_PROGRESS,
     )
     task.fail(["errors", "more_errors"])
@@ -123,7 +138,9 @@ def test_fail_updates_status_to_error_and_adds_time_completed_and_errors():
 
 def test_cancel_updates_status_to_cancelled():
     task = Task(
-        experiment_definition=ExperimentDefinition(sample_id="sample"),
+        experiment_definition=ExperimentDefinition(
+            plan_name="test", sample_id="sample", instrument_session=""
+        ),
         status=Status.WAITING,
     )
     task.cancel()
