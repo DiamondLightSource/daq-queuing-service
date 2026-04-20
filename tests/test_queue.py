@@ -83,14 +83,14 @@ async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueu
     new_task = make_new_task("new")
     await task_queue.add_tasks([new_task])
     assert task_queue._queue == ["0", "1", "2", "3", "4", "new"]
-    assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}  # type: ignore  # noqa
+    assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
 
 
 async def test_add_tasks_with_position_works_as_expected(task_queue: TaskQueue):
     new_task = make_new_task("new")
     await task_queue.add_tasks([new_task], 2)
     assert task_queue._queue == ["0", "1", "new", "2", "3", "4"]
-    assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}  # type: ignore  # noqa
+    assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
 
 
 async def test_add_tasks_adds_to_the_end_if_position_bigger_than_queue_length(
@@ -99,7 +99,7 @@ async def test_add_tasks_adds_to_the_end_if_position_bigger_than_queue_length(
     new_task = make_new_task("new")
     await task_queue.add_tasks([new_task], 20)
     assert task_queue._queue == ["0", "1", "2", "3", "4", "new"]
-    assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}  # type: ignore  # noqa
+    assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
 
 
 async def test_add_task_to_position_0_adds_to_position_1_if_first_task_in_progress(
@@ -112,7 +112,7 @@ async def test_add_task_to_position_0_adds_to_position_1_if_first_task_in_progre
     await task_queue_in_progress.add_tasks(new_tasks, 0)
 
     assert task_queue_in_progress._queue == ["0", "new", "new_2", "1", "2", "3", "4"]
-    assert set(task_queue_in_progress._tasks.keys()) == {  # pyright: ignore[reportPrivateUsage]
+    assert set(task_queue_in_progress._tasks.keys()) == {
         "0",
         "1",
         "2",
@@ -133,7 +133,7 @@ async def test_add_task_to_position_0_adds_to_position_0_if_first_task_waiting(
     await task_queue.add_tasks(new_tasks, 0)
 
     assert task_queue._queue == ["new", "new_2", "0", "1", "2", "3", "4"]
-    assert set(task_queue._tasks.keys()) == {  # pyright: ignore[reportPrivateUsage]
+    assert set(task_queue._tasks.keys()) == {
         "0",
         "1",
         "2",
