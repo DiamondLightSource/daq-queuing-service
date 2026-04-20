@@ -1,22 +1,30 @@
-class QueueError(Exception): ...
+class QueueError(Exception):
+    pass
 
 
-class TaskInProgressError(QueueError): ...
+class TaskInProgressError(QueueError):
+    pass
 
 
-class TaskNotFoundError(QueueError, KeyError): ...
+class TaskNotFoundError(QueueError, KeyError):
+    pass
 
 
-class TaskNotInQueueError(QueueError): ...
+class TaskNotInQueueError(QueueError):
+    pass
 
 
-class TaskIdInUseError(QueueError): ...
+class TaskIdInUseError(QueueError):
+    pass
 
 
-class NegativePositionError(QueueError): ...
+class NegativePositionError(QueueError):
+    pass
 
 
-class TaskAlreadyOwnedError(QueueError): ...
+class TaskAlreadyOwnedError(QueueError):
+    pass
 
 
-class TaskIsCompleteError(QueueError): ...
+class TaskIsCompleteError(QueueError):
+    pass
