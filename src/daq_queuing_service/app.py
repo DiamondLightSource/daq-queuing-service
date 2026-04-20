@@ -1,8 +1,10 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from typing import NoReturn
 
-from blueapi.client.rest import BlueapiRestClient, RestConfig
+from blueapi.client import BlueapiClient
+from blueapi.config import ApplicationConfig, RestConfig, StompConfig
 from fastapi import FastAPI
 from pydantic import HttpUrl
 
@@ -26,16 +28,34 @@ logging.basicConfig(
 
 def create_app() -> FastAPI:
     queue = TaskQueue()
-    blueapi_rest_client = BlueapiRestClient(RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL)))
+    blueapi_client = BlueapiClient.from_config(
+        ApplicationConfig(
+            api=RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL)),
+            stomp=StompConfig(enabled=True),
+        )
+    )
     blueapi_client_adapter = BlueapiClientAdapter(
-        blueapi_rest_client,
-        construct_blueapi_task_request,
+        blueapi_client,
     )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        worker = QueueWorker(queue=queue, blueapi_client=blueapi_client_adapter)
+        worker = QueueWorker(
+            queue=queue,
+            blueapi_client=blueapi_client_adapter,
+            task_request_constructor=construct_blueapi_task_request,
+        )
         worker_task = asyncio.create_task(worker.run_loop())
+
+        def log_task_exception(task: asyncio.Task[NoReturn]):
+            try:
+                exc = task.exception()
+                if exc:
+                    logging.error("Worker crashed", exc_info=exc)
+            except asyncio.CancelledError:
+                pass
+
+        worker_task.add_done_callback(log_task_exception)
         try:
             yield
         finally:
@@ -45,7 +65,7 @@ def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
     register_exception_handlers(app)
     app.include_router(
-        create_api_router(queue, blueapi_rest_client, construct_blueapi_task_request)
+        create_api_router(queue, blueapi_client, construct_blueapi_task_request)
     )
 
     return app

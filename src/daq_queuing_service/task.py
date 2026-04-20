@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any, Self
 from uuid import uuid4
 
+from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel, Field
 
 
@@ -47,7 +48,8 @@ class Task(BaseModel):
     status: Status = Status.WAITING
     time_started: str | None = None
     time_completed: str | None = None
-    errors: list[str] = Field(default_factory=list[str])
+    errors: list[str | TaskError] = Field(default_factory=list[str | TaskError])
+    result: TaskResult | None = None
     blueapi_id: str | None = None
 
     def _update_status(self, new_status: Status):
@@ -66,15 +68,15 @@ class Task(BaseModel):
         self._update_status(Status.CLAIMED)
 
     def put_in_progress(self):
-        assert self.blueapi_id is not None
         self._update_status(Status.IN_PROGRESS)
         self.time_started = datetime.now().isoformat()
 
-    def succeed(self):
+    def succeed(self, result: TaskResult):
         self._update_status(Status.SUCCESS)
+        self.result = result
         self.time_completed = datetime.now().isoformat()
 
-    def fail(self, errors: list[str] | None = None):
+    def fail(self, errors: list[str | TaskError] | None = None):
         self._update_status(Status.ERROR)
         self.time_completed = datetime.now().isoformat()
         if errors:

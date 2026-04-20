@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections.abc import Sequence
 
+from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
 from daq_queuing_service.task import Status, Task, TaskWithPosition
@@ -64,19 +65,19 @@ class TaskQueue:
             self._condition.notify_all()
         LOGGER.info(f"Task {task.id} has been returned to the queue")
 
-    async def complete_task(self, task: Task):
+    async def complete_task(self, task: Task, result: TaskResult):
         async with self._condition:
             self._check_task_valid_to_be_returned(task)
             assert self._queue[0] == task.id, (
                 f"This task is not at the front of the queue: {task}"
             )
-            task.succeed()
+            task.succeed(result)
             self._queue.pop(0)
             self._history.append(task.id)
             self._condition.notify_all()
-        LOGGER.info(f"Task {task.id} has been completed successfully")
+        LOGGER.info(f"Task {task.id} has been completed successfully: {result}")
 
-    async def fail_task(self, task: Task, errors: list[str] | None = None):
+    async def fail_task(self, task: Task, errors: list[str | TaskError] | None = None):
         async with self._condition:
             self._check_task_valid_to_be_returned(task)
             assert self._queue[0] == task.id, (

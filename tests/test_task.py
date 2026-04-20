@@ -1,4 +1,5 @@
 import pytest
+from blueapi.worker.event import TaskResult
 
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 
@@ -118,7 +119,7 @@ def test_succeed_updates_status_to_success_and_adds_time_completed():
         ),
         status=Status.IN_PROGRESS,
     )
-    task.succeed()
+    task.succeed(TaskResult(result=None, type="NoneType"))
     assert task.status == Status.SUCCESS
     assert task.time_completed is not None
 

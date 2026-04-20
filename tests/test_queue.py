@@ -2,6 +2,7 @@ import asyncio
 import copy
 
 import pytest
+from blueapi.worker.event import TaskResult
 
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
@@ -70,7 +71,7 @@ async def task_queue_with_history(task_queue: TaskQueue):
         task = await task_queue.claim_next_task_once_available()
         task.blueapi_id = f"blueapi_id_{i}"
         task.put_in_progress()
-        await task_queue.complete_task(task)
+        await task_queue.complete_task(task, TaskResult(result=None, type="NoneType"))
     # By this point should have 3 tasks in queue and 2 in history
     for i, task_id in enumerate(task_queue._history):
         # Real timestamps will break tests
@@ -347,6 +348,7 @@ async def test_get_history_only_returns_tasks_in_history(
             errors=[],
             position=None,
             blueapi_id="blueapi_id_0",
+            result=TaskResult(result=None, type="NoneType"),
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -359,6 +361,7 @@ async def test_get_history_only_returns_tasks_in_history(
             errors=[],
             position=None,
             blueapi_id="blueapi_id_1",
+            result=TaskResult(result=None, type="NoneType"),
         ),
     ]
 
@@ -381,6 +384,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             errors=[],
             position=None,
             blueapi_id="blueapi_id_0",
+            result=TaskResult(result=None, type="NoneType"),
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -393,6 +397,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             errors=[],
             position=None,
             blueapi_id="blueapi_id_1",
+            result=TaskResult(result=None, type="NoneType"),
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -590,7 +595,7 @@ async def test_complete_task_puts_task_in_history_and_updates_status_to_complete
     task.blueapi_id = "blueapi_id"
     task.put_in_progress()
     assert task.status == Status.IN_PROGRESS
-    await task_queue.complete_task(task)
+    await task_queue.complete_task(task, TaskResult(result=None, type="NoneType"))
     assert task.id not in task_queue._queue
     assert task.id in task_queue._history
     assert task.status == Status.SUCCESS
@@ -603,9 +608,13 @@ async def test_complete_task_must_receive_exact_same_object_as_was_claimed(
     similar_task = task.model_copy()
     another_similar_task = copy.copy(task)
     with pytest.raises(AssertionError):
-        await task_queue.complete_task(similar_task)
+        await task_queue.complete_task(
+            similar_task, TaskResult(result=None, type="NoneType")
+        )
     with pytest.raises(AssertionError):
-        await task_queue.complete_task(another_similar_task)
+        await task_queue.complete_task(
+            another_similar_task, TaskResult(result=None, type="NoneType")
+        )
 
 
 async def test_fail_task_puts_task_in_history_and_updates_status_to_complete(
