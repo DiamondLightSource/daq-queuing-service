@@ -369,7 +369,6 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
     assert task_queue_with_history._queue == ["2", "3", "4"]
     assert task_queue_with_history._history == ["0", "1"]
     result = await task_queue_with_history.get_tasks()
-    print(result)
     assert result == [
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
