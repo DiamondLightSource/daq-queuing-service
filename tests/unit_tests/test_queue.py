@@ -27,38 +27,6 @@ def make_new_task(id_str: str):
     )
 
 
-@pytest.fixture
-async def task_queue_claimed(task_queue: TaskQueue):
-    first_task_id = task_queue._queue[0]
-    first_task = task_queue._tasks[first_task_id]
-    first_task.claim()
-    return task_queue
-
-
-@pytest.fixture
-async def task_queue_in_progress(task_queue_claimed: TaskQueue):
-    first_task_id = task_queue_claimed._queue[0]
-    first_task = task_queue_claimed._tasks[first_task_id]
-    first_task.blueapi_id = "blueapi_id_0"
-    first_task.put_in_progress()
-    return task_queue_claimed
-
-
-@pytest.fixture
-async def task_queue_with_history(task_queue: TaskQueue):
-    for i in range(2):
-        task = await task_queue.claim_next_task_once_available()
-        task.blueapi_id = f"blueapi_id_{i}"
-        task.put_in_progress()
-        await task_queue.complete_task(task, TaskResult(result=None, type="NoneType"))
-    # By this point should have 3 tasks in queue and 2 in history
-    for i, task_id in enumerate(task_queue._history):
-        # Real timestamps will break tests
-        task_queue._tasks[task_id].time_started = f"2026-04-17T15:0{i}:00.000000"
-        task_queue._tasks[task_id].time_completed = f"2026-04-17T15:0{i}:59.000000"
-    return task_queue
-
-
 async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueue):
     new_task = make_new_task("new")
     await task_queue.add_tasks([new_task])

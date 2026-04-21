@@ -124,7 +124,7 @@ def create_api_router(
         return await queue.clear_history()
 
     @router.get("/history")
-    async def get_historic_tasks(
+    async def get_completed_tasks(
         status: Status | None = None,
     ) -> list[TaskWithPosition]:
         return _filter_by_status(await queue.get_history(), status)
