@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from typing import NoReturn
 
 from blueapi.client import BlueapiClient
-from blueapi.config import ApplicationConfig, RestConfig, StompConfig
+from blueapi.config import ApplicationConfig, RestConfig, StompConfig, TcpUrl
 from fastapi import FastAPI
 from pydantic import HttpUrl
 
@@ -31,7 +31,7 @@ def create_app() -> FastAPI:
     blueapi_client = BlueapiClient.from_config(
         ApplicationConfig(
             api=RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL)),
-            stomp=StompConfig(enabled=True),
+            stomp=StompConfig(enabled=True, url=TcpUrl("tcp://localhost:61613")),
         )
     )
     blueapi_client_adapter = BlueapiClientAdapter(

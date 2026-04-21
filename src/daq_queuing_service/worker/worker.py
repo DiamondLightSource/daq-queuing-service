@@ -40,11 +40,15 @@ class QueueWorker:
         while True:
             next_task = await self._wait_for_next_task()
             await self._process_task(next_task)
+            self._at_loop_end()
+
+    def _at_loop_end(self):
+        LOGGER.info("Loop finished")
 
     async def _wait_for_next_task(self):
         while True:
             await self._queue.wait_until_task_available()
-            result = self._client.get_state()
+            result = await self._client.get_state()
             if result.value == WorkerState.IDLE:
                 break
             LOGGER.info(
@@ -57,7 +61,7 @@ class QueueWorker:
         task_request = self._task_request_constructor(task.experiment_definition)
         LOGGER.info(f"Sending task {task.id} to BlueAPI")
 
-        result = self._client.run_task(
+        result = await self._client.run_task(
             task_request, on_event=partial(self._on_blueapi_event, task=task)
         )
 
@@ -73,6 +77,7 @@ class QueueWorker:
                 LOGGER.debug(
                     f"Task {task.id} completed succesfully:  {task_status.result}"
                 )
+                print("Task completed")
                 await self._queue.complete_task(task, task_status.result)
             case TaskError():
                 LOGGER.debug(f"Task {task.id} failed: {task_status.result}")
@@ -82,7 +87,10 @@ class QueueWorker:
     def _on_blueapi_event(event: AnyEvent, task: Task):
         match event:
             case WorkerEvent() as worker_event:
-                if task.status != Status.IN_PROGRESS:
+                if (
+                    worker_event.state == WorkerState.RUNNING
+                    and task.status != Status.IN_PROGRESS
+                ):
                     assert worker_event.task_status
                     task.blueapi_id = worker_event.task_status.task_id
                     LOGGER.info(

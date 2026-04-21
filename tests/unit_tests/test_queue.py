@@ -28,27 +28,6 @@ def make_new_task(id_str: str):
 
 
 @pytest.fixture
-def tasks() -> list[Task]:
-    return [
-        Task(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id=str(i), params={}, instrument_session=""
-            ),
-            id=str(i),
-        )
-        for i in range(5)
-    ]
-
-
-@pytest.fixture
-async def task_queue(tasks: list[Task]):
-    queue = TaskQueue()
-    await queue.update_state(paused=False)
-    await queue.add_tasks(tasks)
-    return queue
-
-
-@pytest.fixture
 async def task_queue_claimed(task_queue: TaskQueue):
     first_task_id = task_queue._queue[0]
     first_task = task_queue._tasks[first_task_id]

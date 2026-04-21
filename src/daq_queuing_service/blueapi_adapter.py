@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Generic, TypeVar
@@ -38,14 +39,15 @@ class BlueapiClientAdapter:
     ):
         self._client = client
 
-    def get_state(self) -> BlueapiResult[WorkerState, ServiceUnavailableError]:
+    async def get_state(self) -> BlueapiResult[WorkerState, ServiceUnavailableError]:
         try:
-            return BlueapiResult(value=self._client.get_state())
+            state = await asyncio.to_thread(self._client.get_state)
+            return BlueapiResult(value=state)
         except ServiceUnavailableError as e:
             LOGGER.error(f"Lost connection to blueapi: {e}")
             return BlueapiResult(error=e)
 
-    def run_task(
+    async def run_task(
         self,
         task_request: TaskRequest,
         on_event: OnAnyEvent | None = None,
@@ -57,7 +59,10 @@ class BlueapiClientAdapter:
         | ServiceUnavailableError,
     ]:
         try:
-            return BlueapiResult(self._client.run_task(task_request, on_event=on_event))
+            task_status = await asyncio.to_thread(
+                self._client.run_task, task_request, on_event=on_event
+            )
+            return BlueapiResult(value=task_status)
         except (
             BlueskyRemoteControlError,
             InvalidParametersError,
