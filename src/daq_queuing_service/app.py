@@ -10,8 +10,8 @@ from pydantic import HttpUrl
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.blueapi_adapter import (
-    BlueapiClientAdapter,
+from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_task_request,
 )
 from daq_queuing_service.task_queue.queue import TaskQueue
