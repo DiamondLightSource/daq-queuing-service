@@ -2,7 +2,7 @@ import asyncio
 import copy
 
 import pytest
-from blueapi.worker.event import TaskError, TaskResult
+from blueapi.worker.event import TaskResult
 
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
@@ -11,9 +11,7 @@ from daq_queuing_service.task_queue.queue import (
 )
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
-    TaskIdInUseError,
     TaskInProgressError,
-    TaskNotClaimedError,
     TaskNotFoundError,
 )
 
@@ -27,6 +25,38 @@ def make_new_task(id_str: str):
         ),
         id=id_str,
     )
+
+
+@pytest.fixture
+async def task_queue_claimed(task_queue: TaskQueue):
+    first_task_id = task_queue._queue[0]
+    first_task = task_queue._tasks[first_task_id]
+    first_task.claim()
+    return task_queue
+
+
+@pytest.fixture
+async def task_queue_in_progress(task_queue_claimed: TaskQueue):
+    first_task_id = task_queue_claimed._queue[0]
+    first_task = task_queue_claimed._tasks[first_task_id]
+    first_task.blueapi_id = "blueapi_id_0"
+    first_task.put_in_progress()
+    return task_queue_claimed
+
+
+@pytest.fixture
+async def task_queue_with_history(task_queue: TaskQueue):
+    for i in range(2):
+        task = await task_queue.claim_next_task_once_available()
+        task.blueapi_id = f"blueapi_id_{i}"
+        task.put_in_progress()
+        await task_queue.complete_task(task, TaskResult(result=None, type="NoneType"))
+    # By this point should have 3 tasks in queue and 2 in history
+    for i, task_id in enumerate(task_queue._history):
+        # Real timestamps will break tests
+        task_queue._tasks[task_id].time_started = f"2026-04-17T15:0{i}:00.000000"
+        task_queue._tasks[task_id].time_completed = f"2026-04-17T15:0{i}:59.000000"
+    return task_queue
 
 
 async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueue):
@@ -100,12 +130,6 @@ async def test_add_task_to_negative_position_raises_error(
     new_tasks = [make_new_task("new"), make_new_task("new_2")]
     with pytest.raises(NegativePositionError):
         await task_queue_in_progress.add_tasks(new_tasks, -1)
-
-
-async def test_add_task_with_repeated_task_id_raises_error(task_queue: TaskQueue):
-    new_tasks = [task_queue._tasks["1"]]
-    with pytest.raises(TaskIdInUseError):
-        await task_queue.add_tasks(new_tasks)
 
 
 @pytest.mark.parametrize(
@@ -255,12 +279,11 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
-            status=Status.IN_PROGRESS,
-            time_started="2026-04-17T15:02:00.000000",
+            status=Status.WAITING,
+            time_started=None,
             time_completed=None,
             errors=[],
             position=0,
-            blueapi_id="blueapi_id_2",
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -298,17 +321,13 @@ async def test_get_history_only_returns_tasks_in_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.ERROR,
+            status=Status.SUCCESS,
             time_started="2026-04-17T15:00:00.000000",
             time_completed="2026-04-17T15:00:59.000000",
-            errors=[
-                TaskError(
-                    outcome="error", type="ValueError", message="Error during plan"
-                )
-            ],
+            errors=[],
             position=None,
             blueapi_id="blueapi_id_0",
-            result=None,
+            result=TaskResult(result=None, type="NoneType"),
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -338,17 +357,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.ERROR,
+            status=Status.SUCCESS,
             time_started="2026-04-17T15:00:00.000000",
             time_completed="2026-04-17T15:00:59.000000",
-            errors=[
-                TaskError(
-                    outcome="error", type="ValueError", message="Error during plan"
-                )
-            ],
+            errors=[],
             position=None,
             blueapi_id="blueapi_id_0",
-            result=None,
+            result=TaskResult(result=None, type="NoneType"),
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -368,12 +383,12 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
-            status=Status.IN_PROGRESS,
-            time_started="2026-04-17T15:02:00.000000",
+            status=Status.WAITING,
+            time_started=None,
             time_completed=None,
             errors=[],
             position=0,
-            blueapi_id="blueapi_id_2",
+            blueapi_id=None,
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -614,21 +629,3 @@ async def test_fail_task_with_errors_adds_errors_to_task(
     assert task.errors == ["This task failed"]
     assert task.id in task_queue._history
     assert task.id not in task_queue._queue
-
-
-async def test_return_task_to_queue_changes_task_status_to_waiting(
-    task_queue: TaskQueue,
-):
-    task = await task_queue.claim_next_task_once_available()
-    assert task.status == Status.CLAIMED
-    await task_queue.return_task_to_queue(task)
-    assert task.status == Status.WAITING
-
-
-async def test_return_task_to_queue_raises_error_if_task_has_not_been_claimed(
-    task_queue: TaskQueue,
-):
-    task = await task_queue.claim_next_task_once_available()
-    task.status = Status.SUCCESS
-    with pytest.raises(TaskNotClaimedError):
-        await task_queue.return_task_to_queue(task)

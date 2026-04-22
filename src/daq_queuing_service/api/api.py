@@ -1,11 +1,8 @@
 import logging
 from collections.abc import Callable
 
-from blueapi.client.rest import (
-    BlueapiRestClient,
-    InvalidParametersError,
-    UnknownPlanError,
-)
+from blueapi.client import BlueapiClient
+from blueapi.client.rest import InvalidParametersError, UnknownPlanError
 from blueapi.service.model import TaskRequest
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -17,9 +14,9 @@ from daq_queuing_service.task_queue.queue import (
     TaskWithPosition,
 )
 
-# pyright: reportUnusedFunction=false
-
 LOGGER = logging.getLogger(__name__)
+
+# pyright: reportUnusedFunction=false
 
 
 class InvalidExperimentDefinitionsError(Exception):
@@ -47,7 +44,7 @@ def _filter_by_status(
 
 def _validate_tasks_with_blueapi(
     tasks: list[Task],
-    blueapi_client: BlueapiRestClient,
+    blueapi_client: BlueapiClient,
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
 ) -> None:
     errors: dict[int, InvalidParametersError | UnknownPlanError] = {}
@@ -56,7 +53,6 @@ def _validate_tasks_with_blueapi(
             task_response = blueapi_client.create_task(
                 task_request_constructor(task.experiment_definition)
             )
-            print(task_response)
             blueapi_client.clear_task(task_response.task_id)
         except (InvalidParametersError, UnknownPlanError) as e:
             errors[i] = e
@@ -66,7 +62,7 @@ def _validate_tasks_with_blueapi(
 
 def create_api_router(
     queue: TaskQueue,
-    blueapi_client: BlueapiRestClient,
+    blueapi_client: BlueapiClient,
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
 ) -> APIRouter:
     router = APIRouter()
@@ -123,14 +119,14 @@ def create_api_router(
     async def get_task_by_id(task_id: str) -> TaskWithPosition:
         return await queue.get_task_by_id(task_id)
 
-    @router.get("/history")
-    async def get_completed_tasks(
-        status: Status | None = None,
-    ) -> list[TaskWithPosition]:
-        return _filter_by_status(await queue.get_history(), status)
-
     @router.delete("/history")
     async def clear_history():
         return await queue.clear_history()
+
+    @router.get("/history")
+    async def get_historic_tasks(
+        status: Status | None = None,
+    ) -> list[TaskWithPosition]:
+        return _filter_by_status(await queue.get_history(), status)
 
     return router

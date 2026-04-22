@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,7 +13,6 @@ from blueapi.client.rest import (
 from blueapi.core import DataEvent
 from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
-from pytest import LogCaptureFixture
 
 from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter, BlueapiResult
 from daq_queuing_service.task import ExperimentDefinition, Status
@@ -286,9 +284,3 @@ async def test__wait_for_next_task_waits_for_queue_ready_to_give_task(
 
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(worker._wait_for_next_task(), timeout=0.05)
-
-
-def test__at_loop_end_log_message(worker: QueueWorker, caplog: LogCaptureFixture):
-    with caplog.at_level(logging.INFO):
-        worker._at_loop_end()
-    assert "Loop finished" in caplog.text

@@ -8,9 +8,9 @@ from pydantic import BaseModel
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
+    TaskAlreadyOwnedError,
     TaskIdInUseError,
     TaskInProgressError,
-    TaskNotClaimedError,
     TaskNotFoundError,
     TaskNotInQueueError,
 )
@@ -58,7 +58,7 @@ class TaskQueue:
                     assert task.id == self._queue[0]
                     task.wait()
                 case _:
-                    raise TaskNotClaimedError(
+                    raise TaskAlreadyOwnedError(
                         f"Cannot return task {task.id}, "
                         + f"it's status is {task.status}."
                     )
@@ -237,7 +237,7 @@ class TaskQueue:
     def _validate_new_tasks(self, tasks: list[Task]):
         for task in tasks:
             if task.id in self._tasks:
-                raise TaskIdInUseError(f"Task ID '{task.id}' already in use!")
+                raise TaskIdInUseError(f"str '{task.id}' already in use!")
 
     def _add_tasks(self, tasks: list[Task], position: int | None) -> None:
         task_ids = [task.id for task in tasks]
