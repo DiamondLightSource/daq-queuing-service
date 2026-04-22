@@ -1,8 +1,11 @@
 import logging
 from collections.abc import Callable
 
-from blueapi.client import BlueapiClient
-from blueapi.client.rest import InvalidParametersError, UnknownPlanError
+from blueapi.client.rest import (
+    BlueapiRestClient,
+    InvalidParametersError,
+    UnknownPlanError,
+)
 from blueapi.service.model import TaskRequest
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -44,7 +47,7 @@ def _filter_by_status(
 
 def _validate_tasks_with_blueapi(
     tasks: list[Task],
-    blueapi_client: BlueapiClient,
+    blueapi_client: BlueapiRestClient,
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
 ) -> None:
     errors: dict[int, InvalidParametersError | UnknownPlanError] = {}
@@ -53,6 +56,7 @@ def _validate_tasks_with_blueapi(
             task_response = blueapi_client.create_task(
                 task_request_constructor(task.experiment_definition)
             )
+            print(task_response)
             blueapi_client.clear_task(task_response.task_id)
         except (InvalidParametersError, UnknownPlanError) as e:
             errors[i] = e
@@ -62,7 +66,7 @@ def _validate_tasks_with_blueapi(
 
 def create_api_router(
     queue: TaskQueue,
-    blueapi_client: BlueapiClient,
+    blueapi_client: BlueapiRestClient,
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
 ) -> APIRouter:
     router = APIRouter()

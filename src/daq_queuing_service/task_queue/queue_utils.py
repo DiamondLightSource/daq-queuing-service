@@ -22,7 +22,7 @@ class NegativePositionError(QueueError):
     pass
 
 
-class TaskAlreadyOwnedError(QueueError):
+class TaskNotClaimedError(QueueError):
     pass
 
 

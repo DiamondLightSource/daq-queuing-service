@@ -8,9 +8,9 @@ from pydantic import BaseModel
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
-    TaskAlreadyOwnedError,
     TaskIdInUseError,
     TaskInProgressError,
+    TaskNotClaimedError,
     TaskNotFoundError,
     TaskNotInQueueError,
 )
@@ -58,7 +58,7 @@ class TaskQueue:
                     assert task.id == self._queue[0]
                     task.wait()
                 case _:
-                    raise TaskAlreadyOwnedError(
+                    raise TaskNotClaimedError(
                         f"Cannot return task {task.id}, "
                         + f"it's status is {task.status}."
                     )

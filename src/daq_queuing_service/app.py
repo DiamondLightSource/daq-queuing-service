@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import NoReturn
 
 from blueapi.client import BlueapiClient
+from blueapi.client.rest import BlueapiRestClient
 from blueapi.config import ApplicationConfig, RestConfig, StompConfig, TcpUrl
 from fastapi import FastAPI
 from pydantic import HttpUrl
@@ -28,15 +29,16 @@ logging.basicConfig(
 
 def create_app() -> FastAPI:
     queue = TaskQueue()
+
+    rest_config = RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL))
+    blueapi_rest_client = BlueapiRestClient(config=rest_config)
     blueapi_client = BlueapiClient.from_config(
         ApplicationConfig(
-            api=RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL)),
+            api=rest_config,
             stomp=StompConfig(enabled=True, url=TcpUrl("tcp://localhost:61613")),
         )
     )
-    blueapi_client_adapter = BlueapiClientAdapter(
-        blueapi_client,
-    )
+    blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -65,7 +67,7 @@ def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
     register_exception_handlers(app)
     app.include_router(
-        create_api_router(queue, blueapi_client, construct_blueapi_task_request)
+        create_api_router(queue, blueapi_rest_client, construct_blueapi_task_request)
     )
 
     return app
