@@ -14,8 +14,6 @@ from blueapi.client.rest import (
 from blueapi.service.model import TaskRequest
 from blueapi.worker import TaskStatus, WorkerState
 
-from daq_queuing_service.task import ExperimentDefinition
-
 LOGGER = logging.getLogger(__name__)
 
 T = TypeVar("T")
@@ -71,16 +69,3 @@ class BlueapiClientAdapter:
         ) as e:
             LOGGER.exception(e)
             return BlueapiResult(error=e)
-        except Exception as e:
-            LOGGER.exception(f"Exception: {e}")
-            raise e
-
-
-def construct_blueapi_task_request(
-    experiment_definition: ExperimentDefinition,
-) -> TaskRequest:
-    return TaskRequest(
-        name=experiment_definition.plan_name,
-        params=experiment_definition.params,
-        instrument_session=experiment_definition.instrument_session,
-    )
