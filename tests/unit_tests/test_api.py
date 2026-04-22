@@ -3,8 +3,12 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from blueapi.client import BlueapiClient
-from blueapi.client.rest import InvalidParametersError, ParameterError, UnknownPlanError
+from blueapi.client.rest import (
+    BlueapiRestClient,
+    InvalidParametersError,
+    ParameterError,
+    UnknownPlanError,
+)
 from blueapi.service.model import (
     TaskResponse,
 )
@@ -15,10 +19,16 @@ from fastapi.testclient import TestClient
 from daq_queuing_service.api.api import (
     InvalidExperimentDefinitionsError,
     TaskCancelRequest,
+    _validate_tasks_with_blueapi,
     create_api_router,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.task import ExperimentDefinition, Status, TaskWithPosition
+from daq_queuing_service.task import (
+    ExperimentDefinition,
+    Status,
+    Task,
+    TaskWithPosition,
+)
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.queue_utils import QueueError
 
@@ -26,15 +36,19 @@ MOCK_TASK_REQUEST_CONSTRUCTOR = MagicMock()
 
 
 @pytest.fixture
-def test_client(task_queue_with_history: TaskQueue):
-    blueapi_client = BlueapiClient(rest=MagicMock())
+def blueapi_client():
+    blueapi_client = BlueapiRestClient()
     blueapi_client.create_task = MagicMock(
         return_value=TaskResponse(task_id="blueapi_task_id")
     )
     blueapi_client.clear_task = MagicMock(
         return_value=TaskResponse(task_id="blueapi_task_id")
     )
+    return blueapi_client
 
+
+@pytest.fixture
+def test_client(task_queue_with_history: TaskQueue, blueapi_client: BlueapiRestClient):
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(
@@ -651,3 +665,31 @@ def test_queue_error_caught_by_error_handler(test_client: TestClient):
         )
 
     assert response.status_code == 409
+
+
+def test__validate_tasks_with_blueapi_calls_create_task_and_then_removes_task(
+    blueapi_client: BlueapiRestClient, tasks: list[Task]
+):
+    _validate_tasks_with_blueapi(tasks, blueapi_client, MagicMock())
+
+    assert isinstance(blueapi_client.create_task, MagicMock)
+    assert isinstance(blueapi_client.clear_task, MagicMock)
+    assert blueapi_client.create_task.call_count == 5
+    assert blueapi_client.clear_task.call_count == 5
+
+
+def test__validate_tasks_with_blueapi_calls_collects_errors_and_raises(
+    blueapi_client: BlueapiRestClient,
+    tasks: list[Task],
+):
+    blueapi_client.create_task = MagicMock(side_effect=UnknownPlanError)
+
+    with pytest.raises(InvalidExperimentDefinitionsError) as excinfo:
+        _validate_tasks_with_blueapi(tasks, blueapi_client, MagicMock())
+
+    error_raised = excinfo.value
+    assert isinstance(error_raised, InvalidExperimentDefinitionsError)
+    assert list(error_raised.errors.keys()) == [0, 1, 2, 3, 4]
+    assert all(
+        isinstance(error, UnknownPlanError) for error in error_raised.errors.values()
+    )

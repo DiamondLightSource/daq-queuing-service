@@ -11,7 +11,9 @@ from daq_queuing_service.task_queue.queue import (
 )
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
+    TaskIdInUseError,
     TaskInProgressError,
+    TaskNotClaimedError,
     TaskNotFoundError,
 )
 
@@ -98,6 +100,12 @@ async def test_add_task_to_negative_position_raises_error(
     new_tasks = [make_new_task("new"), make_new_task("new_2")]
     with pytest.raises(NegativePositionError):
         await task_queue_in_progress.add_tasks(new_tasks, -1)
+
+
+async def test_add_task_with_repeated_task_id_raises_error(task_queue: TaskQueue):
+    new_tasks = [task_queue._tasks["1"]]
+    with pytest.raises(TaskIdInUseError):
+        await task_queue.add_tasks(new_tasks)
 
 
 @pytest.mark.parametrize(
@@ -606,3 +614,21 @@ async def test_fail_task_with_errors_adds_errors_to_task(
     assert task.errors == ["This task failed"]
     assert task.id in task_queue._history
     assert task.id not in task_queue._queue
+
+
+async def test_return_task_to_queue_changes_task_status_to_waiting(
+    task_queue: TaskQueue,
+):
+    task = await task_queue.claim_next_task_once_available()
+    assert task.status == Status.CLAIMED
+    await task_queue.return_task_to_queue(task)
+    assert task.status == Status.WAITING
+
+
+async def test_return_task_to_queue_raises_error_if_task_has_not_been_claimed(
+    task_queue: TaskQueue,
+):
+    task = await task_queue.claim_next_task_once_available()
+    task.status = Status.SUCCESS
+    with pytest.raises(TaskNotClaimedError):
+        await task_queue.return_task_to_queue(task)
