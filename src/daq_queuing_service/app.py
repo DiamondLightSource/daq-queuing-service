@@ -20,6 +20,7 @@ from daq_queuing_service.worker.worker import QueueWorker
 
 LOCAL_BLUEAPI_URL = "http://localhost:8000/"
 I15_1_BLUEAPI_URL = "https://i15-1-blueapi.diamond.ac.uk/"
+STOMP_URL = "tcp://localhost:61613"
 
 
 logging.basicConfig(
@@ -28,26 +29,10 @@ logging.basicConfig(
 
 
 def create_app() -> FastAPI:
-    queue = TaskQueue()
-
-    rest_config = RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL))
-    blueapi_rest_client = BlueapiRestClient(config=rest_config)
-    blueapi_client = BlueapiClient.from_config(
-        ApplicationConfig(
-            api=rest_config,
-            stomp=StompConfig(enabled=True, url=TcpUrl("tcp://localhost:61613")),
-        )
-    )
-    blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
-
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        worker = QueueWorker(
-            queue=queue,
-            blueapi_client=blueapi_client_adapter,
-            task_request_constructor=construct_blueapi_task_request,
-        )
-        worker_task = asyncio.create_task(worker.run_loop())
+        worker_task = asyncio.create_task(app.state.worker.run_loop())
+        app.state.worker_task = worker_task
 
         def log_task_exception(task: asyncio.Task[NoReturn]):
             try:
@@ -65,9 +50,30 @@ def create_app() -> FastAPI:
             await asyncio.gather(worker_task, return_exceptions=True)
 
     app = FastAPI(lifespan=lifespan)
+
+    app.state.queue = TaskQueue()
+
+    rest_config = RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL))
+    blueapi_rest_client = BlueapiRestClient(config=rest_config)
+    blueapi_client = BlueapiClient.from_config(
+        ApplicationConfig(
+            api=rest_config,
+            stomp=StompConfig(enabled=True, url=TcpUrl(STOMP_URL)),
+        )
+    )
+    blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
+
+    app.state.worker = QueueWorker(
+        queue=app.state.queue,
+        blueapi_client=blueapi_client_adapter,
+        task_request_constructor=construct_blueapi_task_request,
+    )
+
     register_exception_handlers(app)
     app.include_router(
-        create_api_router(queue, blueapi_rest_client, construct_blueapi_task_request)
+        create_api_router(
+            app.state.queue, blueapi_rest_client, construct_blueapi_task_request
+        )
     )
 
     return app
