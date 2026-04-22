@@ -14,9 +14,9 @@ from daq_queuing_service.task_queue.queue import (
     TaskWithPosition,
 )
 
-LOGGER = logging.getLogger(__name__)
-
 # pyright: reportUnusedFunction=false
+
+LOGGER = logging.getLogger(__name__)
 
 
 class InvalidExperimentDefinitionsError(Exception):
@@ -119,14 +119,14 @@ def create_api_router(
     async def get_task_by_id(task_id: str) -> TaskWithPosition:
         return await queue.get_task_by_id(task_id)
 
-    @router.delete("/history")
-    async def clear_history():
-        return await queue.clear_history()
-
     @router.get("/history")
     async def get_completed_tasks(
         status: Status | None = None,
     ) -> list[TaskWithPosition]:
         return _filter_by_status(await queue.get_history(), status)
+
+    @router.delete("/history")
+    async def clear_history():
+        return await queue.clear_history()
 
     return router

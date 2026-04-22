@@ -2,7 +2,7 @@ import asyncio
 import copy
 
 import pytest
-from blueapi.worker.event import TaskResult
+from blueapi.worker.event import TaskError, TaskResult
 
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
@@ -247,11 +247,12 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
-            status=Status.WAITING,
-            time_started=None,
+            status=Status.IN_PROGRESS,
+            time_started="2026-04-17T15:02:00.000000",
             time_completed=None,
             errors=[],
             position=0,
+            blueapi_id="blueapi_id_2",
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -289,13 +290,17 @@ async def test_get_history_only_returns_tasks_in_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.SUCCESS,
+            status=Status.ERROR,
             time_started="2026-04-17T15:00:00.000000",
             time_completed="2026-04-17T15:00:59.000000",
-            errors=[],
+            errors=[
+                TaskError(
+                    outcome="error", type="ValueError", message="Error during plan"
+                )
+            ],
             position=None,
             blueapi_id="blueapi_id_0",
-            result=TaskResult(result=None, type="NoneType"),
+            result=None,
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -325,13 +330,17 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.SUCCESS,
+            status=Status.ERROR,
             time_started="2026-04-17T15:00:00.000000",
             time_completed="2026-04-17T15:00:59.000000",
-            errors=[],
+            errors=[
+                TaskError(
+                    outcome="error", type="ValueError", message="Error during plan"
+                )
+            ],
             position=None,
             blueapi_id="blueapi_id_0",
-            result=TaskResult(result=None, type="NoneType"),
+            result=None,
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
@@ -351,12 +360,12 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
-            status=Status.WAITING,
-            time_started=None,
+            status=Status.IN_PROGRESS,
+            time_started="2026-04-17T15:02:00.000000",
             time_completed=None,
             errors=[],
             position=0,
-            blueapi_id=None,
+            blueapi_id="blueapi_id_2",
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
