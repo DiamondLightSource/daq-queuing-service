@@ -237,7 +237,7 @@ class TaskQueue:
     def _validate_new_tasks(self, tasks: list[Task]):
         for task in tasks:
             if task.id in self._tasks:
-                raise TaskIdInUseError(f"str '{task.id}' already in use!")
+                raise TaskIdInUseError(f"Task ID '{task.id}' already in use!")
 
     def _add_tasks(self, tasks: list[Task], position: int | None) -> None:
         task_ids = [task.id for task in tasks]

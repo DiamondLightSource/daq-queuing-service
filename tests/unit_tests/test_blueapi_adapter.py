@@ -12,7 +12,7 @@ from blueapi.service.model import TaskRequest
 from blueapi.worker import WorkerState
 from blueapi.worker.event import TaskResult, TaskStatus
 
-from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter, BlueapiResult
 
 
 async def test_blueapi_adapter_get_state_returns_blueapi_response_with_state():
@@ -76,3 +76,11 @@ async def test_blueapi_adapter_run_task_returns_error_if_raised(error: Exception
     )
     assert result.value is None
     assert isinstance(result.error, type(error))
+
+
+@pytest.mark.parametrize("value, error", [[None, None], ["some_value", Exception]])
+def test_blueapi_result_must_have_exactly_one_of_value_or_error_set(
+    value: str | None, error: Exception | None
+):
+    with pytest.raises(ValueError):
+        BlueapiResult(value=value, error=error)

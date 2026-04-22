@@ -1,9 +1,10 @@
 import uuid
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.client import BlueapiClient
+from blueapi.client.rest import InvalidParametersError, ParameterError, UnknownPlanError
 from blueapi.service.model import (
     TaskResponse,
 )
@@ -11,10 +12,15 @@ from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
-from daq_queuing_service.api.api import TaskCancelRequest, create_api_router
+from daq_queuing_service.api.api import (
+    InvalidExperimentDefinitionsError,
+    TaskCancelRequest,
+    create_api_router,
+)
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.task import ExperimentDefinition, Status, TaskWithPosition
 from daq_queuing_service.task_queue.queue import TaskQueue
+from daq_queuing_service.task_queue.queue_utils import QueueError
 
 MOCK_TASK_REQUEST_CONSTRUCTOR = MagicMock()
 
@@ -311,6 +317,72 @@ def test_add_tasks_to_queue_with_bad_payload_gives_expected_error_responses(
     assert response.json() == expected_response_json
 
 
+@pytest.mark.parametrize(
+    "error, expected_response",
+    [
+        [
+            InvalidExperimentDefinitionsError(
+                {
+                    0: InvalidParametersError(
+                        errors=[
+                            ParameterError(
+                                loc=["bad_param"],
+                                msg="fake_error",
+                                type="extra_forbidden",
+                                input="input",
+                            )
+                        ]
+                    )
+                }
+            ),
+            {
+                "error": "invalid_experiment_definitions_error",
+                "message": "Found validation errors for 1 experiment definitions. "
+                + "No tasks have been added to the queue.",
+                "details": {
+                    "0": {
+                        "type": "invalid_parameters",
+                        "details": "Incorrect parameters supplied\n    "
+                        + "Unexpected field 'bad_param'",
+                    }
+                },
+            },
+        ],
+        [
+            InvalidExperimentDefinitionsError({0: UnknownPlanError()}),
+            {
+                "error": "invalid_experiment_definitions_error",
+                "message": "Found validation errors for 1 experiment definitions. "
+                + "No tasks have been added to the queue.",
+                "details": {"0": {"type": "unknown_plan", "details": ""}},
+            },
+        ],
+    ],
+)
+def test_add_tasks_to_queue_if_tasks_fail_validation_then_expected_error_response_given(
+    test_client: TestClient,
+    error: InvalidExperimentDefinitionsError,
+    expected_response: dict[str, Any],
+):
+    with patch(
+        "daq_queuing_service.api.api._validate_tasks_with_blueapi", side_effect=error
+    ):
+        response = test_client.post(
+            "/queue",
+            json=[
+                {
+                    "plan_name": "add_tasks",
+                    "sample_id": "1",
+                    "params": {"time": 10},
+                    "instrument_session": "abc",
+                }
+            ],
+        )
+
+    assert response.status_code == 409
+    assert response.json() == expected_response
+
+
 async def test_move_task_moves_task_and_returns_position(
     test_client: TestClient, task_queue_with_history: TaskQueue
 ):
@@ -559,3 +631,23 @@ async def test_clear_history_deletes_history(
     response = test_client.delete("/history")
     assert response.status_code == 200
     assert not await task_queue_with_history.get_history()
+
+
+def test_queue_error_caught_by_error_handler(test_client: TestClient):
+    with patch(
+        "daq_queuing_service.api.api._validate_tasks_with_blueapi",
+        side_effect=QueueError("Error in queue"),
+    ):
+        response = test_client.post(
+            "/queue",
+            json=[
+                {
+                    "plan_name": "add_tasks",
+                    "sample_id": "1",
+                    "params": {"time": 10},
+                    "instrument_session": "abc",
+                }
+            ],
+        )
+
+    assert response.status_code == 409

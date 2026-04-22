@@ -6,7 +6,6 @@ from daq_queuing_service.api.api import InvalidExperimentDefinitionsError
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     QueueError,
-    TaskIdInUseError,
     TaskInProgressError,
     TaskNotFoundError,
     TaskNotInQueueError,
@@ -39,13 +38,6 @@ def register_exception_handlers(app: FastAPI):
         return JSONResponse(
             status_code=409,
             content={"error": "task_not_in_queue", "message": str(exception)},
-        )
-
-    @app.exception_handler(TaskIdInUseError)
-    async def task_id_in_use_handler(request: Request, exception: TaskIdInUseError):
-        return JSONResponse(
-            status_code=409,
-            content={"error": "task_id_in_use", "message": str(exception)},
         )
 
     @app.exception_handler(NegativePositionError)
