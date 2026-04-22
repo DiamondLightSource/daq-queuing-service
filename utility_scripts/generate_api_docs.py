@@ -15,5 +15,6 @@ openapi = get_openapi(
     routes=app.routes,
 )
 
-with open("docs/reference/rest-api.md", "w") as f:
+with open("docs/reference/rest_api.json", "w") as f:
     f.write(json.dumps(openapi, indent=2))
+    f.write("\n")

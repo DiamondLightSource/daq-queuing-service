@@ -36,6 +36,7 @@ dev = [
     "sphinx-autobuild",
     "sphinx-copybutton",
     "sphinx-design",
+    "sphinxcontrib-openapi>=0.9.0",
     "tox-uv",
     "types-mock",
 ]
@@ -85,7 +86,7 @@ source = ["src", "**/site-packages/"]
 [tool.tox]
 skipsdist = true
 # envs to runs automatically with tox -p
-env_list = ["pre-commit", "type-checking", "tests", "docs"]
+env_list = ["pre-commit", "type-checking", "tests", "docs", "generate-api-docs"]
 
 [tool.tox.env_run_base]
 # Pass all environment variables to the test environments
@@ -133,9 +134,24 @@ commands = [
     ],
 ]
 
+[tool.tox.env.generate-api-docs]
+description = "Compile rest-api.json file from source code. This is then referenced in docs."
+deps = "."
+commands = [
+    [
+        "{envpython}",
+        "utility_scripts/generate_api_docs.py",
+    ],
+]
+
 [tool.tox.env.docs]
 description = "Run docs build with clean environment"
 commands = [
+    [
+        "tox",
+        "-e",
+        "generate-api-docs"
+    ],
     [
         "sphinx-build",
         "--fresh-env",
