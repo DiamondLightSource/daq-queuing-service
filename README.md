@@ -5,10 +5,9 @@
 
 # daq_queuing_service
 
-A service to queue tasks and chain BlueAPI calls
+A service to queue DAQ experiments and chain BlueAPI calls
 
-This is where you should write a short paragraph that describes what your module does,
-how it does it, and why people should use it.
+The service combines a queue with a worker that consumes items in the queue and sends them to blueapi. A REST API is exposed to interact with the queue, allowing users to add, move, cancel, and get information about, items in the queue, and pause/unpause the queue.
 
 Source          | <https://github.com/DiamondLightSource/daq-queuing-service>
 :---:           | :---:
@@ -20,18 +19,6 @@ Releases        | <https://github.com/DiamondLightSource/daq-queuing-service/rel
 This is where you should put some images or code snippets that illustrate
 some relevant examples. If it is a library then you might put some
 introductory code here:
-
-```python
-from daq_queuing_service import __version__
-
-print(f"Hello daq_queuing_service {__version__}")
-```
-
-Or if it is a commandline tool then you might put some example commands here:
-
-```
-python -m daq_queuing_service --version
-```
 
 <!-- README only content. Anything below this line won't be included in index.md -->
 
