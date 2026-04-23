@@ -9,4 +9,6 @@ The items contained inside the queue are called tasks. Tasks are produced by sen
 - Any errors that occurred during the task
 - A blueapi task ID (distinct from the ID assigned by the queue)
 
+When the queue is asked to retrieve a task, it will calculate its position in the queue and include that in the task object.
+
 Once a task reaches the top of the queue, the experiment definition it contains will be converted to a blueapi call and sent to blueapi. Converter plugins can be written and interchanged, allowing for flexibility in how experiment definitions are written by different beamlines. Once a task is complete, it will leave the queue and enter a history list.
