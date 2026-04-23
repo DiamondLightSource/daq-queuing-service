@@ -6,9 +6,8 @@
 
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <title>API &#8212; daq-queuing-service 0.1.dev63+g2c141d34f documentation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HTTP Routing Table &#8212; daq-queuing-service 0.1.dev63+g2c141d34f documentation</title>
   
   
   
@@ -47,7 +46,7 @@
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="_static/copybutton.js?v=30646c52"></script>
     <script src="_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = '_api';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'http-routingtable';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.17.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://DiamondLightSource.github.io/daq-queuing-service/switcher.json';
@@ -59,6 +58,7 @@
     <link rel="icon" href="_static/dls-logo.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="main" />
@@ -68,6 +68,12 @@
     <script src="_static/language_data.js"></script>
     <script src="searchindex.js"></script>
   
+
+    <script>
+      DOCUMENTATION_OPTIONS.COLLAPSE_INDEX = true;
+    </script>
+
+
   </head>
   <body data-default-mode="">
   
@@ -267,10 +273,6 @@
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
-      <span class="fa-solid fa-outdent"></span>
-    </button>
-  
 </div>
 
     </header>
@@ -416,31 +418,7 @@
           <div class="bd-content">
             <div class="bd-article-container">
               
-              <div class="bd-header-article d-print-none">
-<div class="header-article-items header-article__inner">
-  
-    <div class="header-article-items__start">
-      
-        <div class="header-article-item">
-
-<nav aria-label="Breadcrumb" class="d-print-none">
-  <ul class="bd-breadcrumbs">
-    
-    <li class="breadcrumb-item breadcrumb-home">
-      <a href="index.html" class="nav-link" aria-label="Home">
-        <i class="fa-solid fa-home"></i>
-      </a>
-    </li>
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">API</span></li>
-  </ul>
-</nav>
-</div>
-      
-    </div>
-  
-  
-</div>
-</div>
+              <div class="bd-header-article d-print-none"></div>
               
               
               
@@ -448,17 +426,90 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="api">
-<h1>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h1>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/daq_queuing_service.html#module-daq_queuing_service" title="daq_queuing_service"><code class="xref py py-obj docutils literal notranslate"><span class="pre">daq_queuing_service</span></code></a></p></td>
-<td><p>Top level API.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
+
+   <h1>HTTP Routing Table</h1>
+
+   <div class="modindex-jumpbox">
+   <a href="#cap-/"><strong>/</strong></a> | 
+   <a href="#cap-/history"><strong>/history</strong></a> | 
+   <a href="#cap-/queue"><strong>/queue</strong></a> | 
+   <a href="#cap-/tasks"><strong>/tasks</strong></a>
+   </div>
+
+   <table class="indextable modindextable">
+     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
+     <tr class="cap" id="cap-/"><td></td><td>
+       <strong>/</strong></td><td></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#get--"><code class="xref">GET /</code></a></td><td>
+       <em>Read Root</em></td></tr>
+     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
+     <tr class="cap" id="cap-/history"><td></td><td>
+       <strong>/history</strong></td><td></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#get--history"><code class="xref">GET /history</code></a></td><td>
+       <em>Get Completed Tasks</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#delete--history"><code class="xref">DELETE /history</code></a></td><td>
+       <em>Clear History</em></td></tr>
+     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
+     <tr class="cap" id="cap-/queue"><td></td><td>
+       <strong>/queue</strong></td><td></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#get--queue"><code class="xref">GET /queue</code></a></td><td>
+       <em>Get Queued Tasks</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#get--queue-state"><code class="xref">GET /queue/state</code></a></td><td>
+       <em>Get Queue State</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#get--queue-position"><code class="xref">GET /queue/{position}</code></a></td><td>
+       <em>Get Task By Position</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#post--queue"><code class="xref">POST /queue</code></a></td><td>
+       <em>Add Tasks To Queue</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#post--queue-move"><code class="xref">POST /queue/move</code></a></td><td>
+       <em>Move Task</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#delete--queue-tasks"><code class="xref">DELETE /queue/tasks</code></a></td><td>
+       <em>Cancel Tasks</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#patch--queue-state"><code class="xref">PATCH /queue/state</code></a></td><td>
+       <em>Update Queue State</em></td></tr>
+     <tr class="pcap"><td></td><td>&#160;</td><td></td></tr>
+     <tr class="cap" id="cap-/tasks"><td></td><td>
+       <strong>/tasks</strong></td><td></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#get--tasks"><code class="xref">GET /tasks</code></a></td><td>
+       <em>Get All Tasks</em></td></tr>
+     <tr>
+       <td></td>
+       <td>
+       <a href="reference/rest-api.html#get--tasks-task_id"><code class="xref">GET /tasks/{task_id}</code></a></td><td>
+       <em>Get Task By Id</em></td></tr>
+   </table>
 
 
                 </article>
@@ -476,37 +527,6 @@
             </div>
             
             
-              
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-
-  
-  <div class="tocsection editthispage">
-    <a href="https://github.com/DiamondLightSource/daq-queuing-service/edit/main/docs/_api.rst">
-      <i class="fa-solid fa-pencil"></i>
-      
-      
-        
-          Edit on GitHub
-        
-      
-    </a>
-  </div>
-</div>
-
-  <div class="sidebar-secondary-item">
-
-  <div class="tocsection sourcelink">
-    <a href="_sources/_api.rst.txt">
-      <i class="fa-solid fa-file-lines"></i> Show Source
-    </a>
-  </div>
-</div>
-
-</div></div>
               
             
           </div>
