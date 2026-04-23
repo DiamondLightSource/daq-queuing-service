@@ -103,6 +103,13 @@ class TaskQueue:
         LOGGER.info(f"Task {task.id} has been completed successfully: {result}")
 
     async def fail_task(self, task: Task, errors: list[str | TaskError] | None = None):
+        """Sets a task to failed, removes it from the queue and adds it to history
+
+        Args:
+            task (Task): The task to fail
+            errors (list[str  |  TaskError] | None, optional): A list of errors that
+            occurred when trying to run the task. Defaults to None.
+        """
         async with self._condition:
             self._check_task_valid_to_be_returned(task)
             assert self._queue[0] == task.id, (
@@ -121,7 +128,10 @@ class TaskQueue:
             task_id (str): Task ID of the task
 
         Returns:
-            TaskWithPosition: A copy of the task with a position field
+            TaskWithPosition: A copy of the task with a position field.
+
+        Raises:
+            TaskNotFoundError: Raised if the no task exists with the requested task ID.
         """
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
@@ -139,7 +149,8 @@ class TaskQueue:
             position (int): The position of the task to be returned.
 
         Returns:
-            TaskWithPosition | None: A copy of the task with a position field
+            TaskWithPosition | None: A copy of the task with a position field, or None
+            if no task exists at the requested position.
         """
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
@@ -280,6 +291,13 @@ class TaskQueue:
         return len(self._queue)
 
     def _task_available(self) -> bool:
+        """Predicate that determines whether the queue has a task available. This
+        returns True if the first task in the queue has a status of WAITING, and the
+        queue is not paused.
+
+        Returns:
+            bool: Whether or not the queue has a task available.
+        """
         if self._state.paused or not self._queue:
             return False
         return self._tasks[self._queue[0]].status == Status.WAITING
