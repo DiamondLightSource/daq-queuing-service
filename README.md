@@ -16,9 +16,13 @@ Docker          | `docker run ghcr.io/diamondlightsource/daq-queuing-service:lat
 Documentation   | <https://diamondlightsource.github.io/daq-queuing-service>
 Releases        | <https://github.com/DiamondLightSource/daq-queuing-service/releases>
 
-This is where you should put some images or code snippets that illustrate
-some relevant examples. If it is a library then you might put some
-introductory code here:
+The server is build with FastAPI. For developement and testing, it may be useful to have blueapi and the queue service running locally. To get started, install the required dependencies into a virtual environment and run the FastAPI app with uvicorn: 
+```bash
+uv sync
+source .venv/bin/activate
+blueapi --config tests/system_tests/stomp.yaml serve  # This will run on port 8000
+uvicorn daq_queuing_service.app:app --port 8001
+```
 
 <!-- README only content. Anything below this line won't be included in index.md -->
 
