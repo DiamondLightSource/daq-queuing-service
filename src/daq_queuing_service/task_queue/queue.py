@@ -36,6 +36,13 @@ class TaskQueue:
         self._state: QueueState = QueueState(paused=True)
 
     async def claim_next_task_once_available(self) -> Task:
+        """Waits until a task is available before returning the task. A task is
+        available if it's at the top of the queue, is not already in progress or
+        claimed, and the queue is not paused.
+
+        Returns:
+            Task: The task at the top of the queue
+        """
         async with self._condition:
             while not self._task_available():
                 await self._condition.wait()
@@ -45,12 +52,24 @@ class TaskQueue:
         LOGGER.info(f"Task {task.id} has been claimed")
         return task
 
-    async def wait_until_task_available(self) -> None:
+    async def wait_until_task_available(self):
+        """Waits until a task is available before returning. A task is
+        available if it's at the top of the queue, is not already in progress or
+        claimed, and the queue is not paused.
+        """
         async with self._condition:
             while not self._task_available():
                 await self._condition.wait()
 
-    async def return_task_to_queue(self, task: Task) -> None:
+    async def return_task_to_queue(self, task: Task):
+        """Returns a task to the queue that had previously been claimed
+
+        Args:
+            task (Task): The task to return
+
+        Raises:
+            TaskNotClaimedError: Raised if the task's status is not have a 'Claimed'
+        """
         self._check_task_valid_to_be_returned(task)
         async with self._condition:
             match task.status:
@@ -66,6 +85,12 @@ class TaskQueue:
         LOGGER.info(f"Task {task.id} has been returned to the queue")
 
     async def complete_task(self, task: Task, result: TaskResult):
+        """Sets a task to complete, removes it from the queue and adds it to history
+
+        Args:
+            task (Task): Task to be completed
+            result (TaskResult): The result of the task from blueapi
+        """
         async with self._condition:
             self._check_task_valid_to_be_returned(task)
             assert self._queue[0] == task.id, (
@@ -90,6 +115,14 @@ class TaskQueue:
         LOGGER.info(f"Task {task.id} has failed with the following errors: {errors}")
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
+        """Returns a task based on it's task ID
+
+        Args:
+            task_id (str): Task ID of the task
+
+        Returns:
+            TaskWithPosition: A copy of the task with a position field
+        """
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
             return self._get_task_by_id(task_id)
@@ -100,6 +133,14 @@ class TaskQueue:
         return TaskWithPosition.from_task(task, position)
 
     async def get_task_by_position(self, position: int) -> TaskWithPosition | None:
+        """Return a task based on it's position in the queue
+
+        Args:
+            position (int): The position of the task to be returned.
+
+        Returns:
+            TaskWithPosition | None: A copy of the task with a position field
+        """
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._condition:
             if position < -self.length or position >= self.length:
@@ -107,16 +148,34 @@ class TaskQueue:
             return self._get_task_by_id(self._queue[position])
 
     async def get_queue(self) -> list[TaskWithPosition]:
+        """Get the entire queue (not including history)
+
+        Returns:
+            list[TaskWithPosition]: A list of the tasks in the queue, in the order they
+            will be run in.
+        """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._condition:
             return self._get_queue()
 
     async def get_history(self) -> list[TaskWithPosition]:
+        """Get the history list.
+
+        Returns:
+            list[TaskWithPosition]: A list of the tasks in the history list, in
+            chronological order.
+        """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._condition:
             return self._get_history()
 
     async def get_tasks(self) -> list[TaskWithPosition]:
+        """Get all the tasks in the queue and history list.
+
+        Returns:
+            list[TaskWithPosition]: A list of tasks in chronological order, starting
+            with the history.
+        """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._condition:
             return self._get_history() + self._get_queue()
@@ -185,6 +244,9 @@ class TaskQueue:
         return tasks
 
     async def clear_history(self):
+        """Clears the history list. Any task in the history list at the time will be
+        deleted permanently and inaccessible.
+        """
         async with self._condition:
             for task_id in self._history:
                 self._tasks.pop(task_id)
@@ -192,7 +254,15 @@ class TaskQueue:
             self._condition.notify_all()
         LOGGER.info("Succesfully cleared history")
 
-    async def update_state(self, paused: bool | None = None):
+    async def update_state(self, paused: bool | None = None) -> QueueState:
+        """Update the state of the queue.
+
+        Args:
+            paused (bool | None, optional): Whether or not the queue should be paused.
+
+        Returns:
+            QueueState: The new state of the queue.
+        """
         async with self._condition:
             self._state = QueueState(
                 paused=self._state.paused if paused is None else paused
