@@ -5,9 +5,7 @@ from typing import NoReturn
 
 from blueapi.client import BlueapiClient
 from blueapi.client.rest import BlueapiRestClient
-from blueapi.config import ApplicationConfig, RestConfig, StompConfig, TcpUrl
 from fastapi import FastAPI
-from pydantic import HttpUrl
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
@@ -17,6 +15,8 @@ from daq_queuing_service.plugins.construct_task_request import (
 )
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
+
+from ._config import load_config
 
 LOCAL_BLUEAPI_URL = "http://localhost:8000/"
 I15_1_BLUEAPI_URL = "https://i15-1-blueapi.diamond.ac.uk/"
@@ -49,18 +49,13 @@ def create_app() -> FastAPI:
             worker_task.cancel()
             await asyncio.gather(worker_task, return_exceptions=True)
 
+    config = load_config()
     app = FastAPI(lifespan=lifespan)
 
     app.state.queue = TaskQueue()
 
-    rest_config = RestConfig(url=HttpUrl(LOCAL_BLUEAPI_URL))
-    blueapi_rest_client = BlueapiRestClient(config=rest_config)
-    blueapi_client = BlueapiClient.from_config(
-        ApplicationConfig(
-            api=rest_config,
-            stomp=StompConfig(enabled=True, url=TcpUrl(STOMP_URL)),
-        )
-    )
+    blueapi_rest_client = BlueapiRestClient(config=config.blueapi.api)
+    blueapi_client = BlueapiClient.from_config(config.blueapi)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
 
     app.state.worker = QueueWorker(

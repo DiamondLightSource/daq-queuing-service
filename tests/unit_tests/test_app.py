@@ -3,13 +3,23 @@ import logging
 from typing import NoReturn
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
-from daq_queuing_service.app import create_app
+from daq_queuing_service.app.app import create_app
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
+
+
+@pytest.fixture(autouse=True)
+def patch_config_path():
+    with patch(
+        "daq_queuing_service.app._config.CONFIG_PATH",
+        "tests/test_data/test_config.yaml",
+    ):
+        yield
 
 
 def test_create_app_returns_fast_api_object():
@@ -19,7 +29,7 @@ def test_create_app_returns_fast_api_object():
 
 def test_create_app_registers_exception_handlers():
     with patch(
-        "daq_queuing_service.app.register_exception_handlers"
+        "daq_queuing_service.app.app.register_exception_handlers"
     ) as mock_register_exception_handlers:
         create_app()
 
@@ -27,7 +37,9 @@ def test_create_app_registers_exception_handlers():
 
 
 def test_create_app_adds_router():
-    with patch("daq_queuing_service.app.create_api_router") as mock_create_api_router:
+    with patch(
+        "daq_queuing_service.app.app.create_api_router"
+    ) as mock_create_api_router:
         create_app()
 
     mock_create_api_router.assert_called_once()
@@ -54,7 +66,9 @@ def test_worker_task_cancelled_on_shutdown():
 
 
 def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app():
-    with patch("daq_queuing_service.app.create_api_router") as mock_create_api_router:
+    with patch(
+        "daq_queuing_service.app.app.create_api_router"
+    ) as mock_create_api_router:
         app = create_app()
 
     app_queue = app.state.queue
