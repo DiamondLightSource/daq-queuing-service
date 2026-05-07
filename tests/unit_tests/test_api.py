@@ -69,6 +69,11 @@ def test_read_root_returns_expected_string(test_client: TestClient):
     )
 
 
+def test_healthz_returns_healthy(test_client: TestClient):
+    response = test_client.get("/healthz")
+    assert response.status_code == 200
+
+
 def test_get_queue_state_returns_queue_state(test_client: TestClient):
     response = test_client.get("/queue/state")
     assert response.status_code == 200

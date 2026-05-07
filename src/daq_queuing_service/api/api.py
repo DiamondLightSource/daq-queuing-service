@@ -7,7 +7,7 @@ from blueapi.client.rest import (
     UnknownPlanError,
 )
 from blueapi.service.model import TaskRequest
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
@@ -70,6 +70,10 @@ def create_api_router(
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
 ) -> APIRouter:
     router = APIRouter()
+
+    @router.get("/healthz")
+    async def healthz():
+        return Response()
 
     @router.get("/")
     def read_root(request: Request):
