@@ -18,11 +18,6 @@ from daq_queuing_service.worker.worker import QueueWorker
 
 from ._config import load_config
 
-LOCAL_BLUEAPI_URL = "http://localhost:8000/"
-I15_1_BLUEAPI_URL = "https://i15-1-blueapi.diamond.ac.uk/"
-STOMP_URL = "tcp://localhost:61613"
-
-
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
 )
