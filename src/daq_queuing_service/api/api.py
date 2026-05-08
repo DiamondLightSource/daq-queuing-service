@@ -10,6 +10,7 @@ from blueapi.service.model import TaskRequest
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 
+from daq_queuing_service.app._config import AppConfig, load_config
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
     QueueState,
@@ -51,12 +52,12 @@ def _validate_tasks_with_blueapi(
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
 ) -> None:
     errors: dict[int, InvalidParametersError | UnknownPlanError] = {}
+    LOGGER.info(f"Using blueapi client: {blueapi_client._config}")  # type: ignore # noqa
     for i, task in enumerate(tasks):
         try:
             task_response = blueapi_client.create_task(
                 task_request_constructor(task.experiment_definition)
             )
-            print(task_response)
             blueapi_client.clear_task(task_response.task_id)
         except (InvalidParametersError, UnknownPlanError) as e:
             errors[i] = e
@@ -81,6 +82,10 @@ def create_api_router(
         return (
             f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
         )
+
+    @router.get("/config")
+    def get_config() -> AppConfig:
+        return load_config()
 
     @router.patch("/queue/state")
     async def update_queue_state(payload: QueueStateUpdate) -> QueueState:
