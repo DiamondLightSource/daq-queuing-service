@@ -1,6 +1,9 @@
 import pytest
 from blueapi.worker.event import TaskError, TaskResult
 
+from daq_queuing_service.plugins.construct_task_request import (
+    construct_blueapi_call_list,
+)
 from daq_queuing_service.task import ExperimentDefinition, Task
 from daq_queuing_service.task_queue.queue import TaskQueue
 
@@ -20,7 +23,7 @@ def tasks() -> list[Task]:
 
 @pytest.fixture
 async def task_queue(tasks: list[Task]):
-    queue = TaskQueue()
+    queue = TaskQueue(convert=construct_blueapi_call_list)
     await queue.update_state(paused=False)
     await queue.add_tasks(tasks)
     return queue

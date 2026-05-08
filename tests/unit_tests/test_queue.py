@@ -2,8 +2,13 @@ import asyncio
 import copy
 
 import pytest
+from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
 
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from daq_queuing_service.plugins.construct_task_request import (
+    construct_blueapi_call_list,
+)
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
     TaskQueue,
@@ -34,6 +39,21 @@ async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueu
     await task_queue.add_tasks([new_task])
     assert task_queue._queue == ["0", "1", "2", "3", "4", "new"]
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
+
+
+async def test_add_tasks_adds_to_call_queue():
+    task_queue = TaskQueue(convert=construct_blueapi_call_list)
+    await task_queue.add_tasks([make_new_task("new"), make_new_task("new_2")])
+    assert task_queue._call_queue == [
+        BlueapiCall(
+            task_request=TaskRequest(name="test", params={}, instrument_session=""),
+            parent_task_id="new",
+        ),
+        BlueapiCall(
+            task_request=TaskRequest(name="test", params={}, instrument_session=""),
+            parent_task_id="new_2",
+        ),
+    ]
 
 
 async def test_add_tasks_with_position_works_as_expected(task_queue: TaskQueue):
@@ -124,7 +144,7 @@ async def test_move_task_works_as_expected_and_returns_new_position(
     expected_order: list[int],
     expected_return_value: int,
 ):
-    queue = TaskQueue()
+    queue = TaskQueue(convert=construct_blueapi_call_list)
     tasks = [make_new_task(str(i)) for i in range(10)]
     await queue.add_tasks(tasks)
     task = str(task_to_move)
@@ -144,7 +164,11 @@ async def test_move_task_to_position_0_moves_to_position_1_if_first_task_in_prog
 
     new_position = await task_queue_in_progress.move_task("4", 0)
     assert new_position == 1
-    assert task_queue_in_progress._queue == ["0", "4", "1", "2", "3"]
+    expected_order = ["0", "4", "1", "2", "3"]
+    assert task_queue_in_progress._queue == expected_order
+    assert [
+        call.parent_task_id for call in task_queue_in_progress._call_queue
+    ] == expected_order
 
 
 async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting(
@@ -541,7 +565,7 @@ async def test_wait_until_task_available_waits_if_queue_paused(
 
 
 async def test_wait_until_task_available_waits_if_queue_empty():
-    task_queue = TaskQueue()
+    task_queue = TaskQueue(construct_blueapi_call_list)
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_task_available(), timeout=0.05)
 
