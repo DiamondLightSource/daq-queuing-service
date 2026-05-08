@@ -9,8 +9,9 @@ from fastapi import FastAPI
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.plugins.construct_task_request import (
+    construct_blueapi_call_list,
     construct_blueapi_task_request,
 )
 from daq_queuing_service.task_queue.queue import TaskQueue
@@ -47,7 +48,7 @@ def create_app() -> FastAPI:
     config = load_config()
     app = FastAPI(lifespan=lifespan)
 
-    app.state.queue = TaskQueue()
+    app.state.queue = TaskQueue(construct_blueapi_call_list)
 
     blueapi_rest_client = BlueapiRestClient(config=config.blueapi.api)
     blueapi_client = BlueapiClient.from_config(config.blueapi)

@@ -15,7 +15,7 @@ from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
 from blueapi.worker.event import TaskError, TaskResult
 
-from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import TaskQueue
 

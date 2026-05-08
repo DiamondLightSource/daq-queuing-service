@@ -16,7 +16,10 @@ from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
 from pytest import LogCaptureFixture
 
-from daq_queuing_service.blueapi_adapter import BlueapiClientAdapter, BlueapiResult
+from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
+    BlueapiClientAdapter,
+    BlueapiResult,
+)
 from daq_queuing_service.task import ExperimentDefinition, Status
 from daq_queuing_service.task_queue.queue import TaskError, TaskQueue, TaskResult
 from daq_queuing_service.worker.worker import QueueWorker

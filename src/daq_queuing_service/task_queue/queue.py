@@ -1,11 +1,18 @@
 import asyncio
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from types import TracebackType
+from typing import Any
 
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
-from daq_queuing_service.task import Status, Task, TaskWithPosition
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from daq_queuing_service.task import (
+    Status,
+    Task,
+    TaskWithPosition,
+)
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     TaskIdInUseError,
@@ -17,6 +24,10 @@ from daq_queuing_service.task_queue.queue_utils import (
 
 LOGGER = logging.getLogger(__name__)
 
+Converter = Callable[
+    [list[TaskWithPosition], list[TaskWithPosition]], list[BlueapiCall]
+]
+
 
 class TaskRegistry(dict[str, Task]):
     def __missing__(self, task_id: str) -> Task:
@@ -27,13 +38,37 @@ class QueueState(BaseModel):
     paused: bool
 
 
+class Modifying(asyncio.Condition):
+    def __init__(self, on_exit: Callable[[], Any]):
+        super().__init__()
+        self._on_exit = on_exit
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ):
+        self._on_exit()
+
+        return await super().__aexit__(exc_type, exc, tb)
+
+
 class TaskQueue:
-    def __init__(self):
+    def __init__(
+        self,
+        convert: Converter,
+    ):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
-        self._condition = asyncio.Condition()
+        self._call_queue: list[BlueapiCall] = []
         self._state: QueueState = QueueState(paused=True)
+        self._convert = convert
+        self._modifying = Modifying(on_exit=self._after_modifying)
+
+    def _after_modifying(self):
+        self._call_queue = self._convert(self._get_queue(), self._get_history())
 
     async def claim_next_task_once_available(self) -> Task:
         """Waits until a task is available before returning the task. A task is
@@ -43,12 +78,12 @@ class TaskQueue:
         Returns:
             Task: The task at the top of the queue
         """
-        async with self._condition:
+        async with self._modifying:
             while not self._task_available():
-                await self._condition.wait()
+                await self._modifying.wait()
             task = self._tasks[self._queue[0]]
             task.claim()
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has been claimed")
         return task
 
@@ -57,9 +92,9 @@ class TaskQueue:
         available if it's at the top of the queue, is not already in progress or
         claimed, and the queue is not paused.
         """
-        async with self._condition:
+        async with self._modifying:
             while not self._task_available():
-                await self._condition.wait()
+                await self._modifying.wait()
 
     async def return_task_to_queue(self, task: Task):
         """Returns a task to the queue that had previously been claimed
@@ -71,7 +106,7 @@ class TaskQueue:
             TaskNotClaimedError: Raised if the task's status is not have a 'Claimed'
         """
         self._check_task_valid_to_be_returned(task)
-        async with self._condition:
+        async with self._modifying:
             match task.status:
                 case Status.CLAIMED:
                     assert task.id == self._queue[0]
@@ -81,7 +116,7 @@ class TaskQueue:
                         f"Cannot return task {task.id}, "
                         + f"it's status is {task.status}."
                     )
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has been returned to the queue")
 
     async def complete_task(self, task: Task, result: TaskResult):
@@ -91,7 +126,7 @@ class TaskQueue:
             task (Task): Task to be completed
             result (TaskResult): The result of the task from blueapi
         """
-        async with self._condition:
+        async with self._modifying:
             self._check_task_valid_to_be_returned(task)
             assert self._queue[0] == task.id, (
                 f"This task is not at the front of the queue: {task}"
@@ -99,7 +134,7 @@ class TaskQueue:
             task.succeed(result)
             self._queue.pop(0)
             self._history.append(task.id)
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has been completed successfully: {result}")
 
     async def fail_task(self, task: Task, errors: list[str | TaskError] | None = None):
@@ -110,7 +145,7 @@ class TaskQueue:
             errors (list[str  |  TaskError] | None, optional): A list of errors that
             occurred when trying to run the task. Defaults to None.
         """
-        async with self._condition:
+        async with self._modifying:
             self._check_task_valid_to_be_returned(task)
             assert self._queue[0] == task.id, (
                 f"This task is not at the front of the queue: {task}"
@@ -118,7 +153,7 @@ class TaskQueue:
             task.fail(errors)
             self._queue.pop(0)
             self._history.append(task.id)
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has failed with the following errors: {errors}")
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
@@ -134,7 +169,7 @@ class TaskQueue:
             TaskNotFoundError: Raised if the no task exists with the requested task ID.
         """
         # Returns copy so don't have to be worried about caller modifying task.
-        async with self._condition:
+        async with self._modifying:
             return self._get_task_by_id(task_id)
 
     def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
@@ -153,7 +188,7 @@ class TaskQueue:
             if no task exists at the requested position.
         """
         # Returns copy so don't have to be worried about caller modifying task.
-        async with self._condition:
+        async with self._modifying:
             if position < -self.length or position >= self.length:
                 return None
             return self._get_task_by_id(self._queue[position])
@@ -166,7 +201,7 @@ class TaskQueue:
             will be run in.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._condition:
+        async with self._modifying:
             return self._get_queue()
 
     async def get_history(self) -> list[TaskWithPosition]:
@@ -177,7 +212,7 @@ class TaskQueue:
             chronological order.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._condition:
+        async with self._modifying:
             return self._get_history()
 
     async def get_tasks(self) -> list[TaskWithPosition]:
@@ -188,7 +223,7 @@ class TaskQueue:
             with the history.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._condition:
+        async with self._modifying:
             return self._get_history() + self._get_queue()
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
@@ -202,12 +237,12 @@ class TaskQueue:
             tasks (list[Task]): List of tasks to add
             position (int | None, optional): Position of the tasks. Defaults to None.
         """
-        async with self._condition:
+        async with self._modifying:
             self._validate_new_tasks(tasks)
             if position is not None:
                 position = self._get_valid_position(position)
             self._add_tasks(tasks, position)
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info(f"Successfully added tasks to queue: {[task.id for task in tasks]}")
 
     async def move_task(self, task_id: str, position: int) -> int:
@@ -222,12 +257,12 @@ class TaskQueue:
         Returns:
             int: The new position of the task (may be different to what was requested)
         """
-        async with self._condition:
+        async with self._modifying:
             self._validate_tasks_for_move_or_deletion([task_id])
             position = self._get_valid_position(position)
             self._remove_tasks_from_queue([task_id])
             self._queue[position:position] = [task_id]
-            self._condition.notify_all()
+            self._modifying.notify_all()
             new_position = self._queue.index(task_id)
         LOGGER.info(f"Succesfully moved task {task_id} to position {new_position}")
         return new_position
@@ -243,14 +278,14 @@ class TaskQueue:
         Returns:
             list[Task]: List of the task objects that were removed from the queue.
         """
-        async with self._condition:
+        async with self._modifying:
             task_ids = list(task_ids)
             self._validate_tasks_for_move_or_deletion(task_ids)
             self._remove_tasks_from_queue(task_ids)
             tasks = self._remove_tasks_from_registry(task_ids)
             for task in tasks:
                 task.cancel()
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info(f"Succesfully cancelled tasks: {task_ids}")
         return tasks
 
@@ -258,11 +293,11 @@ class TaskQueue:
         """Clears the history list. Any task in the history list at the time will be
         deleted permanently and inaccessible.
         """
-        async with self._condition:
+        async with self._modifying:
             for task_id in self._history:
                 self._tasks.pop(task_id)
             self._history.clear()
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info("Succesfully cleared history")
 
     async def update_state(self, paused: bool | None = None) -> QueueState:
@@ -274,11 +309,11 @@ class TaskQueue:
         Returns:
             QueueState: The new state of the queue.
         """
-        async with self._condition:
+        async with self._modifying:
             self._state = QueueState(
                 paused=self._state.paused if paused is None else paused
             )
-            self._condition.notify_all()
+            self._modifying.notify_all()
         LOGGER.info(f"Succesfully updated queue state to {self._state}")
         return self._state
 
