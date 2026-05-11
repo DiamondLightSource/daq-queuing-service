@@ -16,7 +16,8 @@ from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
 from blueapi.worker.event import TaskError, TaskResult
 
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
-from daq_queuing_service.task import ExperimentDefinition, Status, Task
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.task import ExperimentDefinition
 from daq_queuing_service.task_queue.queue import TaskQueue
 
 LOGGER = logging.getLogger(__name__)
@@ -38,16 +39,16 @@ class QueueWorker:
 
     async def run_loop(self):
         while True:
-            next_task = await self._wait_for_next_task()
-            await self._process_task(next_task)
+            next_call = await self._wait_for_next_task()
+            await self._process_call(next_call)
             self._at_loop_end()
 
     def _at_loop_end(self):
         LOGGER.info("Loop finished")
 
-    async def _wait_for_next_task(self):
+    async def _wait_for_next_task(self) -> BlueapiCall:
         while True:
-            await self._queue.wait_until_task_available()
+            await self._queue.wait_until_call_available()
             result = await self._client.get_state()
             if result.value == WorkerState.IDLE:
                 break
@@ -55,18 +56,18 @@ class QueueWorker:
                 f"Waiting for BlueAPI worker to be IDLE, currently {result.value}"
             )
             await asyncio.sleep(self.poll_time_s)
-        return await self._queue.claim_next_task_once_available()
+        return await self._queue.get_next_call_once_available()
 
-    async def _process_task(self, task: Task):
-        task_request = self._task_request_constructor(task.experiment_definition)
-        LOGGER.info(f"Sending task {task.id} to BlueAPI")
+    async def _process_call(self, call: BlueapiCall):
+        task_request = call.task_request
+        LOGGER.info(f"Sending call {call} to BlueAPI")
 
         result = await self._client.run_task(
-            task_request, on_event=partial(self._on_blueapi_event, task=task)
+            task_request, on_event=partial(self._on_blueapi_event, call=call)
         )
 
         if result.error:
-            await self._handle_run_task_error(task, result.error)
+            await self._handle_run_task_error(call, result.error)
             return
 
         assert result.value
@@ -75,28 +76,27 @@ class QueueWorker:
         match task_status.result:
             case TaskResult():
                 LOGGER.debug(
-                    f"Task {task.id} completed succesfully:  {task_status.result}"
+                    f"Call {call} completed succesfully:  {task_status.result}"
                 )
-                print("Task completed")
-                await self._queue.complete_task(task, task_status.result)
+                await self._queue.complete_call(call, task_status.result)
             case TaskError():
-                LOGGER.debug(f"Task {task.id} failed: {task_status.result}")
-                await self._queue.fail_task(task, [task_status.result])
+                LOGGER.debug(f"Call {call} failed: {task_status.result}")
+                await self._queue.fail_call(call, [task_status.result])
 
     @staticmethod
-    def _on_blueapi_event(event: AnyEvent, task: Task):
+    def _on_blueapi_event(event: AnyEvent, call: BlueapiCall):
         match event:
             case WorkerEvent() as worker_event:
                 if (
                     worker_event.state == WorkerState.RUNNING
-                    and task.status != Status.IN_PROGRESS
+                    and call.status != CallStatus.IN_PROGRESS
                 ):
                     assert worker_event.task_status
-                    task.blueapi_id = worker_event.task_status.task_id
+                    call.blueapi_id = worker_event.task_status.task_id
                     LOGGER.info(
-                        f"Task {task.id} is in progress, blueapi ID: " + task.blueapi_id
+                        f"Call {call} is in progress, blueapi ID: {call.blueapi_id}"
                     )
-                    task.put_in_progress()
+                    call.put_in_progress()
             case ProgressEvent():
                 pass
 
@@ -105,7 +105,7 @@ class QueueWorker:
 
     async def _handle_run_task_error(
         self,
-        task: Task,
+        call: BlueapiCall,
         error: InvalidParametersError
         | UnknownPlanError
         | ServiceUnavailableError
@@ -114,12 +114,11 @@ class QueueWorker:
     ):
         match error:
             case InvalidParametersError():
-                await self._queue.fail_task(
-                    task,
-                    errors=[str(error) for error in error.errors],
+                await self._queue.fail_call(
+                    call, errors=[str(error) for error in error.errors]
                 )
             case UnknownPlanError():
-                await self._queue.fail_task(task, ["Unknown plan", str(error)])
+                await self._queue.fail_call(call, ["Unknown plan", str(error)])
             case BlueskyRemoteControlError() | ServiceUnavailableError():
                 # We get this error if the blueapi worker is busy or unavailable
-                await self._queue.return_task_to_queue(task)
+                await self._queue.return_call_to_queue(call)

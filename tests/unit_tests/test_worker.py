@@ -20,6 +20,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
     BlueapiClientAdapter,
     BlueapiResult,
 )
+from daq_queuing_service.blueapi_interaction.blueapi_call import CallStatus
 from daq_queuing_service.task import ExperimentDefinition, Status
 from daq_queuing_service.task_queue.queue import TaskError, TaskQueue, TaskResult
 from daq_queuing_service.worker.worker import QueueWorker
@@ -187,12 +188,12 @@ async def test_worker_run_loop_cycle(
     with pytest.raises(only_loop_once):
         await worker.run_loop()
 
-    assert first_task.status == Status.SUCCESS
+    assert first_task.status == Status.COMPLETE
     worker._client.get_state.assert_called_once()  # type: ignore
     worker._client.run_task.assert_called_once()  # type: ignore
 
 
-async def test_when_parameter_error_then_task_failed_and_error_added_to_task(
+async def test_when_parameter_error_then_call_failed_and_error_added_to_call(
     worker_with_parameter_error: QueueWorker, only_loop_once: type[Exception]
 ):
 
@@ -202,13 +203,14 @@ async def test_when_parameter_error_then_task_failed_and_error_added_to_task(
     with pytest.raises(only_loop_once):
         await worker_with_parameter_error.run_loop()
 
-    assert first_task.status == Status.ERROR
-    assert first_task.errors == ["Unexpected field 'bad_param'"]
+    first_call = first_task.blueapi_calls[0]
+    assert first_call.status == CallStatus.ERROR
+    assert first_call.errors == ["Unexpected field 'bad_param'"]
     worker_with_parameter_error._client.get_state.assert_called_once()  # type: ignore
     worker_with_parameter_error._client.run_task.assert_called_once()  # type: ignore
 
 
-async def test_when_plan_name_error_then_task_failed_and_error_added_to_task(
+async def test_when_plan_name_error_then_call_failed_and_error_added_to_task(
     worker_with_unknown_plan_error: QueueWorker, only_loop_once: type[Exception]
 ):
 
@@ -218,13 +220,14 @@ async def test_when_plan_name_error_then_task_failed_and_error_added_to_task(
     with pytest.raises(only_loop_once):
         await worker_with_unknown_plan_error.run_loop()
 
-    assert first_task.status == Status.ERROR
-    assert first_task.errors == ["Unknown plan", ""]
+    first_call = first_task.blueapi_calls[0]
+    assert first_call.status == CallStatus.ERROR
+    assert first_call.errors == ["Unknown plan", ""]
     worker_with_unknown_plan_error._client.get_state.assert_called_once()  # type: ignore
     worker_with_unknown_plan_error._client.run_task.assert_called_once()  # type: ignore
 
 
-async def test_when_blueapi_error_then_task_put_back_into_queue(
+async def test_when_blueapi_error_then_call_put_back_into_queue(
     worker_with_blueapi_error: QueueWorker, only_loop_once: type[Exception]
 ):
 
@@ -234,7 +237,9 @@ async def test_when_blueapi_error_then_task_put_back_into_queue(
     with pytest.raises(only_loop_once):
         await worker_with_blueapi_error.run_loop()
 
-    assert first_task.status == Status.WAITING
+    first_call = first_task.blueapi_calls[0]
+    assert first_call.status == CallStatus.WAITING
+    assert first_task.status == Status.QUEUED
     worker_with_blueapi_error._client.get_state.assert_called_once()  # type: ignore
     worker_with_blueapi_error._client.run_task.assert_called_once()  # type: ignore
     assert not await worker_with_blueapi_error._queue.get_history()
@@ -250,8 +255,9 @@ async def test_when_plan_error_then_task_failed_and_errors_added(
     with pytest.raises(only_loop_once):
         await worker_with_plan_error.run_loop()
 
-    assert first_task.status == Status.ERROR
-    assert first_task.errors == [
+    first_call = first_task.blueapi_calls[0]
+    assert first_call.status == CallStatus.ERROR
+    assert first_call.errors == [
         TaskError(outcome="error", type="ValueError", message="Error during plan")
     ]
     worker_with_plan_error._client.get_state.assert_called_once()  # type: ignore
@@ -285,7 +291,7 @@ async def test__wait_for_next_task_waits_for_queue_ready_to_give_task(
     worker: QueueWorker,
 ):
     queue = worker._queue
-    queue._tasks[queue._queue[0]].status = Status.IN_PROGRESS
+    queue._tasks[queue._queue[0]].blueapi_calls[0].status = CallStatus.IN_PROGRESS
 
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(worker._wait_for_next_task(), timeout=0.05)

@@ -7,8 +7,8 @@ from typing import Any
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, Status
-from daq_queuing_service.task import Task, TaskStatus, TaskWithPosition
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     TaskIdInUseError,
@@ -68,10 +68,10 @@ class TaskQueue:
     def _update_call_queue(self):
         for task_id in self._queue:
             task = self._tasks[task_id]
-            if task.status == TaskStatus.COMPLETE:
+            if task.status == Status.COMPLETE:
                 self._queue.remove(task_id)
                 self._history.append(task_id)
-            elif task.status != TaskStatus.IN_PROGRESS:
+            elif task.status != Status.IN_PROGRESS:
                 task.blueapi_calls = []
 
         self._call_queue = [
@@ -79,11 +79,11 @@ class TaskQueue:
             for call in self._call_queue
             if call.parent_task_id
             and call.parent_task_id in self._queue
-            and self._tasks[call.parent_task_id].status == TaskStatus.IN_PROGRESS
+            and self._tasks[call.parent_task_id].status == Status.IN_PROGRESS
         ]
 
         new_queue = self._convert(
-            [task for task in self._get_queue() if task.status == TaskStatus.QUEUED],
+            [task for task in self._get_queue() if task.status == Status.QUEUED],
             self._get_history(),
             self._queue_history,
         )
@@ -134,7 +134,7 @@ class TaskQueue:
         self._check_call_valid_to_be_returned(call)
         async with self._modifying:
             match call.status:
-                case Status.CLAIMED:
+                case CallStatus.CLAIMED:
                     assert call == self._call_queue[0]
                     call.wait()
                 case _:
@@ -350,7 +350,7 @@ class TaskQueue:
         """
         if self._state.paused or not self._call_queue:
             return False
-        return self._call_queue[0].status == Status.WAITING
+        return self._call_queue[0].status == CallStatus.WAITING
 
     def _check_call_valid_to_be_returned(self, call: BlueapiCall):
         # Check caller has actual task object not copy
@@ -369,7 +369,7 @@ class TaskQueue:
         if (  # if position 0 requested but a task is in progress, return position 1
             position == 0
             and self.length
-            and self._tasks[self._queue[0]].status != TaskStatus.QUEUED
+            and self._tasks[self._queue[0]].status != Status.QUEUED
         ):
             return 1
         return position
@@ -427,7 +427,7 @@ class TaskQueue:
             task = self._tasks[task_id]
             if task_id not in self._queue:
                 raise TaskNotInQueueError(f"Task {task_id} isn't present in queue")
-            if task.status != TaskStatus.QUEUED:
+            if task.status != Status.QUEUED:
                 raise TaskInProgressError(
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )

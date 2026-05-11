@@ -5,14 +5,14 @@ from uuid import uuid4
 from blueapi.service.model import StrEnum
 from pydantic import BaseModel, Field
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, Status
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
 
 
 def create_uuid_str() -> str:
     return str(uuid4())
 
 
-class TaskStatus(StrEnum):
+class Status(StrEnum):
     QUEUED = "Queued"
     IN_PROGRESS = "In progress"
     COMPLETE = "Complete"
@@ -38,20 +38,26 @@ class Task(BaseModel):
         self._cancelled = True
 
     @property
-    def status(self) -> TaskStatus:
+    def status(self) -> Status:
         if self._cancelled:
-            return TaskStatus.CANCELLED
+            return Status.CANCELLED
         if self.blueapi_calls and all(
-            call.status in [Status.SUCCESS, Status.ERROR] for call in self.blueapi_calls
-        ):
-            return TaskStatus.COMPLETE
-        if any(
-            call.status
-            in [Status.IN_PROGRESS, Status.CLAIMED, Status.SUCCESS, Status.ERROR]
+            call.status in [CallStatus.SUCCESS, CallStatus.ERROR]
             for call in self.blueapi_calls
         ):
-            return TaskStatus.IN_PROGRESS
-        return TaskStatus.QUEUED
+            return Status.COMPLETE
+        if any(
+            call.status
+            in [
+                Status.IN_PROGRESS,
+                CallStatus.CLAIMED,
+                CallStatus.SUCCESS,
+                CallStatus.ERROR,
+            ]
+            for call in self.blueapi_calls
+        ):
+            return Status.IN_PROGRESS
+        return Status.QUEUED
 
 
 class TaskWithPosition(Task):

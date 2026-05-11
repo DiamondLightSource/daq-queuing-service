@@ -6,7 +6,7 @@ from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel, Field
 
 
-class Status(StrEnum):
+class CallStatus(StrEnum):
     WAITING = "Waiting"  # Waiting in the queue
     CLAIMED = "Claimed"  # Claimed by the worker
     IN_PROGRESS = "In progress"  # In progress inside BlueAPI
@@ -15,12 +15,16 @@ class Status(StrEnum):
 
     @property
     def allowed_transitions(self):
-        allowed_transitions: dict[Status, set[Status]] = {  # from: to
-            Status.WAITING: {Status.CLAIMED},
-            Status.CLAIMED: {Status.WAITING, Status.IN_PROGRESS, Status.ERROR},
-            Status.IN_PROGRESS: {Status.SUCCESS, Status.ERROR},
-            Status.SUCCESS: set(),
-            Status.ERROR: set(),
+        allowed_transitions: dict[CallStatus, set[CallStatus]] = {  # from: to
+            CallStatus.WAITING: {CallStatus.CLAIMED},
+            CallStatus.CLAIMED: {
+                CallStatus.WAITING,
+                CallStatus.IN_PROGRESS,
+                CallStatus.ERROR,
+            },
+            CallStatus.IN_PROGRESS: {CallStatus.SUCCESS, CallStatus.ERROR},
+            CallStatus.SUCCESS: set(),
+            CallStatus.ERROR: set(),
         }
         return allowed_transitions[self]
 
@@ -28,14 +32,14 @@ class Status(StrEnum):
 class BlueapiCall(BaseModel):
     task_request: TaskRequest
     parent_task_id: str | None = None
-    status: Status = Status.WAITING
+    status: CallStatus = CallStatus.WAITING
     time_started: str | None = None
     time_completed: str | None = None
     result: TaskResult | None = None
     errors: list[str | TaskError] = Field(default_factory=list[str | TaskError])
     blueapi_id: str | None = None
 
-    def _update_status(self, new_status: Status):
+    def _update_status(self, new_status: CallStatus):
         """Updates the status of the task, checking that the transition is valid
 
         Args:
@@ -55,17 +59,17 @@ class BlueapiCall(BaseModel):
 
     def wait(self):
         """Updates the task status to WAITING"""
-        self._update_status(Status.WAITING)
+        self._update_status(CallStatus.WAITING)
 
     def claim(self):
         """Updates the task status to CLAIMED"""
-        self._update_status(Status.CLAIMED)
+        self._update_status(CallStatus.CLAIMED)
 
     def put_in_progress(self):
         """Updates the task status to IN_PROGRESS and sets the time_started field to the
         current time
         """
-        self._update_status(Status.IN_PROGRESS)
+        self._update_status(CallStatus.IN_PROGRESS)
         self.time_started = datetime.now().isoformat()
 
     def succeed(self, result: TaskResult):
@@ -75,7 +79,7 @@ class BlueapiCall(BaseModel):
         Args:
             result (TaskResult): The result of the task from blueapi
         """
-        self._update_status(Status.SUCCESS)
+        self._update_status(CallStatus.SUCCESS)
         self.result = result
         self.time_completed = datetime.now().isoformat()
 
@@ -87,7 +91,7 @@ class BlueapiCall(BaseModel):
             errors (list[str  |  TaskError] | None, optional): List of errors that
             occurred when trying to run the task. Defaults to None.
         """
-        self._update_status(Status.ERROR)
+        self._update_status(CallStatus.ERROR)
         self.time_completed = datetime.now().isoformat()
         if errors:
             self.errors.extend(errors)
