@@ -59,11 +59,10 @@ class QueueWorker:
         return await self._queue.get_next_call_once_available()
 
     async def _process_call(self, call: BlueapiCall):
-        task_request = call.task_request
         LOGGER.info(f"Sending call {call} to BlueAPI")
 
         result = await self._client.run_task(
-            task_request, on_event=partial(self._on_blueapi_event, call=call)
+            call.task_request, on_event=partial(self._on_blueapi_event, call=call)
         )
 
         if result.error:
