@@ -9,7 +9,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
 )
-from daq_queuing_service.task import ExperimentDefinition, Status, Task
+from daq_queuing_service.task import ExperimentDefinition, Status, Task, TaskStatus
 from daq_queuing_service.task_queue.queue import (
     TaskQueue,
     TaskWithPosition,
@@ -77,7 +77,7 @@ async def test_add_task_to_position_0_adds_to_position_1_if_first_task_in_progre
 ):
     new_tasks = [make_new_task("new"), make_new_task("new_2")]
     first_task = await task_queue_in_progress.get_task_by_position(0)
-    assert first_task and first_task.status == Status.IN_PROGRESS
+    assert first_task and first_task.status == TaskStatus.IN_PROGRESS
 
     await task_queue_in_progress.add_tasks(new_tasks, 0)
 
@@ -98,7 +98,7 @@ async def test_add_task_to_position_0_adds_to_position_0_if_first_task_waiting(
 ):
     new_tasks = new_tasks = [make_new_task("new"), make_new_task("new_2")]
     first_task = await task_queue.get_task_by_position(0)
-    assert first_task and first_task.status == Status.WAITING
+    assert first_task and first_task.status == TaskStatus.QUEUED
 
     await task_queue.add_tasks(new_tasks, 0)
 
@@ -175,30 +175,17 @@ async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting
     task_queue: TaskQueue,
 ):
     task = await task_queue.get_task_by_position(0)
-    assert task and task.status == Status.WAITING
+    assert task and task.status == TaskStatus.QUEUED
 
     await task_queue.move_task("4", 0)
     assert task_queue._queue == ["4", "0", "1", "2", "3"]
-
-
-async def test_move_task_does_not_move_task_that_is_claimed_and_raises_error(
-    task_queue_claimed: TaskQueue,
-):
-    task = await task_queue_claimed.get_task_by_position(0)
-    assert task and task.status == Status.CLAIMED
-
-    with pytest.raises(TaskInProgressError):
-        await task_queue_claimed.move_task("0", 3)
-
-    assert task_queue_claimed._queue == ["0", "1", "2", "3", "4"]
-    assert set(task_queue_claimed._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
 async def test_move_task_does_not_move_task_that_is_in_progress_and_raises_error(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
-    assert task and task.status == Status.IN_PROGRESS
+    assert task and task.status == TaskStatus.IN_PROGRESS
 
     with pytest.raises(TaskInProgressError):
         await task_queue_in_progress.move_task("0", 3)
@@ -211,7 +198,7 @@ async def test_move_task_raises_error_if_wrong_task_id_given(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
-    assert task and task.status == Status.IN_PROGRESS
+    assert task and task.status == TaskStatus.IN_PROGRESS
 
     with pytest.raises(TaskNotFoundError):
         await task_queue_in_progress.move_task("10", 3)
@@ -224,24 +211,11 @@ async def test_remove_tasks_works_as_expected(task_queue: TaskQueue):
     assert task_queue._queue == ["0", "1", "3"]
 
 
-async def test_remove_tasks_does_not_remove_task_that_is_claimed_and_raises_error(
-    task_queue_claimed: TaskQueue,
-):
-    task = await task_queue_claimed.get_task_by_position(0)
-    assert task and task.status == Status.CLAIMED
-
-    with pytest.raises(TaskInProgressError):
-        await task_queue_claimed.cancel_tasks(["0", "2"])
-
-    assert task_queue_claimed._queue == ["0", "1", "2", "3", "4"]
-    assert set(task_queue_claimed._tasks.keys()) == {"0", "1", "2", "3", "4"}
-
-
 async def test_remove_tasks_does_not_remove_task_that_is_in_progress_and_raises_error(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
-    assert task and task.status == Status.IN_PROGRESS
+    assert task and task.status == TaskStatus.IN_PROGRESS
 
     with pytest.raises(TaskInProgressError):
         await task_queue_in_progress.cancel_tasks(["0", "2"])
@@ -279,22 +253,33 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
-            status=Status.IN_PROGRESS,
-            time_started="2026-04-17T15:02:00.000000",
-            time_completed=None,
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="2",
+                    status=Status.IN_PROGRESS,
+                    time_started="2026-04-17T15:02:00.000000",
+                    time_completed=None,
+                    errors=[],
+                )
+            ],
             position=0,
-            blueapi_id="blueapi_id_2",
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
                 plan_name="test", sample_id="3", instrument_session=""
             ),
             id="3",
-            status=Status.WAITING,
-            time_started=None,
-            time_completed=None,
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="3",
+                    status=Status.WAITING,
+                    time_started=None,
+                    time_completed=None,
+                    errors=[],
+                )
+            ],
             position=1,
         ),
         TaskWithPosition(
@@ -302,10 +287,16 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 plan_name="test", sample_id="4", instrument_session=""
             ),
             id="4",
-            status=Status.WAITING,
-            time_started=None,
-            time_completed=None,
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="4",
+                    status=Status.WAITING,
+                    time_started=None,
+                    time_completed=None,
+                    errors=[],
+                )
+            ],
             position=2,
         ),
     ]
@@ -322,30 +313,42 @@ async def test_get_history_only_returns_tasks_in_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.ERROR,
-            time_started="2026-04-17T15:00:00.000000",
-            time_completed="2026-04-17T15:00:59.000000",
-            errors=[
-                TaskError(
-                    outcome="error", type="ValueError", message="Error during plan"
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="0",
+                    status=Status.ERROR,
+                    time_started="2026-04-17T15:00:00.000000",
+                    time_completed="2026-04-17T15:00:59.000000",
+                    errors=[
+                        TaskError(
+                            outcome="error",
+                            type="ValueError",
+                            message="Error during plan",
+                        )
+                    ],
+                    result=None,
                 )
             ],
             position=None,
-            blueapi_id="blueapi_id_0",
-            result=None,
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
                 plan_name="test", sample_id="1", instrument_session=""
             ),
             id="1",
-            status=Status.SUCCESS,
-            time_started="2026-04-17T15:01:00.000000",
-            time_completed="2026-04-17T15:01:59.000000",
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="1",
+                    status=Status.SUCCESS,
+                    time_started="2026-04-17T15:01:00.000000",
+                    time_completed="2026-04-17T15:01:59.000000",
+                    errors=[],
+                    result=TaskResult(result=None, type="NoneType"),
+                )
+            ],
             position=None,
-            blueapi_id="blueapi_id_1",
-            result=TaskResult(result=None, type="NoneType"),
         ),
     ]
 
@@ -362,66 +365,93 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.ERROR,
-            time_started="2026-04-17T15:00:00.000000",
-            time_completed="2026-04-17T15:00:59.000000",
-            errors=[
-                TaskError(
-                    outcome="error", type="ValueError", message="Error during plan"
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="0",
+                    status=Status.ERROR,
+                    time_started="2026-04-17T15:00:00.000000",
+                    time_completed="2026-04-17T15:00:59.000000",
+                    errors=[
+                        TaskError(
+                            outcome="error",
+                            type="ValueError",
+                            message="Error during plan",
+                        )
+                    ],
+                    result=None,
                 )
             ],
             position=None,
-            blueapi_id="blueapi_id_0",
-            result=None,
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
                 plan_name="test", sample_id="1", instrument_session=""
             ),
             id="1",
-            status=Status.SUCCESS,
-            time_started="2026-04-17T15:01:00.000000",
-            time_completed="2026-04-17T15:01:59.000000",
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="1",
+                    status=Status.SUCCESS,
+                    time_started="2026-04-17T15:01:00.000000",
+                    time_completed="2026-04-17T15:01:59.000000",
+                    errors=[],
+                    result=TaskResult(result=None, type="NoneType"),
+                )
+            ],
             position=None,
-            blueapi_id="blueapi_id_1",
-            result=TaskResult(result=None, type="NoneType"),
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
-            status=Status.IN_PROGRESS,
-            time_started="2026-04-17T15:02:00.000000",
-            time_completed=None,
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="2",
+                    status=Status.IN_PROGRESS,
+                    time_started="2026-04-17T15:02:00.000000",
+                    time_completed=None,
+                    errors=[],
+                )
+            ],
             position=0,
-            blueapi_id="blueapi_id_2",
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
                 plan_name="test", sample_id="3", instrument_session=""
             ),
             id="3",
-            status=Status.WAITING,
-            time_started=None,
-            time_completed=None,
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="3",
+                    status=Status.WAITING,
+                    time_started=None,
+                    time_completed=None,
+                    errors=[],
+                )
+            ],
             position=1,
-            blueapi_id=None,
         ),
         TaskWithPosition(
             experiment_definition=ExperimentDefinition(
                 plan_name="test", sample_id="4", instrument_session=""
             ),
             id="4",
-            status=Status.WAITING,
-            time_started=None,
-            time_completed=None,
-            errors=[],
+            blueapi_calls=[
+                BlueapiCall(
+                    task_request=TaskRequest(name="test", instrument_session=""),
+                    parent_task_id="4",
+                    status=Status.WAITING,
+                    time_started=None,
+                    time_completed=None,
+                    errors=[],
+                )
+            ],
             position=2,
-            blueapi_id=None,
         ),
     ]
 
@@ -490,169 +520,164 @@ async def test_pausing_queue_prevents_task_from_being_claimed(task_queue: TaskQu
     await task_queue.update_state(paused=True)
     assert task_queue.state.paused
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(
-            task_queue.claim_next_task_once_available(), timeout=0.05
-        )
+        await asyncio.wait_for(task_queue.get_next_call_once_available(), timeout=0.05)
 
 
 async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQueue):
     await task_queue.update_state(paused=False)
     assert not task_queue.state.paused
-    await task_queue.claim_next_task_once_available()
+    await task_queue.get_next_call_once_available()
 
 
-async def test_claim_next_task_once_available_claims_task_and_returns(
+async def test_claim_next_call_once_available_claims_task_and_returns(
     task_queue: TaskQueue,
 ):
     next_task = task_queue._tasks[task_queue._queue[0]]
-    assert next_task and next_task.status == Status.WAITING
+    next_call = next_task.blueapi_calls[0]
+    assert next_task and next_task.status == TaskStatus.QUEUED
+    assert next_call.status == Status.WAITING
 
-    claimed_task = await task_queue.claim_next_task_once_available()
-    assert claimed_task is next_task
-    assert claimed_task.status == Status.CLAIMED
+    claimed_call = await task_queue.get_next_call_once_available()
+    assert claimed_call.parent_task_id == next_call.parent_task_id
+    assert claimed_call.status == Status.CLAIMED
 
 
-async def test_claim_next_task_once_available_waits_if_next_task_is_already_claimed(
+async def test_claim_next_call_once_available_waits_if_next_task_is_already_claimed(
     task_queue: TaskQueue,
 ):
-    claimed_task = await task_queue.claim_next_task_once_available()
-    assert claimed_task and claimed_task.status == Status.CLAIMED
+    claimed_call = await task_queue.get_next_call_once_available()
+    assert claimed_call and claimed_call.status == Status.CLAIMED
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(
-            task_queue.claim_next_task_once_available(), timeout=0.05
-        )
+        await asyncio.wait_for(task_queue.get_next_call_once_available(), timeout=0.05)
 
 
-async def test_claim_next_task_once_available_waits_if_next_task_is_already_in_progress(
+async def test_claim_next_call_once_available_waits_if_next_task_is_already_in_progress(
     task_queue: TaskQueue,
 ):
-    claimed_task = await task_queue.claim_next_task_once_available()
-    claimed_task.blueapi_id = "blueapi_id"
-    claimed_task.put_in_progress()
-    assert claimed_task and claimed_task.status == Status.IN_PROGRESS
+    claimed_call = await task_queue.get_next_call_once_available()
+    claimed_call.put_in_progress()
+    assert claimed_call and claimed_call.status == Status.IN_PROGRESS
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(
-            task_queue.claim_next_task_once_available(), timeout=0.05
-        )
+        await asyncio.wait_for(task_queue.get_next_call_once_available(), timeout=0.05)
 
 
-async def test_wait_until_task_available_waits_if_next_task_is_claimed(
+async def test_wait_until_call_available_waits_if_next_task_is_claimed(
     task_queue: TaskQueue,
 ):
-    claimed_task = await task_queue.claim_next_task_once_available()
-    assert claimed_task and claimed_task.status == Status.CLAIMED
+    claimed_call = await task_queue.get_next_call_once_available()
+    assert claimed_call and claimed_call.status == Status.CLAIMED
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(task_queue.wait_until_task_available(), timeout=0.05)
+        await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
-async def test_wait_until_task_available_waits_if_next_task_is_in_progress(
+async def test_wait_until_call_available_waits_if_next_task_is_in_progress(
     task_queue: TaskQueue,
 ):
-    claimed_task = await task_queue.claim_next_task_once_available()
-    claimed_task.blueapi_id = "blueapi_id"
-    claimed_task.put_in_progress()
-    assert claimed_task and claimed_task.status == Status.IN_PROGRESS
+    claimed_call = await task_queue.get_next_call_once_available()
+    claimed_call.put_in_progress()
+    assert claimed_call and claimed_call.status == Status.IN_PROGRESS
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(task_queue.wait_until_task_available(), timeout=0.05)
+        await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
-async def test_wait_until_task_available_waits_if_queue_paused(
+async def test_wait_until_call_available_waits_if_queue_paused(
     task_queue: TaskQueue,
 ):
     await task_queue.update_state(paused=True)
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(task_queue.wait_until_task_available(), timeout=0.05)
+        await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
-async def test_wait_until_task_available_waits_if_queue_empty():
+async def test_wait_until_call_available_waits_if_queue_empty():
     task_queue = TaskQueue(construct_blueapi_call_list)
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(task_queue.wait_until_task_available(), timeout=0.05)
+        await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
-async def test_wait_until_task_available_does_not_wait_if_conditions_met(
+async def test_wait_until_call_available_does_not_wait_if_conditions_met(
     task_queue: TaskQueue,
 ):
-    await asyncio.wait_for(task_queue.wait_until_task_available(), timeout=0.05)
+    await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
-async def test_complete_task_puts_task_in_history_and_updates_status_to_complete(
+async def test_complete_call_puts_call_in_history_and_updates_status_to_complete(
     task_queue: TaskQueue,
 ):
-    task = await task_queue.claim_next_task_once_available()
-    task.blueapi_id = "blueapi_id"
-    task.put_in_progress()
-    assert task.status == Status.IN_PROGRESS
-    await task_queue.complete_task(task, TaskResult(result=None, type="NoneType"))
-    assert task.id not in task_queue._queue
-    assert task.id in task_queue._history
-    assert task.status == Status.SUCCESS
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    assert call.status == Status.IN_PROGRESS
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert call.parent_task_id not in task_queue._queue
+    assert call.parent_task_id in task_queue._history
+    assert call not in task_queue._call_queue
+    assert call in task_queue._call_history
+    assert call.status == Status.SUCCESS
 
 
-async def test_complete_task_must_receive_exact_same_object_as_was_claimed(
+async def test_complete_call_must_receive_exact_same_object_as_was_claimed(
     task_queue: TaskQueue,
 ):
-    task = await task_queue.claim_next_task_once_available()
-    similar_task = task.model_copy()
-    another_similar_task = copy.copy(task)
+    call = await task_queue.get_next_call_once_available()
+    similar_call = call.model_copy()
+    another_similar_call = copy.copy(call)
     with pytest.raises(AssertionError):
-        await task_queue.complete_task(
-            similar_task, TaskResult(result=None, type="NoneType")
+        await task_queue.complete_call(
+            similar_call, TaskResult(result=None, type="NoneType")
         )
     with pytest.raises(AssertionError):
-        await task_queue.complete_task(
-            another_similar_task, TaskResult(result=None, type="NoneType")
+        await task_queue.complete_call(
+            another_similar_call, TaskResult(result=None, type="NoneType")
         )
 
 
-async def test_fail_task_puts_task_in_history_and_updates_status_to_complete(
+async def test_fail_call_puts_task_in_history_and_updates_status_to_complete(
     task_queue: TaskQueue,
 ):
-    task = await task_queue.claim_next_task_once_available()
-    assert task.status == Status.CLAIMED
-    await task_queue.fail_task(task)
-    assert task.id not in task_queue._queue
-    assert task.id in task_queue._history
-    assert task.status == Status.ERROR
+    call = await task_queue.get_next_call_once_available()
+    assert call.status == Status.CLAIMED
+    await task_queue.fail_call(call)
+    assert call.parent_task_id not in task_queue._queue
+    assert call.parent_task_id in task_queue._history
+    assert call not in task_queue._call_queue
+    assert call in task_queue._call_history
+    assert call.status == Status.ERROR
 
 
-async def test_fail_task_must_receive_exact_same_object_as_was_claimed(
+async def test_fail_call_must_receive_exact_same_object_as_was_claimed(
     task_queue: TaskQueue,
 ):
-    task = await task_queue.claim_next_task_once_available()
-    similar_task = task.model_copy()
-    another_similar_task = copy.copy(task)
+    call = await task_queue.get_next_call_once_available()
+    similar_call = call.model_copy()
+    another_similar_call = copy.copy(call)
     with pytest.raises(AssertionError):
-        await task_queue.fail_task(similar_task)
+        await task_queue.fail_call(similar_call)
     with pytest.raises(AssertionError):
-        await task_queue.fail_task(another_similar_task)
+        await task_queue.fail_call(another_similar_call)
 
 
-async def test_fail_task_with_errors_adds_errors_to_task(
+async def test_fail_call_with_errors_adds_errors_to_call(
     task_queue: TaskQueue,
 ):
-    task = await task_queue.claim_next_task_once_available()
+    call = await task_queue.get_next_call_once_available()
     error = "This task failed"
-    await task_queue.fail_task(task, [str(error)])
-    assert task.status == Status.ERROR
-    assert task.errors == ["This task failed"]
-    assert task.id in task_queue._history
-    assert task.id not in task_queue._queue
+    await task_queue.fail_call(call, [str(error)])
+    assert call.status == Status.ERROR
+    assert call.errors == ["This task failed"]
 
 
-async def test_return_task_to_queue_changes_task_status_to_waiting(
+async def test_return_call_to_queue_changes_task_status_to_waiting(
     task_queue: TaskQueue,
 ):
-    task = await task_queue.claim_next_task_once_available()
-    assert task.status == Status.CLAIMED
-    await task_queue.return_task_to_queue(task)
-    assert task.status == Status.WAITING
+    call = await task_queue.get_next_call_once_available()
+    assert call.status == Status.CLAIMED
+    await task_queue.return_call_to_queue(call)
+    assert call.status == Status.WAITING
 
 
 async def test_return_task_to_queue_raises_error_if_task_has_not_been_claimed(
     task_queue: TaskQueue,
 ):
-    task = await task_queue.claim_next_task_once_available()
-    task.status = Status.SUCCESS
+    call = await task_queue.get_next_call_once_available()
+    call.status = Status.SUCCESS
     with pytest.raises(TaskNotClaimedError):
-        await task_queue.return_task_to_queue(task)
+        await task_queue.return_call_to_queue(call)

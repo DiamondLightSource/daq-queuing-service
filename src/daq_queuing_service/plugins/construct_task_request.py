@@ -15,7 +15,9 @@ def construct_blueapi_task_request(
 
 
 def construct_blueapi_call_list(
-    queue: list[TaskWithPosition], history: list[TaskWithPosition], call_history: list[BlueapiCall]
+    queue: list[TaskWithPosition],
+    history: list[TaskWithPosition],
+    call_history: list[BlueapiCall],
 ) -> list[BlueapiCall]:
 
     call_list = [

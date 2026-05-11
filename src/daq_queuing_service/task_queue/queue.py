@@ -7,12 +7,8 @@ from typing import Any
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
-from daq_queuing_service.task import (
-    Status,
-    Task,
-    TaskWithPosition,
-)
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, Status
+from daq_queuing_service.task import Task, TaskStatus, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     TaskIdInUseError,
@@ -63,40 +59,61 @@ class TaskQueue:
         self._queue: list[str] = []
         self._history: list[str] = []
         self._call_queue: list[BlueapiCall] = []
+        self._call_history: list[BlueapiCall] = []
         self._queue_history: list[BlueapiCall] = []
         self._state: QueueState = QueueState(paused=True)
         self._convert = convert
         self._modifying = Modifying(on_exit=self._update_call_queue)
 
     def _update_call_queue(self):
-        self._call_queue = self._convert(
-            self._get_queue(), self._get_history(), self._queue_history
-        )
         for task_id in self._queue:
             task = self._tasks[task_id]
-            task.blueapi_calls = []
-        for call in self._call_queue:
-            self._tasks[call.parent_task_id].blueapi_calls.append(call)
+            if task.status == TaskStatus.COMPLETE:
+                self._queue.remove(task_id)
+                self._history.append(task_id)
+            elif task.status != TaskStatus.IN_PROGRESS:
+                task.blueapi_calls = []
+
+        self._call_queue = [
+            call
+            for call in self._call_queue
+            if call.parent_task_id
+            and call.parent_task_id in self._queue
+            and self._tasks[call.parent_task_id].status == TaskStatus.IN_PROGRESS
+        ]
+
+        new_queue = self._convert(
+            [task for task in self._get_queue() if task.status == TaskStatus.QUEUED],
+            self._get_history(),
+            self._queue_history,
+        )
+
+        for call in new_queue:
+            if call.parent_task_id:
+                self._tasks[call.parent_task_id].blueapi_calls.append(call)
+
+        self._call_queue.extend(new_queue)
+
         self._modifying.notify_all()
 
-    async def claim_next_task_once_available(self) -> Task:
-        """Waits until a task is available before returning the task. A task is
-        available if it's at the top of the queue, is not already in progress or
+    async def get_next_call_once_available(self) -> BlueapiCall:
+        """Waits until a call is available before returning the call. A call is
+        available if it's at the top of the call queue, is not already in progress or
         claimed, and the queue is not paused.
 
         Returns:
-            Task: The task at the top of the queue
+            BlueapiCall: The call at the top of the queue
         """
         async with self._modifying:
             while not self._task_available():
                 await self._modifying.wait()
             self._update_call_queue()
-            task = self._tasks[self._queue[0]]
-            task.claim()
-        LOGGER.info(f"Task {task.id} has been claimed")
-        return task
+            call = self._call_queue[0]
+            call.claim()
+        LOGGER.info(f"Plan {call} has been claimed")
+        return call
 
-    async def wait_until_task_available(self):
+    async def wait_until_call_available(self):
         """Waits until a task is available before returning. A task is
         available if it's at the top of the queue, is not already in progress or
         claimed, and the queue is not paused.
@@ -105,7 +122,7 @@ class TaskQueue:
             while not self._task_available():
                 await self._modifying.wait()
 
-    async def return_task_to_queue(self, task: Task):
+    async def return_call_to_queue(self, call: BlueapiCall):
         """Returns a task to the queue that had previously been claimed
 
         Args:
@@ -114,20 +131,20 @@ class TaskQueue:
         Raises:
             TaskNotClaimedError: Raised if the task's status is not have a 'Claimed'
         """
-        self._check_task_valid_to_be_returned(task)
+        self._check_call_valid_to_be_returned(call)
         async with self._modifying:
-            match task.status:
+            match call.status:
                 case Status.CLAIMED:
-                    assert task.id == self._queue[0]
-                    task.wait()
+                    assert call == self._call_queue[0]
+                    call.wait()
                 case _:
                     raise TaskNotClaimedError(
-                        f"Cannot return task {task.id}, "
-                        + f"it's status is {task.status}."
+                        f"Cannot return call {call}, "
+                        + f"it's status is {call.status}."
                     )
-        LOGGER.info(f"Task {task.id} has been returned to the queue")
+        LOGGER.info(f"Call {call} has been returned to the queue")
 
-    async def complete_task(self, task: Task, result: TaskResult):
+    async def complete_call(self, call: BlueapiCall, result: TaskResult):
         """Sets a task to complete, removes it from the queue and adds it to history
 
         Args:
@@ -135,16 +152,17 @@ class TaskQueue:
             result (TaskResult): The result of the task from blueapi
         """
         async with self._modifying:
-            self._check_task_valid_to_be_returned(task)
-            assert self._queue[0] == task.id, (
-                f"This task is not at the front of the queue: {task}"
+            self._check_call_valid_to_be_returned(call)
+            assert call == self._call_queue[0], (
+                f"This call is not at the front of the queue: {call}"
             )
-            task.succeed(result)
-            self._queue.pop(0)
-            self._history.append(task.id)
-        LOGGER.info(f"Task {task.id} has been completed successfully: {result}")
+            call.succeed(result)
+            self._call_history.append(call)
+        LOGGER.info(f"Plan {call} has been completed successfully: {result}")
 
-    async def fail_task(self, task: Task, errors: list[str | TaskError] | None = None):
+    async def fail_call(
+        self, call: BlueapiCall, errors: list[str | TaskError] | None = None
+    ):
         """Sets a task to failed, removes it from the queue and adds it to history
 
         Args:
@@ -153,14 +171,10 @@ class TaskQueue:
             occurred when trying to run the task. Defaults to None.
         """
         async with self._modifying:
-            self._check_task_valid_to_be_returned(task)
-            assert self._queue[0] == task.id, (
-                f"This task is not at the front of the queue: {task}"
-            )
-            task.fail(errors)
-            self._queue.pop(0)
-            self._history.append(task.id)
-        LOGGER.info(f"Task {task.id} has failed with the following errors: {errors}")
+            self._check_call_valid_to_be_returned(call)
+            call.fail(errors)
+            self._call_history.append(call)
+        LOGGER.info(f"Call {call} has failed with the following errors: {errors}")
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
         """Returns a task based on it's task ID
@@ -334,26 +348,28 @@ class TaskQueue:
         Returns:
             bool: Whether or not the queue has a task available.
         """
-        if self._state.paused or not self._queue:
+        if self._state.paused or not self._call_queue:
             return False
-        return self._tasks[self._queue[0]].status == Status.WAITING
+        return self._call_queue[0].status == Status.WAITING
 
-    def _check_task_valid_to_be_returned(self, task: Task):
+    def _check_call_valid_to_be_returned(self, call: BlueapiCall):
         # Check caller has actual task object not copy
         # This ensures the caller has claimed the task, reducing the chance a task is
         # returned that is actually still being run/modified by a different process.
         # However if the worker crashes we then lose the Task object and can't return
         # the task? Needs discussion with others.
-        assert task is self._tasks[task.id]
-        assert task.id in self._queue, f"This task is not in the queue: {task}"
+        assert call is self._call_queue[0]
+        assert call.parent_task_id in self._queue, (
+            f"This call has no parent task: {call}"
+        )
 
     def _get_valid_position(self, position: int) -> int:
         if position < 0:
             raise NegativePositionError(f"Position must be >= 0, got {position}")
         if (  # if position 0 requested but a task is in progress, return position 1
-            self.length
-            and position == 0
-            and self._tasks[self._queue[0]].status != Status.WAITING
+            position == 0
+            and self.length
+            and self._tasks[self._queue[0]].status != TaskStatus.QUEUED
         ):
             return 1
         return position
@@ -411,7 +427,7 @@ class TaskQueue:
             task = self._tasks[task_id]
             if task_id not in self._queue:
                 raise TaskNotInQueueError(f"Task {task_id} isn't present in queue")
-            if task.status != Status.WAITING:
+            if task.status != TaskStatus.QUEUED:
                 raise TaskInProgressError(
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )
