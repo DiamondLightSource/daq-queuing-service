@@ -63,18 +63,22 @@ class TaskQueue:
         self._queue_history: list[BlueapiCall] = []
         self._state: QueueState = QueueState(paused=True)
         self._convert = convert
-        self._modifying = Modifying(on_exit=self._update_call_queue)
+        self._modifying = Modifying(on_exit=self._sync)
 
-    def _update_call_queue(self):
+    def _sync(self):
         for task_id in self._queue:
             task = self._tasks[task_id]
             if task.status == Status.COMPLETE:
+                # Move task from queue to history if all blueapi calls complete
                 self._queue.remove(task_id)
                 self._history.append(task_id)
             elif task.status != Status.IN_PROGRESS:
+                # If task is not in progress calls will be re-calculated
                 task.blueapi_calls = []
 
         self._call_queue = [
+            # Persist calls who's parent tasks are in progress
+            # More work needed to allow for interleaved calls from different tasks
             call
             for call in self._call_queue
             if call.parent_task_id
@@ -89,6 +93,7 @@ class TaskQueue:
         )
 
         for call in new_queue:
+            # Add children to parent tasks
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
@@ -107,7 +112,7 @@ class TaskQueue:
         async with self._modifying:
             while not self._task_available():
                 await self._modifying.wait()
-            self._update_call_queue()
+            self._sync()
             call = self._call_queue[0]
             call.claim()
         LOGGER.info(f"Plan {call} has been claimed")
