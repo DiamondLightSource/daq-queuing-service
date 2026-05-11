@@ -3,7 +3,7 @@ from typing import Any, Self
 from uuid import uuid4
 
 from blueapi.service.model import StrEnum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
 
@@ -37,6 +37,7 @@ class Task(BaseModel):
     def cancel(self):
         self._cancelled = True
 
+    @computed_field
     @property
     def status(self) -> Status:
         if self._cancelled:

@@ -10,6 +10,7 @@ from blueapi.client.rest import (
     UnknownPlanError,
 )
 from blueapi.service.model import (
+    TaskRequest,
     TaskResponse,
 )
 from fastapi import FastAPI
@@ -23,6 +24,7 @@ from daq_queuing_service.api.api import (
     create_api_router,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
 from daq_queuing_service.task import (
     ExperimentDefinition,
     Status,
@@ -101,11 +103,22 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             },
             "id": "2",
             "status": "In progress",
-            "time_started": "2026-04-17T15:02:00.000000",
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": "blueapi_id_2",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "2",
+                    "status": "In progress",
+                    "time_started": "2026-04-17T15:02:00.000000",
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 0,
         },
         {
@@ -116,12 +129,23 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "3",
-            "status": "Waiting",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "status": "Queued",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "3",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 1,
         },
         {
@@ -132,12 +156,23 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "4",
-            "status": "Waiting",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "status": "Queued",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "4",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 2,
         },
     ]
@@ -146,7 +181,6 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
 def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
     response = test_client.get("/queue", params={"status": Status.IN_PROGRESS})
     assert response.status_code == 200
-    print(response.json())
     assert response.json() == [
         {
             "experiment_definition": {
@@ -156,13 +190,24 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "2",
-            "status": "In progress",
-            "time_started": "2026-04-17T15:02:00.000000",
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": "blueapi_id_2",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "2",
+                    "status": "In progress",
+                    "time_started": "2026-04-17T15:02:00.000000",
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 0,
+            "status": "In progress",
         }
     ]
 
@@ -178,9 +223,42 @@ async def test_get_all_tasks_returns_all_tasks(
 
 
 async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
-    response = test_client.get("/tasks", params={"status": Status.SUCCESS})
+    response = test_client.get("/tasks", params={"status": Status.COMPLETE})
     assert response.status_code == 200
     assert response.json() == [
+        {
+            "experiment_definition": {
+                "plan_name": "test",
+                "sample_id": "0",
+                "params": {},
+                "instrument_session": "",
+            },
+            "id": "0",
+            "status": "Complete",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "0",
+                    "status": "Error",
+                    "time_started": "2026-04-17T15:00:00.000000",
+                    "time_completed": "2026-04-17T15:00:59.000000",
+                    "result": None,
+                    "errors": [
+                        {
+                            "outcome": "error",
+                            "type": "ValueError",
+                            "message": "Error during plan",
+                        }
+                    ],
+                    "blueapi_id": None,
+                }
+            ],
+            "position": None,
+        },
         {
             "experiment_definition": {
                 "plan_name": "test",
@@ -189,14 +267,29 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "1",
-            "status": "Success",
-            "time_started": "2026-04-17T15:01:00.000000",
-            "time_completed": "2026-04-17T15:01:59.000000",
-            "errors": [],
-            "result": {"outcome": "success", "result": None, "type": "NoneType"},
-            "blueapi_id": "blueapi_id_1",
+            "status": "Complete",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "1",
+                    "status": "Success",
+                    "time_started": "2026-04-17T15:01:00.000000",
+                    "time_completed": "2026-04-17T15:01:59.000000",
+                    "result": {
+                        "outcome": "success",
+                        "result": None,
+                        "type": "NoneType",
+                    },
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": None,
-        }
+        },
     ]
 
 
@@ -208,36 +301,6 @@ async def test_get_completed_tasks_returns_completed_tasks(
     assert response.json() == jsonable_encoder(
         await task_queue_with_history.get_history()
     )
-
-
-async def test_get_completed_tasks_can_filter_by_status(test_client: TestClient):
-
-    response = test_client.get("/history", params={"status": Status.ERROR})
-    assert response.status_code == 200
-    assert response.json() == [
-        {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "0",
-                "params": {},
-                "instrument_session": "",
-            },
-            "id": "0",
-            "status": "Error",
-            "time_started": "2026-04-17T15:00:00.000000",
-            "time_completed": "2026-04-17T15:00:59.000000",
-            "errors": [
-                {
-                    "outcome": "error",
-                    "type": "ValueError",
-                    "message": "Error during plan",
-                }
-            ],
-            "result": None,
-            "blueapi_id": "blueapi_id_0",
-            "position": None,
-        }
-    ]
 
 
 async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_task_ids(
@@ -268,13 +331,21 @@ async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_ta
             params={"time": 10},
             instrument_session="abc",
         ),
-        id=task_ids[0],
-        status=Status.WAITING,
-        time_started=None,
-        time_completed=None,
-        errors=[],
-        result=None,
-        blueapi_id=None,
+        id=task_ids[-1],
+        blueapi_calls=[
+            BlueapiCall(
+                task_request=TaskRequest(
+                    name="add_tasks", params={"time": 10}, instrument_session="abc"
+                ),
+                parent_task_id=task_ids[-1],
+                status=CallStatus.WAITING,
+                time_started=None,
+                time_completed=None,
+                result=None,
+                errors=[],
+                blueapi_id=None,
+            )
+        ],
         position=3,
     )
 
@@ -511,11 +582,22 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
             "id": "3",
             "status": "Cancelled",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "3",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
         },
         {
             "experiment_definition": {
@@ -526,11 +608,22 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
             "id": "4",
             "status": "Cancelled",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "4",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
         },
     ]
 
@@ -603,12 +696,23 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
             "instrument_session": "",
         },
         "id": "3",
-        "status": "Waiting",
-        "time_started": None,
-        "time_completed": None,
-        "errors": [],
-        "result": None,
-        "blueapi_id": None,
+        "status": "Queued",
+        "blueapi_calls": [
+            {
+                "task_request": {
+                    "name": "test",
+                    "params": {},
+                    "instrument_session": "",
+                },
+                "parent_task_id": "3",
+                "status": "Waiting",
+                "time_started": None,
+                "time_completed": None,
+                "result": None,
+                "errors": [],
+                "blueapi_id": None,
+            }
+        ],
         "position": 1,
     }
 
@@ -624,12 +728,23 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
             "instrument_session": "",
         },
         "id": "3",
-        "status": "Waiting",
-        "time_started": None,
-        "time_completed": None,
-        "errors": [],
-        "result": None,
-        "blueapi_id": None,
+        "status": "Queued",
+        "blueapi_calls": [
+            {
+                "task_request": {
+                    "name": "test",
+                    "params": {},
+                    "instrument_session": "",
+                },
+                "parent_task_id": "3",
+                "status": "Waiting",
+                "time_started": None,
+                "time_completed": None,
+                "result": None,
+                "errors": [],
+                "blueapi_id": None,
+            }
+        ],
         "position": 1,
     }
 

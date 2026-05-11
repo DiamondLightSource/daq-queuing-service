@@ -24,7 +24,7 @@ def register_exception_handlers(app: FastAPI):
         request: Request, exception: ServiceUnavailableError
     ):
         return JSONResponse(
-            status_code=409,
+            status_code=404,
             content={"error": "blueapi_unavailable", "message": str(exception)},
         )
 
