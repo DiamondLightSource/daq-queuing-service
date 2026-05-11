@@ -77,6 +77,7 @@ class TaskQueue:
             task.blueapi_calls = []
         for call in self._call_queue:
             self._tasks[call.parent_task_id].blueapi_calls.append(call)
+        self._modifying.notify_all()
 
     async def claim_next_task_once_available(self) -> Task:
         """Waits until a task is available before returning the task. A task is
@@ -92,7 +93,6 @@ class TaskQueue:
             self._update_call_queue()
             task = self._tasks[self._queue[0]]
             task.claim()
-            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has been claimed")
         return task
 
@@ -125,7 +125,6 @@ class TaskQueue:
                         f"Cannot return task {task.id}, "
                         + f"it's status is {task.status}."
                     )
-            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has been returned to the queue")
 
     async def complete_task(self, task: Task, result: TaskResult):
@@ -143,7 +142,6 @@ class TaskQueue:
             task.succeed(result)
             self._queue.pop(0)
             self._history.append(task.id)
-            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has been completed successfully: {result}")
 
     async def fail_task(self, task: Task, errors: list[str | TaskError] | None = None):
@@ -162,7 +160,6 @@ class TaskQueue:
             task.fail(errors)
             self._queue.pop(0)
             self._history.append(task.id)
-            self._modifying.notify_all()
         LOGGER.info(f"Task {task.id} has failed with the following errors: {errors}")
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
@@ -251,7 +248,6 @@ class TaskQueue:
             if position is not None:
                 position = self._get_valid_position(position)
             self._add_tasks(tasks, position)
-            self._modifying.notify_all()
         LOGGER.info(f"Successfully added tasks to queue: {[task.id for task in tasks]}")
 
     async def move_task(self, task_id: str, position: int) -> int:
@@ -271,7 +267,6 @@ class TaskQueue:
             position = self._get_valid_position(position)
             self._remove_tasks_from_queue([task_id])
             self._queue[position:position] = [task_id]
-            self._modifying.notify_all()
             new_position = self._queue.index(task_id)
         LOGGER.info(f"Succesfully moved task {task_id} to position {new_position}")
         return new_position
@@ -294,7 +289,6 @@ class TaskQueue:
             tasks = self._remove_tasks_from_registry(task_ids)
             for task in tasks:
                 task.cancel()
-            self._modifying.notify_all()
         LOGGER.info(f"Succesfully cancelled tasks: {task_ids}")
         return tasks
 
@@ -306,7 +300,6 @@ class TaskQueue:
             for task_id in self._history:
                 self._tasks.pop(task_id)
             self._history.clear()
-            self._modifying.notify_all()
         LOGGER.info("Succesfully cleared history")
 
     async def update_state(self, paused: bool | None = None) -> QueueState:
@@ -322,7 +315,6 @@ class TaskQueue:
             self._state = QueueState(
                 paused=self._state.paused if paused is None else paused
             )
-            self._modifying.notify_all()
         LOGGER.info(f"Succesfully updated queue state to {self._state}")
         return self._state
 
