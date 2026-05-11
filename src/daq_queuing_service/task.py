@@ -7,8 +7,10 @@ from uuid import uuid4
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel, Field
 
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 
-def _create_uuid_str() -> str:
+
+def create_uuid_str() -> str:
     return str(uuid4())
 
 
@@ -44,13 +46,13 @@ class ExperimentDefinition(BaseModel):
 
 class Task(BaseModel):
     experiment_definition: ExperimentDefinition
-    id: str = Field(default_factory=_create_uuid_str)
+    id: str = Field(default_factory=create_uuid_str)
     status: Status = Status.WAITING
     time_started: str | None = None
     time_completed: str | None = None
     errors: list[str | TaskError] = Field(default_factory=list[str | TaskError])
     result: TaskResult | None = None
-    blueapi_id: str | None = None
+    blueapi_calls: list[BlueapiCall] = []
 
     def _update_status(self, new_status: Status):
         """Updates the status of the task, checking that the transition is valid

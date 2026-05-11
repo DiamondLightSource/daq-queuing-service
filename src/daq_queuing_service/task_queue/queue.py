@@ -25,7 +25,8 @@ from daq_queuing_service.task_queue.queue_utils import (
 LOGGER = logging.getLogger(__name__)
 
 Converter = Callable[
-    [list[TaskWithPosition], list[TaskWithPosition]], list[BlueapiCall]
+    [list[TaskWithPosition], list[TaskWithPosition], list[BlueapiCall]],
+    list[BlueapiCall],
 ]
 
 
@@ -50,7 +51,6 @@ class Modifying(asyncio.Condition):
         tb: TracebackType | None,
     ):
         self._on_exit()
-
         return await super().__aexit__(exc_type, exc, tb)
 
 
@@ -63,12 +63,20 @@ class TaskQueue:
         self._queue: list[str] = []
         self._history: list[str] = []
         self._call_queue: list[BlueapiCall] = []
+        self._queue_history: list[BlueapiCall] = []
         self._state: QueueState = QueueState(paused=True)
         self._convert = convert
-        self._modifying = Modifying(on_exit=self._after_modifying)
+        self._modifying = Modifying(on_exit=self._update_call_queue)
 
-    def _after_modifying(self):
-        self._call_queue = self._convert(self._get_queue(), self._get_history())
+    def _update_call_queue(self):
+        self._call_queue = self._convert(
+            self._get_queue(), self._get_history(), self._queue_history
+        )
+        for task_id in self._queue:
+            task = self._tasks[task_id]
+            task.blueapi_calls = []
+        for call in self._call_queue:
+            self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
     async def claim_next_task_once_available(self) -> Task:
         """Waits until a task is available before returning the task. A task is
@@ -81,6 +89,7 @@ class TaskQueue:
         async with self._modifying:
             while not self._task_available():
                 await self._modifying.wait()
+            self._update_call_queue()
             task = self._tasks[self._queue[0]]
             task.claim()
             self._modifying.notify_all()

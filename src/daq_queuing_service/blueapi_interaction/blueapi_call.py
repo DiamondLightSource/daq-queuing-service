@@ -5,3 +5,4 @@ from pydantic import BaseModel
 class BlueapiCall(BaseModel):
     task_request: TaskRequest
     parent_task_id: str
+    blueapi_id: str | None = None
