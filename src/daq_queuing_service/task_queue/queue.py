@@ -8,6 +8,7 @@ from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
@@ -51,10 +52,7 @@ class Modifying(asyncio.Condition):
 
 
 class TaskQueue:
-    def __init__(
-        self,
-        convert: Converter,
-    ):
+    def __init__(self, convert: Converter, broadcaster: Broadcaster):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -64,6 +62,7 @@ class TaskQueue:
         self._state: QueueState = QueueState(paused=True)
         self._convert = convert
         self._modifying = Modifying(on_exit=self._sync)
+        self._broadcaster = broadcaster
 
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
@@ -104,6 +103,21 @@ class TaskQueue:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
         self._call_queue.extend(new_queue)
+
+        queue = self._get_queue()
+        history = self._get_history()
+
+        # Broadcast updates to subscribers
+        # TO DO: only broadcast items that have changed
+        self._broadcaster.broadcast({"type": "queue_update", "data": queue})
+        self._broadcaster.broadcast({"type": "history_update", "data": history})
+        self._broadcaster.broadcast({"type": "tasks_update", "data": history + queue})
+        self._broadcaster.broadcast(
+            {"type": "call_queue_update", "data": self._call_queue}
+        )
+        self._broadcaster.broadcast(
+            {"type": "calls_history_update", "data": self._call_queue}
+        )
 
         self._modifying.notify_all()
 
