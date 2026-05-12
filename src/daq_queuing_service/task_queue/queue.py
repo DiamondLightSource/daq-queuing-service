@@ -70,7 +70,7 @@ class TaskQueue:
         tasks to a queue of blueapi calls. This is called every time the queue is
         modified, and also right before a call is popped off the front of the queue.
         """
-        for task_id in self._queue:
+        for task_id in list(self._queue):
             task = self._tasks[task_id]
             if task.status == Status.COMPLETE:
                 # Move task from queue to history if all blueapi calls complete
@@ -81,7 +81,7 @@ class TaskQueue:
                 task.blueapi_calls = []
 
         self._call_queue = [
-            # Persist calls who's parent tasks are in progress
+            # Persist calls who's parent task is in progress
             # Once a task is in progress it is not provided to the converter
             # More work needed to allow for interleaved calls from different tasks,
             # and for in progress tasks to inform conversion
