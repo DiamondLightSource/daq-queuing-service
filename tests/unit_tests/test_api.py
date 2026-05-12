@@ -7,6 +7,7 @@ from blueapi.client.rest import (
     BlueapiRestClient,
     InvalidParametersError,
     ParameterError,
+    ServiceUnavailableError,
     UnknownPlanError,
 )
 from blueapi.service.model import (
@@ -758,6 +759,22 @@ def test_get_task_by_id_gives_error_if_task_id_does_not_exist(test_client: TestC
     }
 
 
+def test_get_call_queue_returns_calls_in_call_queue(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    response = test_client.get("/call_queue")
+    assert response.status_code == 200
+    assert response.json() == jsonable_encoder(task_queue_with_history._call_queue)
+
+
+def test_get_call_history_returns_calls_in_call_queue(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    response = test_client.get("/call_history")
+    assert response.status_code == 200
+    assert response.json() == jsonable_encoder(task_queue_with_history._call_history)
+
+
 async def test_clear_history_deletes_history(
     test_client: TestClient, task_queue_with_history: TaskQueue
 ):
@@ -785,6 +802,26 @@ def test_queue_error_caught_by_error_handler(test_client: TestClient):
         )
 
     assert response.status_code == 409
+
+
+def test_blueapi_connection_error_caught_by_error_handler(test_client: TestClient):
+    with patch(
+        "daq_queuing_service.api.api._validate_tasks_with_blueapi",
+        side_effect=ServiceUnavailableError("Can't connect to blueapi"),
+    ):
+        response = test_client.post(
+            "/queue",
+            json=[
+                {
+                    "plan_name": "add_tasks",
+                    "sample_id": "1",
+                    "params": {"time": 10},
+                    "instrument_session": "abc",
+                }
+            ],
+        )
+
+    assert response.status_code == 404
 
 
 def test__validate_tasks_with_blueapi_calls_create_task_and_then_removes_task(

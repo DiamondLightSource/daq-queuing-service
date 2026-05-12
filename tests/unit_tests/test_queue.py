@@ -681,3 +681,73 @@ async def test_return_task_to_queue_raises_error_if_task_has_not_been_claimed(
     call.status = CallStatus.SUCCESS
     with pytest.raises(TaskNotClaimedError):
         await task_queue.return_call_to_queue(call)
+
+
+async def test_get_call_queue_returns_calls_in_call_queue(
+    task_queue_with_history: TaskQueue,
+):
+    result = await task_queue_with_history.get_call_queue()
+    assert result == [
+        BlueapiCall(
+            task_request=TaskRequest(name="test", params={}, instrument_session=""),
+            parent_task_id="2",
+            status=CallStatus.IN_PROGRESS,
+            time_started="2026-04-17T15:02:00.000000",
+            time_completed=None,
+            result=None,
+            errors=[],
+            blueapi_id=None,
+        ),
+        BlueapiCall(
+            task_request=TaskRequest(name="test", params={}, instrument_session=""),
+            parent_task_id="3",
+            status=CallStatus.WAITING,
+            time_started=None,
+            time_completed=None,
+            result=None,
+            errors=[],
+            blueapi_id=None,
+        ),
+        BlueapiCall(
+            task_request=TaskRequest(name="test", params={}, instrument_session=""),
+            parent_task_id="4",
+            status=CallStatus.WAITING,
+            time_started=None,
+            time_completed=None,
+            result=None,
+            errors=[],
+            blueapi_id=None,
+        ),
+    ]
+
+
+async def test_get_call_history_returns_calls_in_call_history(
+    task_queue_with_history: TaskQueue,
+):
+    result = await task_queue_with_history.get_call_history()
+    assert result == [
+        BlueapiCall(
+            task_request=TaskRequest(name="test", params={}, instrument_session=""),
+            parent_task_id="0",
+            status=CallStatus.ERROR,
+            time_started="2026-04-17T15:00:00.000000",
+            time_completed="2026-04-17T15:00:59.000000",
+            result=None,
+            errors=[
+                TaskError(
+                    outcome="error", type="ValueError", message="Error during plan"
+                )
+            ],
+            blueapi_id=None,
+        ),
+        BlueapiCall(
+            task_request=TaskRequest(name="test", params={}, instrument_session=""),
+            parent_task_id="1",
+            status=CallStatus.SUCCESS,
+            time_started="2026-04-17T15:01:00.000000",
+            time_completed="2026-04-17T15:01:59.000000",
+            result=TaskResult(outcome="success", result=None, type="NoneType"),
+            errors=[],
+            blueapi_id=None,
+        ),
+    ]
