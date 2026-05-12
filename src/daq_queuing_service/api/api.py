@@ -142,4 +142,12 @@ def create_api_router(
     async def clear_history():
         return await queue.clear_history()
 
+    @router.get("/call_queue")
+    async def get_call_queue():
+        return await queue.get_call_queue()
+
+    @router.get("/call_history")
+    async def get_call_history():
+        return await queue.get_call_history()
+
     return router

@@ -451,3 +451,11 @@ class TaskQueue:
             TaskWithPosition.from_task(self._tasks[task_id])
             for task_id in self._history
         ]
+
+    async def get_call_queue(self) -> list[BlueapiCall]:
+        async with self._modifying:
+            return list(self._call_queue)
+
+    async def get_call_history(self) -> list[BlueapiCall]:
+        async with self._modifying:
+            return list(self._call_history)
