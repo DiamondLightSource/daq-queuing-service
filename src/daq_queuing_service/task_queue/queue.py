@@ -66,6 +66,10 @@ class TaskQueue:
         self._modifying = Modifying(on_exit=self._sync)
 
     def _sync(self):
+        """Syncs the task queue with the call queue, applying a conversion from queue of
+        tasks to a queue of blueapi calls. This is called every time the queue is
+        modified, and also right before a call is popped off the front of the queue.
+        """
         for task_id in self._queue:
             task = self._tasks[task_id]
             if task.status == Status.COMPLETE:
@@ -78,7 +82,9 @@ class TaskQueue:
 
         self._call_queue = [
             # Persist calls who's parent tasks are in progress
-            # More work needed to allow for interleaved calls from different tasks
+            # Once a task is in progress it is not provided to the converter
+            # More work needed to allow for interleaved calls from different tasks,
+            # and for in progress tasks to inform conversion
             call
             for call in self._call_queue
             if call.parent_task_id
@@ -112,7 +118,7 @@ class TaskQueue:
         async with self._modifying:
             while not self._task_available():
                 await self._modifying.wait()
-            self._sync()
+            self._sync()  # Do conversion here to ensure conditions are up to date
             call = self._call_queue[0]
             call.claim()
         LOGGER.info(f"Plan {call} has been claimed")
@@ -134,7 +140,7 @@ class TaskQueue:
             task (Task): The task to return
 
         Raises:
-            TaskNotClaimedError: Raised if the task's status is not have a 'Claimed'
+            TaskNotClaimedError: Raised if the task's status is not 'Claimed'
         """
         self._check_call_valid_to_be_returned(call)
         async with self._modifying:
@@ -158,9 +164,6 @@ class TaskQueue:
         """
         async with self._modifying:
             self._check_call_valid_to_be_returned(call)
-            assert call == self._call_queue[0], (
-                f"This call is not at the front of the queue: {call}"
-            )
             call.succeed(result)
             self._call_history.append(call)
         LOGGER.info(f"Plan {call} has been completed successfully: {result}")
@@ -168,7 +171,7 @@ class TaskQueue:
     async def fail_call(
         self, call: BlueapiCall, errors: list[str | TaskError] | None = None
     ):
-        """Sets a task to failed, removes it from the queue and adds it to history
+        """Sets a task to failed, removes it from the call queue and adds it to history.
 
         Args:
             task (Task): The task to fail
