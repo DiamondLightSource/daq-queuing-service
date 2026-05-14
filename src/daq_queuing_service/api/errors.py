@@ -1,4 +1,8 @@
-from blueapi.client.rest import InvalidParametersError, UnknownPlanError
+from blueapi.client.rest import (
+    InvalidParametersError,
+    ServiceUnavailableError,
+    UnknownPlanError,
+)
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -15,6 +19,15 @@ from daq_queuing_service.task_queue.queue_utils import (
 
 
 def register_exception_handlers(app: FastAPI):
+    @app.exception_handler(ServiceUnavailableError)
+    async def service_unavailable_error(
+        request: Request, exception: ServiceUnavailableError
+    ):
+        return JSONResponse(
+            status_code=409,
+            content={"error": "blueapi_unavailable", "message": str(exception)},
+        )
+
     @app.exception_handler(TaskInProgressError)
     async def task_in_progress_handler(
         request: Request, exception: TaskInProgressError
