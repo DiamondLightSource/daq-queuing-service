@@ -9,8 +9,9 @@ A service to queue DAQ experiments and chain BlueAPI calls
 
 The service combines a queue with a worker that consumes items in the queue and sends them to blueapi. A REST API is exposed to interact with the queue, allowing users to add, move, cancel, and get information about, items in the queue, and pause/unpause the queue.
 
-Source          | <https://github.com/DiamondLightSource/daq-queuing-service>
+What            | Where
 :---:           | :---:
+Source          | <https://github.com/DiamondLightSource/daq-queuing-service>
 PyPI            | `pip install daq-queuing-service`
 Docker          | `docker run ghcr.io/diamondlightsource/daq-queuing-service:latest`
 Documentation   | <https://diamondlightsource.github.io/daq-queuing-service>
