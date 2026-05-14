@@ -1,6 +1,3 @@
-include:
-  - ../../example-services/compose.yaml
-
 services:
   rabbitmq:
     image: docker.io/rabbitmq:4.0-management
@@ -10,6 +7,4 @@ services:
       - "15672:15672"
       - "61613:61613"
     volumes:
-      - type: bind
-        source: ./services/rabbitmq_plugins
-        target: /etc/rabbitmq/enabled_plugins
+      - ./services/rabbitmq_plugins:/etc/rabbitmq/enabled_plugins:ro,Z
