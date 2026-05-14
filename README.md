@@ -20,8 +20,9 @@ The server is build with FastAPI. For developement and testing, it may be useful
 ```bash
 uv sync
 source .venv/bin/activate
-blueapi --config tests/system_tests/stomp.yaml serve  # This will run on port 8000
-uvicorn daq_queuing_service.app:app --port 8001
+podman-compose -f tests/system_tests/compose.yaml up             # Local rabbitmq
+blueapi --config tests/test_data/test_blueapi_config.yaml serve  # Local blueapi
+uvicorn daq_queuing_service.app.app:app --port 8001              # Local queue service
 ```
 
 <!-- README only content. Anything below this line won't be included in index.md -->
