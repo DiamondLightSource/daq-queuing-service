@@ -23,6 +23,7 @@ from daq_queuing_service.task import ExperimentDefinition, Status, Task
         ([CallStatus.IN_PROGRESS, CallStatus.SUCCESS], Status.IN_PROGRESS),
         ([CallStatus.IN_PROGRESS, CallStatus.ERROR], Status.IN_PROGRESS),
         ([CallStatus.SUCCESS, CallStatus.ERROR], Status.COMPLETE),
+        ([], Status.QUEUED),
     ],
 )
 def test_task_status_derived_correctly_from_call_statuses(

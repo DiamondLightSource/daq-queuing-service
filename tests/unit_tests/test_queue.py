@@ -1,5 +1,6 @@
 import asyncio
 import copy
+from unittest.mock import MagicMock
 
 import pytest
 from blueapi.service.model import TaskRequest
@@ -751,3 +752,27 @@ async def test_get_call_history_returns_calls_in_call_history(
             blueapi_id=None,
         ),
     ]
+
+
+async def test__sync_correctly_moves_tasks_with_all_completed_calls_into_history(
+    task_queue: TaskQueue,
+):
+    task_queue._modifying = MagicMock()
+
+    a_task_id = task_queue._queue[3]
+    a_task = task_queue._tasks[a_task_id]
+    completed_blueapi_call = BlueapiCall(
+        task_request=TaskRequest(name="sync_test", instrument_session=""),
+        status=CallStatus.SUCCESS,
+    )
+
+    a_task.blueapi_calls = [
+        completed_blueapi_call,
+        completed_blueapi_call,
+    ]
+
+    assert a_task_id in task_queue._queue
+    assert a_task_id not in task_queue._history
+    task_queue._sync()
+    assert a_task_id not in task_queue._queue
+    assert a_task_id in task_queue._history
