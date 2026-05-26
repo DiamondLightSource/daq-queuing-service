@@ -91,18 +91,18 @@ class TaskQueue:
             and self._tasks[call.parent_task_id].status == Status.IN_PROGRESS
         ]
 
-        new_queue = self._convert(
+        new_calls = self._convert(
             [task for task in self._get_queue() if task.status == Status.QUEUED],
             self._get_history(),
             self._queue_history,
         )
 
-        for call in new_queue:
+        for call in new_calls:
             # Add children to parent tasks
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
-        self._call_queue.extend(new_queue)
+        self._call_queue.extend(new_calls)
 
         queue = self._get_queue()
         history = self._get_history()
