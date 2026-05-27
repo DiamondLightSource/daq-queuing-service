@@ -1,6 +1,9 @@
 import pytest
 from blueapi.worker.event import TaskError, TaskResult
 
+from daq_queuing_service.plugins.construct_task_request import (
+    construct_blueapi_call_list,
+)
 from daq_queuing_service.task import ExperimentDefinition, Task
 from daq_queuing_service.task_queue.queue import TaskQueue
 
@@ -20,7 +23,7 @@ def tasks() -> list[Task]:
 
 @pytest.fixture
 async def task_queue(tasks: list[Task]):
-    queue = TaskQueue()
+    queue = TaskQueue(convert=construct_blueapi_call_list)
     await queue.update_state(paused=False)
     await queue.add_tasks(tasks)
     return queue
@@ -28,43 +31,37 @@ async def task_queue(tasks: list[Task]):
 
 @pytest.fixture
 async def task_queue_claimed(task_queue: TaskQueue):
-    first_task_id = task_queue._queue[0]
-    first_task = task_queue._tasks[first_task_id]
-    first_task.claim()
+    _ = task_queue.get_next_call_once_available()
     return task_queue
 
 
 @pytest.fixture
-async def task_queue_in_progress(task_queue_claimed: TaskQueue):
-    first_task_id = task_queue_claimed._queue[0]
-    first_task = task_queue_claimed._tasks[first_task_id]
-    first_task.blueapi_id = "blueapi_id_0"
-    first_task.put_in_progress()
-    return task_queue_claimed
+async def task_queue_in_progress(task_queue: TaskQueue):
+    first_call = await task_queue.get_next_call_once_available()
+    first_call.put_in_progress()
+    return task_queue
 
 
 @pytest.fixture
 async def task_queue_with_history(task_queue: TaskQueue):
     for i in range(2):
-        task = await task_queue.claim_next_task_once_available()
-        task.blueapi_id = f"blueapi_id_{i}"
-        task.put_in_progress()
+        call = await task_queue.get_next_call_once_available()
+        call.put_in_progress()
         if i % 2:
-            await task_queue.complete_task(
-                task, TaskResult(result=None, type="NoneType")
+            await task_queue.complete_call(
+                call, TaskResult(result=None, type="NoneType")
             )
         else:
-            await task_queue.fail_task(
-                task, [TaskError(type="ValueError", message="Error during plan")]
+            await task_queue.fail_call(
+                call, [TaskError(type="ValueError", message="Error during plan")]
             )
     # By this point should have 3 tasks in queue and 2 in history
-    for i, task_id in enumerate(task_queue._history):
+    for i, call in enumerate(task_queue._call_history):
         # Real timestamps will break tests
-        task_queue._tasks[task_id].time_started = f"2026-04-17T15:0{i}:00.000000"
-        task_queue._tasks[task_id].time_completed = f"2026-04-17T15:0{i}:59.000000"
+        call.time_started = f"2026-04-17T15:0{i}:00.000000"
+        call.time_completed = f"2026-04-17T15:0{i}:59.000000"
 
-    task = await task_queue.claim_next_task_once_available()
-    task.blueapi_id = f"blueapi_id_{2}"
-    task.put_in_progress()
-    task.time_started = "2026-04-17T15:02:00.000000"
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    call.time_started = "2026-04-17T15:02:00.000000"
     return task_queue
