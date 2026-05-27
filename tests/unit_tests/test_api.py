@@ -39,7 +39,7 @@ MOCK_TASK_REQUEST_CONSTRUCTOR = MagicMock()
 
 
 @pytest.fixture
-def blueapi_client():
+def blueapi_client() -> BlueapiRestClient:
     blueapi_client = BlueapiRestClient()
     blueapi_client.create_task = MagicMock(
         return_value=TaskResponse(task_id="blueapi_task_id")
@@ -51,7 +51,9 @@ def blueapi_client():
 
 
 @pytest.fixture
-def test_client(task_queue_with_history: TaskQueue, blueapi_client: BlueapiRestClient):
+def test_client(
+    task_queue_with_history: TaskQueue, blueapi_client: BlueapiRestClient
+) -> TestClient:
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(
@@ -850,3 +852,9 @@ def test__validate_tasks_with_blueapi_calls_collects_errors_and_raises(
     assert all(
         isinstance(error, UnknownPlanError) for error in error_raised.errors.values()
     )
+
+
+def test_get_config_returns_config(test_client: TestClient):
+    response = test_client.get("/config")
+    assert response.status_code == 200
+    assert response.json()["blueapi_call_constructor"] == "default"
