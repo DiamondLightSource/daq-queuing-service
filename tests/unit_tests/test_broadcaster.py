@@ -46,3 +46,18 @@ def test_if_subscriber_reaches_max_queue_items_then_error_handled_and_logged(
 
     # Other subscribers unaffected
     assert sub_2.get_nowait() == {"type": "test", "data": "last"}
+
+
+def test_if_subscriber_unsubscribes_then_it_no_longer_receives_broadcasts():
+    broadcaster = Broadcaster()
+    sub_1 = broadcaster.subscribe()
+    sub_2 = broadcaster.subscribe()
+    broadcaster.broadcast({"type": "test", "data": 1})
+    broadcaster.unsubscribe(sub_2)
+    broadcaster.broadcast({"type": "test", "data": 2})
+
+    assert sub_1.get_nowait() == {"type": "test", "data": 1}
+    assert sub_2.get_nowait() == {"type": "test", "data": 1}
+    assert sub_1.get_nowait() == {"type": "test", "data": 2}
+    with pytest.raises(asyncio.QueueEmpty):
+        sub_2.get_nowait()
