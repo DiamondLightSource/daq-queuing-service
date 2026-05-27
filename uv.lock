@@ -1003,6 +1003,7 @@ name = "daq-queuing-service"
 source = { editable = "." }
 dependencies = [
     { name = "blueapi" },
+    { name = "fastapi" },
     { name = "pydantic" },
 ]
 
@@ -1029,6 +1030,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "blueapi", specifier = ">=1.13.0" },
+    { name = "fastapi", specifier = ">=0.136.0" },
     { name = "pydantic", specifier = ">=2.13.2" },
 ]
 

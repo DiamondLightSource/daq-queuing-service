@@ -8,6 +8,7 @@ from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
@@ -51,10 +52,7 @@ class Modifying(asyncio.Condition):
 
 
 class TaskQueue:
-    def __init__(
-        self,
-        convert: Converter,
-    ):
+    def __init__(self, convert: Converter, broadcaster: Broadcaster):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -64,12 +62,14 @@ class TaskQueue:
         self._state: QueueState = QueueState(paused=True)
         self._convert = convert
         self._modifying = Modifying(on_exit=self._sync)
+        self._broadcaster = broadcaster
 
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
         tasks to a queue of blueapi calls. This is called every time the queue is
         modified, and also right before a call is popped off the front of the queue.
         """
+        LOGGER.debug("Syncing")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
             if task.status == Status.COMPLETE:
@@ -97,15 +97,30 @@ class TaskQueue:
             self._get_history(),
             self._queue_history,
         )
+        self._call_queue.extend(new_calls)
 
         for call in new_calls:
             # Add children to parent tasks
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
-        self._call_queue.extend(new_calls)
-
+        self._broadcast_changes()
         self._modifying.notify_all()
+
+    def _broadcast_changes(self):
+        queue = self._get_queue()
+        history = self._get_history()
+
+        # broadcast only does anything if there have been changes
+        self._broadcaster.broadcast(Event(type="queue_update", data=queue))
+        self._broadcaster.broadcast(Event(type="history_update", data=history))
+        self._broadcaster.broadcast(Event(type="tasks_update", data=history + queue))
+        self._broadcaster.broadcast(
+            Event(type="call_queue_update", data=self._call_queue)
+        )
+        self._broadcaster.broadcast(
+            Event(type="calls_history_update", data=self._call_history)
+        )
 
     async def get_next_call_once_available(self) -> BlueapiCall:
         """Waits until a call is available before returning the call. A call is
@@ -336,6 +351,9 @@ class TaskQueue:
         async with self._modifying:
             self._state = QueueState(
                 paused=self._state.paused if paused is None else paused
+            )
+            self._broadcaster.broadcast(
+                Event(type="queue_state_update", data=self._state)
             )
         LOGGER.info(f"Succesfully updated queue state to {self._state}")
         return self._state

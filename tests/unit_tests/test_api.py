@@ -1,3 +1,5 @@
+import threading
+import time
 import uuid
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -26,6 +28,7 @@ from daq_queuing_service.api.api import (
 )
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import (
     ExperimentDefinition,
     Status,
@@ -51,16 +54,31 @@ def blueapi_client() -> BlueapiRestClient:
 
 
 @pytest.fixture
-def test_client(
-    task_queue_with_history: TaskQueue, blueapi_client: BlueapiRestClient
-) -> TestClient:
+def broadcaster():
+    return Broadcaster()
+
+
+@pytest.fixture
+def app(
+    task_queue_with_history: TaskQueue,
+    blueapi_client: BlueapiRestClient,
+    broadcaster: Broadcaster,
+):
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(
         create_api_router(
-            task_queue_with_history, blueapi_client, MOCK_TASK_REQUEST_CONSTRUCTOR
+            task_queue_with_history,
+            blueapi_client,
+            MOCK_TASK_REQUEST_CONSTRUCTOR,
+            broadcaster,
         )
     )
+    return app
+
+
+@pytest.fixture
+def test_client(app: FastAPI) -> TestClient:
     return TestClient(app)
 
 
@@ -858,3 +876,32 @@ def test_get_config_returns_config(test_client: TestClient):
     response = test_client.get("/config")
     assert response.status_code == 200
     assert response.json()["blueapi_call_constructor"] == "default"
+
+
+@pytest.mark.skip("Can't get TestClient to play nicely with SSE")
+async def test_stream_events_streams_all_events_from_broadcaster(
+    test_client: TestClient, broadcaster: Broadcaster
+):
+    events_to_send = [Event(type="test_stream", data=i) for i in range(5)]
+    received: list[str] = []
+
+    def read_stream():
+        with test_client.stream("GET", "/events") as response:
+            for line in response.iter_raw():
+                # Never getting response
+                if not line:
+                    continue
+
+                received.append(line.decode())
+                if len(received) == 5:
+                    break
+
+    thread = threading.Thread(target=read_stream)
+    thread.start()
+    time.sleep(0.1)
+    for event in events_to_send:
+        broadcaster.broadcast(event)
+
+    time.sleep(0.2)
+    assert len(received) == 5
+    assert received != []

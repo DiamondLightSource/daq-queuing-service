@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
     construct_blueapi_task_request,
@@ -46,9 +47,11 @@ def create_app() -> FastAPI:
             await asyncio.gather(worker_task, return_exceptions=True)
 
     config = load_config()
+    broadcaster = Broadcaster()
+
     app = FastAPI(lifespan=lifespan)
 
-    app.state.queue = TaskQueue(construct_blueapi_call_list)
+    app.state.queue = TaskQueue(construct_blueapi_call_list, broadcaster)
 
     blueapi_rest_client = BlueapiRestClient(config=config.blueapi.api)
     blueapi_client = BlueapiClient.from_config(config.blueapi)
@@ -63,7 +66,10 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
     app.include_router(
         create_api_router(
-            app.state.queue, blueapi_rest_client, construct_blueapi_task_request
+            app.state.queue,
+            blueapi_rest_client,
+            construct_blueapi_task_request,
+            broadcaster,
         )
     )
 

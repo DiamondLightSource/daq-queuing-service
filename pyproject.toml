@@ -14,6 +14,7 @@ classifiers = [
 description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
     "blueapi>=1.13.0",
+    "fastapi>=0.136.0",
     "pydantic>=2.13.2",
 ]
 dynamic = ["version"]
@@ -136,7 +137,7 @@ commands = [
 
 [tool.tox.env.generate-api-docs]
 description = "Compile rest-api.json file from source code. This is then referenced in docs."
-deps = "."
+deps = "-e ."
 commands = [
     [
         "{envpython}",

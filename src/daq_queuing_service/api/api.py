@@ -1,5 +1,8 @@
+import asyncio
+import json
 import logging
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
+from typing import Any
 
 from blueapi.client.rest import (
     BlueapiRestClient,
@@ -8,9 +11,11 @@ from blueapi.client.rest import (
 )
 from blueapi.service.model import TaskRequest
 from fastapi import APIRouter, Request, Response
+from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
 
 from daq_queuing_service.app._config import AppConfig, load_config
+from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
     QueueState,
@@ -69,6 +74,7 @@ def create_api_router(
     queue: TaskQueue,
     blueapi_client: BlueapiRestClient,
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
+    broadcaster: Broadcaster,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -149,5 +155,26 @@ def create_api_router(
     @router.get("/call_history")
     async def get_call_history():
         return await queue.get_call_history()
+
+    @router.get("/events")
+    async def stream_events():
+        subscriber = broadcaster.subscribe()
+
+        async def event_generator() -> AsyncGenerator[Any, None]:
+            try:
+                while True:
+                    event = await subscriber.get()
+                    event_str = (
+                        f"event: {event['type']}\ndata: {json.dumps(event['data'])}\n\n"
+                    )
+                    yield event_str
+
+            except asyncio.CancelledError:
+                # Client disconnected
+                raise
+            finally:
+                broadcaster.unsubscribe(subscriber)
+
+        return EventSourceResponse(event_generator())
 
     return router

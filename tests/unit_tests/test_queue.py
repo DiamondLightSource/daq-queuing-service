@@ -7,6 +7,7 @@ from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
 )
@@ -43,7 +44,9 @@ async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueu
 
 
 async def test_add_tasks_adds_to_call_queue():
-    task_queue = TaskQueue(convert=construct_blueapi_call_list)
+    task_queue = TaskQueue(
+        convert=construct_blueapi_call_list, broadcaster=Broadcaster()
+    )
     await task_queue.add_tasks([make_new_task("new"), make_new_task("new_2")])
     assert task_queue._call_queue == [
         BlueapiCall(
@@ -145,7 +148,7 @@ async def test_move_task_works_as_expected_and_returns_new_position(
     expected_order: list[int],
     expected_return_value: int,
 ):
-    queue = TaskQueue(convert=construct_blueapi_call_list)
+    queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
     tasks = [make_new_task(str(i)) for i in range(10)]
     await queue.add_tasks(tasks)
     task = str(task_to_move)
@@ -590,7 +593,7 @@ async def test_wait_until_call_available_waits_if_queue_paused(
 
 
 async def test_wait_until_call_available_waits_if_queue_empty():
-    task_queue = TaskQueue(construct_blueapi_call_list)
+    task_queue = TaskQueue(construct_blueapi_call_list, Broadcaster())
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
