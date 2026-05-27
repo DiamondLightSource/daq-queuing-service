@@ -95,6 +95,7 @@ passenv = ["*"]
 
 [tool.tox.env.pre-commit]
 description = "Run pre-commit on all files"
+deps = "."
 commands = [
     [
         "pre-commit",
@@ -137,7 +138,7 @@ commands = [
 
 [tool.tox.env.generate-api-docs]
 description = "Compile rest-api.json file from source code. This is then referenced in docs."
-deps = "."
+deps = "-e ."
 commands = [
     [
         "{envpython}",
