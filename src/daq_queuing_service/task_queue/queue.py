@@ -96,19 +96,21 @@ class TaskQueue:
             self._get_history(),
             self._queue_history,
         )
+        self._call_queue.extend(new_calls)
 
         for call in new_calls:
             # Add children to parent tasks
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
-        self._call_queue.extend(new_calls)
+        self._broadcast_changes()
+        self._modifying.notify_all()
 
+    def _broadcast_changes(self):
         queue = self._get_queue()
         history = self._get_history()
 
-        # Broadcast updates to subscribers
-        # TO DO: only broadcast items that have changed
+        # Broadcast only does anything if there have been changes
         self._broadcaster.broadcast({"type": "queue_update", "data": queue})
         self._broadcaster.broadcast({"type": "history_update", "data": history})
         self._broadcaster.broadcast({"type": "tasks_update", "data": history + queue})
@@ -116,10 +118,8 @@ class TaskQueue:
             {"type": "call_queue_update", "data": self._call_queue}
         )
         self._broadcaster.broadcast(
-            {"type": "calls_history_update", "data": self._call_queue}
+            {"type": "calls_history_update", "data": self._call_history}
         )
-
-        self._modifying.notify_all()
 
     async def get_next_call_once_available(self) -> BlueapiCall:
         """Waits until a call is available before returning the call. A call is
@@ -350,6 +350,9 @@ class TaskQueue:
         async with self._modifying:
             self._state = QueueState(
                 paused=self._state.paused if paused is None else paused
+            )
+            self._broadcaster.broadcast(
+                {"type": "queue_state_update", "data": self._state}
             )
         LOGGER.info(f"Succesfully updated queue state to {self._state}")
         return self._state
