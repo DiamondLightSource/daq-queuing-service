@@ -95,7 +95,6 @@ passenv = ["*"]
 
 [tool.tox.env.pre-commit]
 description = "Run pre-commit on all files"
-deps = "."
 commands = [
     [
         "pre-commit",
