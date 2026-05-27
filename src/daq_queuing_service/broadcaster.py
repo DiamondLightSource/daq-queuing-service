@@ -11,9 +11,10 @@ class Event(TypedDict):
 
 
 class Broadcaster:
-    def __init__(self):
+    def __init__(self, max_queue_size: int = 10):
         self._subscribers: list[asyncio.Queue[Event]] = []
         self._previous: dict[str, Any] = {}
+        self._max_queue_size = max_queue_size
 
     def broadcast(self, event: Event):
         if self._previous.get(event["type"]) == event["data"]:
@@ -27,7 +28,7 @@ class Broadcaster:
         self._previous[event["type"]] = event["data"]
 
     def subscribe(self) -> asyncio.Queue[Event]:
-        subscriber: asyncio.Queue[Event] = asyncio.Queue(maxsize=10)
+        subscriber: asyncio.Queue[Event] = asyncio.Queue(maxsize=self._max_queue_size)
         self._subscribers.append(subscriber)
         return subscriber
 
