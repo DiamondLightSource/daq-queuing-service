@@ -26,6 +26,7 @@ from daq_queuing_service.api.api import (
 )
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.task import (
     ExperimentDefinition,
     Status,
@@ -58,7 +59,10 @@ def test_client(
     register_exception_handlers(app)
     app.include_router(
         create_api_router(
-            task_queue_with_history, blueapi_client, MOCK_TASK_REQUEST_CONSTRUCTOR
+            task_queue_with_history,
+            blueapi_client,
+            MOCK_TASK_REQUEST_CONSTRUCTOR,
+            Broadcaster(),
         )
     )
     return TestClient(app)

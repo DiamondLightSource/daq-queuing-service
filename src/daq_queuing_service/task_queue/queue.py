@@ -69,6 +69,7 @@ class TaskQueue:
         tasks to a queue of blueapi calls. This is called every time the queue is
         modified, and also right before a call is popped off the front of the queue.
         """
+        LOGGER.debug("Syncing")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
             if task.status == Status.COMPLETE:
@@ -110,7 +111,7 @@ class TaskQueue:
         queue = self._get_queue()
         history = self._get_history()
 
-        # Broadcast only does anything if there have been changes
+        # broadcast only does anything if there have been changes
         self._broadcaster.broadcast({"type": "queue_update", "data": queue})
         self._broadcaster.broadcast({"type": "history_update", "data": history})
         self._broadcaster.broadcast({"type": "tasks_update", "data": history + queue})
