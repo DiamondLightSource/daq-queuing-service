@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from collections.abc import AsyncGenerator, Callable
 from typing import Any
@@ -155,7 +156,7 @@ def create_api_router(
     async def get_call_history():
         return await queue.get_call_history()
 
-    @router.get("events")
+    @router.get("/events")
     async def stream_events():
         subscriber = broadcaster.subscribe()
 
@@ -163,16 +164,16 @@ def create_api_router(
             try:
                 while True:
                     event = await subscriber.get()
-
-                    yield {
-                        "event": event["type"],
-                        "data": event["data"],
-                    }
+                    event_str = (
+                        f"event: {event['type']}\ndata: {json.dumps(event['data'])}\n\n"
+                    )
+                    yield event_str
 
             except asyncio.CancelledError:
                 # Client disconnected
-                broadcaster.unsubscribe(subscriber)
                 raise
+            finally:
+                broadcaster.unsubscribe(subscriber)
 
         return EventSourceResponse(event_generator())
 

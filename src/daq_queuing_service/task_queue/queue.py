@@ -8,7 +8,7 @@ from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
-from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
@@ -112,14 +112,14 @@ class TaskQueue:
         history = self._get_history()
 
         # broadcast only does anything if there have been changes
-        self._broadcaster.broadcast({"type": "queue_update", "data": queue})
-        self._broadcaster.broadcast({"type": "history_update", "data": history})
-        self._broadcaster.broadcast({"type": "tasks_update", "data": history + queue})
+        self._broadcaster.broadcast(Event(type="queue_update", data=queue))
+        self._broadcaster.broadcast(Event(type="history_update", data=history))
+        self._broadcaster.broadcast(Event(type="tasks_update", data=history + queue))
         self._broadcaster.broadcast(
-            {"type": "call_queue_update", "data": self._call_queue}
+            Event(type="call_queue_update", data=self._call_queue)
         )
         self._broadcaster.broadcast(
-            {"type": "calls_history_update", "data": self._call_history}
+            Event(type="calls_history_update", data=self._call_history)
         )
 
     async def get_next_call_once_available(self) -> BlueapiCall:
@@ -353,7 +353,7 @@ class TaskQueue:
                 paused=self._state.paused if paused is None else paused
             )
             self._broadcaster.broadcast(
-                {"type": "queue_state_update", "data": self._state}
+                Event(type="queue_state_update", data=self._state)
             )
         LOGGER.info(f"Succesfully updated queue state to {self._state}")
         return self._state

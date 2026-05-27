@@ -544,10 +544,10 @@
         }
       }
     },
-    "events": {
+    "/events": {
       "get": {
         "summary": "Stream Events",
-        "operationId": "stream_eventsevents_get",
+        "operationId": "stream_events_events_get",
         "responses": {
           "200": {
             "description": "Successful Response",
