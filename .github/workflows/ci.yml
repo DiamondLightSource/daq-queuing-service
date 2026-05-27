@@ -14,7 +14,6 @@ jobs:
     uses: ./.github/workflows/_tox.yml
     with:
       tox: pre-commit,type-checking
-      skip_hooks: generate-api-docs
 
   test:
     strategy:
