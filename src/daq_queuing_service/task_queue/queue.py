@@ -7,7 +7,11 @@ from typing import Any
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.blueapi_interaction.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+    CallStatus,
+)
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
@@ -116,10 +120,10 @@ class TaskQueue:
         self._broadcaster.broadcast(Event(type="history_update", data=history))
         self._broadcaster.broadcast(Event(type="tasks_update", data=history + queue))
         self._broadcaster.broadcast(
-            Event(type="call_queue_update", data=self._call_queue)
+            Event(type="call_queue_update", data=self._get_call_queue())
         )
         self._broadcaster.broadcast(
-            Event(type="calls_history_update", data=self._call_history)
+            Event(type="calls_history_update", data=self._get_call_history())
         )
 
     async def get_next_call_once_available(self) -> BlueapiCall:
@@ -470,10 +474,16 @@ class TaskQueue:
             for task_id in self._history
         ]
 
-    async def get_call_queue(self) -> list[BlueapiCall]:
+    async def get_call_queue(self) -> list[BlueapiCallResponse]:
         async with self._modifying:
-            return list(self._call_queue)
+            return self._get_call_queue()
 
-    async def get_call_history(self) -> list[BlueapiCall]:
+    def _get_call_queue(self) -> list[BlueapiCallResponse]:
+        return [call.to_response() for call in self._call_queue]
+
+    async def get_call_history(self) -> list[BlueapiCallResponse]:
         async with self._modifying:
-            return list(self._call_history)
+            return self._get_call_history()
+
+    def _get_call_history(self) -> list[BlueapiCallResponse]:
+        return [call.to_response() for call in self._call_history]

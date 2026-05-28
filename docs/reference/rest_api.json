@@ -751,6 +751,96 @@
         ],
         "title": "BlueapiCall"
       },
+      "BlueapiCallResponse": {
+        "properties": {
+          "task_request": {
+            "$ref": "#/components/schemas/TaskRequest"
+          },
+          "parent_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Task Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatus"
+          },
+          "time_started": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Started"
+          },
+          "time_completed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Completed"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "errors": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/TaskError"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "blueapi_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blueapi Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_request",
+          "parent_task_id",
+          "status",
+          "time_started",
+          "time_completed",
+          "result",
+          "errors",
+          "blueapi_id"
+        ],
+        "title": "BlueapiCallResponse"
+      },
       "CORSConfig": {
         "properties": {
           "origins": {
@@ -1224,10 +1314,10 @@
             "description": "URL to clone from",
             "default": "https://github.com/example/example.git"
           },
-          "branch": {
+          "target_revision": {
             "type": "string",
-            "title": "Branch",
-            "description": "Branch of repo to check out - defaults to remote's default when cloning and the existing branch when the repo already exists"
+            "title": "Target Revision",
+            "description": "Revision (branch or tag) to check out when cloning - defaults to remote's HEAD. If a tag is used, the repo will be left in a 'detached head' state."
           }
         },
         "additionalProperties": false,
@@ -1429,13 +1519,15 @@
             "type": "string",
             "title": "Id"
           },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
           "blueapi_calls": {
             "items": {
-              "$ref": "#/components/schemas/BlueapiCall"
+              "$ref": "#/components/schemas/BlueapiCallResponse"
             },
             "type": "array",
-            "title": "Blueapi Calls",
-            "default": []
+            "title": "Blueapi Calls"
           },
           "position": {
             "anyOf": [
@@ -1447,17 +1539,15 @@
               }
             ],
             "title": "Position"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status",
-            "readOnly": true
           }
         },
         "type": "object",
         "required": [
           "experiment_definition",
-          "position",
-          "status"
+          "id",
+          "status",
+          "blueapi_calls",
+          "position"
         ],
         "title": "TaskWithPosition"
       },
