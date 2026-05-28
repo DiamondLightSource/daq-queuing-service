@@ -623,6 +623,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                     "blueapi_id": None,
                 }
             ],
+            "position": None,
         },
         {
             "experiment_definition": {
@@ -649,6 +650,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                     "blueapi_id": None,
                 }
             ],
+            "position": None,
         },
     ]
 

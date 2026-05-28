@@ -312,7 +312,7 @@ class TaskQueue:
         LOGGER.info(f"Succesfully moved task {task_id} to position {new_position}")
         return new_position
 
-    async def cancel_tasks(self, task_ids: Sequence[str]) -> list[Task]:
+    async def cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
         """Remove tasks from the queue. If one or more of the requested tasks cannot be
         cancelled as they are complete or in progress, an error will be raised and none
         of the requested tasks will be cancelled.
@@ -321,7 +321,8 @@ class TaskQueue:
             task_ids (Sequence[str]): List of task IDs to cancel
 
         Returns:
-            list[Task]: List of the task objects that were removed from the queue.
+            list[TaskWithPosition]: List of the task objects that were removed from the
+            queue.
         """
         async with self._modifying:
             task_ids = list(task_ids)
@@ -331,7 +332,7 @@ class TaskQueue:
             for task in tasks:
                 task.cancel()
         LOGGER.info(f"Succesfully cancelled tasks: {task_ids}")
-        return tasks
+        return [TaskWithPosition.from_task(task) for task in tasks]
 
     async def clear_history(self):
         """Clears the history list. Any task in the history list at the time will be
