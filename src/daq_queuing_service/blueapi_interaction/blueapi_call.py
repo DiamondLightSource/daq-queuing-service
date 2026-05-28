@@ -95,3 +95,21 @@ class BlueapiCall(BaseModel):
         self.time_completed = datetime.now().isoformat()
         if errors:
             self.errors.extend(errors)
+
+    def to_response(self) -> "BlueapiCallResponse":
+        return BlueapiCallResponse.from_blueapi_call(self)
+
+
+class BlueapiCallResponse(BaseModel):
+    task_request: TaskRequest
+    parent_task_id: str | None
+    status: CallStatus
+    time_started: str | None
+    time_completed: str | None
+    result: TaskResult | None
+    errors: list[str | TaskError]
+    blueapi_id: str | None
+
+    @classmethod
+    def from_blueapi_call(cls, blueapi_call: BlueapiCall):
+        return cls.model_validate({**blueapi_call.model_dump()})

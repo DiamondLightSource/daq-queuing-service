@@ -5,7 +5,11 @@ from uuid import uuid4
 from blueapi.service.model import StrEnum
 from pydantic import BaseModel, Field, computed_field
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.blueapi_interaction.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+    CallStatus,
+)
 
 
 def create_uuid_str() -> str:
@@ -61,7 +65,11 @@ class Task(BaseModel):
         return Status.QUEUED
 
 
-class TaskWithPosition(Task):
+class TaskWithPosition(BaseModel):
+    experiment_definition: ExperimentDefinition
+    id: str
+    status: Status
+    blueapi_calls: list[BlueapiCallResponse]
     position: int | None
 
     @classmethod

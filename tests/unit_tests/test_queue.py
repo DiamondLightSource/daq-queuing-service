@@ -6,7 +6,11 @@ import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.blueapi_interaction.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+    CallStatus,
+)
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
@@ -257,14 +261,17 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
+            status=Status.IN_PROGRESS,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="2",
                     status=CallStatus.IN_PROGRESS,
                     time_started="2026-04-17T15:02:00.000000",
                     time_completed=None,
                     errors=[],
+                    result=None,
+                    blueapi_id=None,
                 )
             ],
             position=0,
@@ -274,14 +281,17 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 plan_name="test", sample_id="3", instrument_session=""
             ),
             id="3",
+            status=Status.QUEUED,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="3",
                     status=CallStatus.WAITING,
                     time_started=None,
                     time_completed=None,
                     errors=[],
+                    result=None,
+                    blueapi_id=None,
                 )
             ],
             position=1,
@@ -291,14 +301,17 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 plan_name="test", sample_id="4", instrument_session=""
             ),
             id="4",
+            status=Status.QUEUED,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="4",
                     status=CallStatus.WAITING,
                     time_started=None,
                     time_completed=None,
                     errors=[],
+                    result=None,
+                    blueapi_id=None,
                 )
             ],
             position=2,
@@ -317,8 +330,9 @@ async def test_get_history_only_returns_tasks_in_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
+            status=Status.COMPLETE,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="0",
                     status=CallStatus.ERROR,
@@ -332,6 +346,7 @@ async def test_get_history_only_returns_tasks_in_history(
                         )
                     ],
                     result=None,
+                    blueapi_id=None,
                 )
             ],
             position=None,
@@ -341,8 +356,9 @@ async def test_get_history_only_returns_tasks_in_history(
                 plan_name="test", sample_id="1", instrument_session=""
             ),
             id="1",
+            status=Status.COMPLETE,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="1",
                     status=CallStatus.SUCCESS,
@@ -350,6 +366,7 @@ async def test_get_history_only_returns_tasks_in_history(
                     time_completed="2026-04-17T15:01:59.000000",
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
+                    blueapi_id=None,
                 )
             ],
             position=None,
@@ -369,8 +386,9 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
+            status=Status.COMPLETE,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="0",
                     status=CallStatus.ERROR,
@@ -384,6 +402,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                         )
                     ],
                     result=None,
+                    blueapi_id=None,
                 )
             ],
             position=None,
@@ -393,8 +412,9 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="1", instrument_session=""
             ),
             id="1",
+            status=Status.COMPLETE,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="1",
                     status=CallStatus.SUCCESS,
@@ -402,6 +422,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     time_completed="2026-04-17T15:01:59.000000",
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
+                    blueapi_id=None,
                 )
             ],
             position=None,
@@ -411,14 +432,17 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="2", instrument_session=""
             ),
             id="2",
+            status=Status.IN_PROGRESS,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="2",
                     status=CallStatus.IN_PROGRESS,
                     time_started="2026-04-17T15:02:00.000000",
                     time_completed=None,
                     errors=[],
+                    result=None,
+                    blueapi_id=None,
                 )
             ],
             position=0,
@@ -428,14 +452,17 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="3", instrument_session=""
             ),
             id="3",
+            status=Status.QUEUED,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="3",
                     status=CallStatus.WAITING,
                     time_started=None,
                     time_completed=None,
                     errors=[],
+                    result=None,
+                    blueapi_id=None,
                 )
             ],
             position=1,
@@ -445,14 +472,17 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="4", instrument_session=""
             ),
             id="4",
+            status=Status.QUEUED,
             blueapi_calls=[
-                BlueapiCall(
+                BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="4",
                     status=CallStatus.WAITING,
                     time_started=None,
                     time_completed=None,
                     errors=[],
+                    result=None,
+                    blueapi_id=None,
                 )
             ],
             position=2,
@@ -692,7 +722,7 @@ async def test_get_call_queue_returns_calls_in_call_queue(
 ):
     result = await task_queue_with_history.get_call_queue()
     assert result == [
-        BlueapiCall(
+        BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="2",
             status=CallStatus.IN_PROGRESS,
@@ -702,7 +732,7 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             errors=[],
             blueapi_id=None,
         ),
-        BlueapiCall(
+        BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="3",
             status=CallStatus.WAITING,
@@ -712,7 +742,7 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             errors=[],
             blueapi_id=None,
         ),
-        BlueapiCall(
+        BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="4",
             status=CallStatus.WAITING,
@@ -730,7 +760,7 @@ async def test_get_call_history_returns_calls_in_call_history(
 ):
     result = await task_queue_with_history.get_call_history()
     assert result == [
-        BlueapiCall(
+        BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="0",
             status=CallStatus.ERROR,
@@ -744,7 +774,7 @@ async def test_get_call_history_returns_calls_in_call_history(
             ],
             blueapi_id=None,
         ),
-        BlueapiCall(
+        BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="1",
             status=CallStatus.SUCCESS,

@@ -27,7 +27,10 @@ from daq_queuing_service.api.api import (
     create_api_router,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.blueapi_interaction.blueapi_call import (
+    BlueapiCallResponse,
+    CallStatus,
+)
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import (
     ExperimentDefinition,
@@ -354,7 +357,7 @@ async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_ta
         ),
         id=task_ids[-1],
         blueapi_calls=[
-            BlueapiCall(
+            BlueapiCallResponse(
                 task_request=TaskRequest(
                     name="add_tasks", params={"time": 10}, instrument_session="abc"
                 ),
@@ -368,6 +371,7 @@ async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_ta
             )
         ],
         position=3,
+        status=Status.QUEUED,
     )
 
 
