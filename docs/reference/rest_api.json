@@ -291,7 +291,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/Task"
+                    "$ref": "#/components/schemas/TaskWithPosition"
                   },
                   "type": "array",
                   "title": "Response Cancel Tasks Queue Tasks Delete"
@@ -521,7 +521,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BlueapiCallResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Call Queue Call Queue Get"
+                }
               }
             }
           }
@@ -537,7 +543,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BlueapiCallResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Call History Call History Get"
+                }
               }
             }
           }
@@ -666,90 +678,6 @@
         ],
         "title": "BasicAuthentication",
         "description": "User credentials for basic authentication"
-      },
-      "BlueapiCall": {
-        "properties": {
-          "task_request": {
-            "$ref": "#/components/schemas/TaskRequest"
-          },
-          "parent_task_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Task Id"
-          },
-          "status": {
-            "$ref": "#/components/schemas/CallStatus",
-            "default": "Waiting"
-          },
-          "time_started": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Started"
-          },
-          "time_completed": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Completed"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TaskResult"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "errors": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/components/schemas/TaskError"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Errors"
-          },
-          "blueapi_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Blueapi Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "task_request"
-        ],
-        "title": "BlueapiCall"
       },
       "BlueapiCallResponse": {
         "properties": {
@@ -1386,35 +1314,6 @@
         "type": "object",
         "title": "StompConfig",
         "description": "Config for connecting to stomp broker"
-      },
-      "Task": {
-        "properties": {
-          "experiment_definition": {
-            "$ref": "#/components/schemas/ExperimentDefinition"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "blueapi_calls": {
-            "items": {
-              "$ref": "#/components/schemas/BlueapiCall"
-            },
-            "type": "array",
-            "title": "Blueapi Calls",
-            "default": []
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status",
-            "readOnly": true
-          }
-        },
-        "type": "object",
-        "required": [
-          "experiment_definition",
-          "status"
-        ],
-        "title": "Task"
       },
       "TaskCancelRequest": {
         "properties": {
