@@ -15,6 +15,7 @@ from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
 
 from daq_queuing_service.app._config import AppConfig, load_config
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
@@ -123,7 +124,7 @@ def create_api_router(
         return await queue.move_task(task_id, new_position)
 
     @router.delete("/queue/tasks")
-    async def cancel_tasks(payload: TaskCancelRequest) -> list[Task]:
+    async def cancel_tasks(payload: TaskCancelRequest) -> list[TaskWithPosition]:
         return await queue.cancel_tasks(payload.task_ids)
 
     @router.get("/queue/{position}")
@@ -149,11 +150,11 @@ def create_api_router(
         return await queue.clear_history()
 
     @router.get("/call_queue")
-    async def get_call_queue():
+    async def get_call_queue() -> list[BlueapiCallResponse]:
         return await queue.get_call_queue()
 
     @router.get("/call_history")
-    async def get_call_history():
+    async def get_call_history() -> list[BlueapiCallResponse]:
         return await queue.get_call_history()
 
     @router.get("/events")
