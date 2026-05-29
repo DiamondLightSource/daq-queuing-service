@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncGenerator, Callable
-from typing import Any
 
 from blueapi.client.rest import (
     BlueapiRestClient,
@@ -19,6 +18,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResp
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
+    QUEUE_EVENTS,
     QueueState,
     TaskQueue,
     TaskWithPosition,
@@ -75,7 +75,7 @@ def create_api_router(
     queue: TaskQueue,
     blueapi_client: BlueapiRestClient,
     task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
-    broadcaster: Broadcaster,
+    broadcaster: Broadcaster[QUEUE_EVENTS],
 ) -> APIRouter:
     router = APIRouter()
 
@@ -158,10 +158,10 @@ def create_api_router(
         return await queue.get_call_history()
 
     @router.get("/events")
-    async def stream_events():
+    async def stream_events() -> EventSourceResponse:
         subscriber = broadcaster.subscribe()
 
-        async def event_generator() -> AsyncGenerator[Any, None]:
+        async def event_generator() -> AsyncGenerator[str, None]:
             try:
                 while True:
                     event = await subscriber.get()

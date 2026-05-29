@@ -1,37 +1,57 @@
 import asyncio
 import logging
-from typing import Any, TypedDict
+from collections.abc import Iterable
+from typing import Any, Generic, TypedDict, TypeVar
+
+from pydantic import BaseModel
 
 LOGGER = logging.getLogger(__name__)
 
+T = TypeVar("T", bound=str)
 
-class Event(TypedDict):
-    type: str
+
+class Event(TypedDict, Generic[T]):
+    type: T
     data: Any
 
 
-class Broadcaster:
+def serialise(data: Any) -> Any:
+    if isinstance(data, BaseModel):
+        return data.model_dump()
+
+    if isinstance(data, Iterable):
+        return [serialise(item) for item in data]  # type: ignore
+
+    return data
+
+
+class Broadcaster(Generic[T]):
     def __init__(self, max_queue_size: int = 10):
-        self._subscribers: list[asyncio.Queue[Event]] = []
+        self._subscribers: list[asyncio.Queue[Event[T]]] = []
         self._previous: dict[str, Any] = {}
         self._max_queue_size = max_queue_size
 
-    def broadcast(self, event: Event):
-        if self._previous.get(event["type"]) == event["data"]:
+    def broadcast(self, event: Event[T]):
+        serialised = serialise(event["data"])
+
+        if serialised == self._previous.get(event["type"]):
             return
 
         for subscriber in self._subscribers:
             try:
-                subscriber.put_nowait(event)
+                subscriber.put_nowait(Event(type=event["type"], data=serialised))
             except asyncio.QueueFull:
                 LOGGER.error(f"Queue full, passing subscriber {subscriber}")
-        self._previous[event["type"]] = event["data"]
 
-    def subscribe(self) -> asyncio.Queue[Event]:
-        subscriber: asyncio.Queue[Event] = asyncio.Queue(maxsize=self._max_queue_size)
+        self._previous[event["type"]] = serialised
+
+    def subscribe(self) -> asyncio.Queue[Event[T]]:
+        subscriber: asyncio.Queue[Event[T]] = asyncio.Queue(
+            maxsize=self._max_queue_size
+        )
         self._subscribers.append(subscriber)
         return subscriber
 
-    def unsubscribe(self, subscriber: asyncio.Queue[Event]):
+    def unsubscribe(self, subscriber: asyncio.Queue[Event[T]]):
         if subscriber in self._subscribers:
             self._subscribers.remove(subscriber)

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from collections.abc import Callable, Sequence
 from types import TracebackType
-from typing import Any
+from typing import Any, Literal
 
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
@@ -55,8 +55,18 @@ class Modifying(asyncio.Condition):
         return await super().__aexit__(exc_type, exc, tb)
 
 
+QUEUE_EVENTS = Literal[
+    "state_update",
+    "queue_update",
+    "history_update",
+    "tasks_update",
+    "call_queue_update",
+    "call_history_update",
+]
+
+
 class TaskQueue:
-    def __init__(self, convert: Converter, broadcaster: Broadcaster):
+    def __init__(self, convert: Converter, broadcaster: Broadcaster[QUEUE_EVENTS]):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -123,7 +133,7 @@ class TaskQueue:
             Event(type="call_queue_update", data=self._get_call_queue())
         )
         self._broadcaster.broadcast(
-            Event(type="calls_history_update", data=self._get_call_history())
+            Event(type="call_history_update", data=self._get_call_history())
         )
 
     async def get_next_call_once_available(self) -> BlueapiCall:
@@ -357,9 +367,7 @@ class TaskQueue:
             self._state = QueueState(
                 paused=self._state.paused if paused is None else paused
             )
-            self._broadcaster.broadcast(
-                Event(type="queue_state_update", data=self._state)
-            )
+            self._broadcaster.broadcast(Event(type="state_update", data=self._state))
         LOGGER.info(f"Succesfully updated queue state to {self._state}")
         return self._state
 

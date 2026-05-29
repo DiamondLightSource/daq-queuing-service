@@ -15,7 +15,7 @@ from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
     construct_blueapi_task_request,
 )
-from daq_queuing_service.task_queue.queue import TaskQueue
+from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 
 from ._config import load_config
@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
             await asyncio.gather(worker_task, return_exceptions=True)
 
     config = load_config()
-    broadcaster = Broadcaster()
+    broadcaster: Broadcaster[QUEUE_EVENTS] = Broadcaster()
 
     app = FastAPI(lifespan=lifespan)
 
