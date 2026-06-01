@@ -5,12 +5,14 @@ from typing import NoReturn
 
 from blueapi.client import BlueapiClient
 from blueapi.client.rest import BlueapiRestClient
+from blueapi.service.authentication import SessionCacheManager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.blueapi_interaction.session_manager import UDCSessionManager
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
@@ -63,7 +65,12 @@ def create_app(dev: bool = False) -> FastAPI:
 
     app.state.queue = TaskQueue(construct_blueapi_call_list, broadcaster)
 
-    blueapi_rest_client = BlueapiRestClient(config=config.blueapi.api)
+    assert config.blueapi.oidc
+    session_manager = UDCSessionManager(config.blueapi.oidc, SessionCacheManager(None))
+
+    blueapi_rest_client = BlueapiRestClient(
+        config=config.blueapi.api, session_manager=session_manager
+    )
     blueapi_client = BlueapiClient.from_config(config.blueapi)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
 
