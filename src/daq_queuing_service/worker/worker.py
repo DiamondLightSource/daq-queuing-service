@@ -64,16 +64,17 @@ class QueueWorker:
         result = await self._client.run_task(
             call.task_request, on_event=partial(self._on_blueapi_event, call=call)
         )
+
+        if result.error:
+            await self._handle_run_task_error(call, result.error)
+            return
+
         if call.status == CallStatus.CLAIMED:
             LOGGER.warning(
                 f"Call {call} status was not updated to in progress even"
                 + "though the blueapi task is now complete!"
             )
             call.put_in_progress()
-
-        if result.error:
-            await self._handle_run_task_error(call, result.error)
-            return
 
         assert result.value
         task_status: TaskStatus = result.value

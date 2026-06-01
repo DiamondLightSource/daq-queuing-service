@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, Generic, TypedDict, TypeVar
 
 from pydantic import BaseModel
@@ -18,6 +18,12 @@ class Event(TypedDict, Generic[T]):
 def serialise(data: Any) -> Any:
     if isinstance(data, BaseModel):
         return data.model_dump()
+
+    if isinstance(data, (str, bytes)):
+        return data
+
+    if isinstance(data, Mapping):
+        return {key: serialise(value) for key, value in data.items()}  # type: ignore
 
     if isinstance(data, Iterable):
         return [serialise(item) for item in data]  # type: ignore
