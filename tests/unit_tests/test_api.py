@@ -38,7 +38,7 @@ from daq_queuing_service.task import (
     Task,
     TaskWithPosition,
 )
-from daq_queuing_service.task_queue.queue import TaskQueue
+from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.task_queue.queue_utils import QueueError
 
 MOCK_TASK_REQUEST_CONSTRUCTOR = MagicMock()
@@ -57,7 +57,7 @@ def blueapi_client() -> BlueapiRestClient:
 
 
 @pytest.fixture
-def broadcaster():
+def broadcaster() -> Broadcaster[QUEUE_EVENTS]:
     return Broadcaster()
 
 
@@ -65,8 +65,8 @@ def broadcaster():
 def app(
     task_queue_with_history: TaskQueue,
     blueapi_client: BlueapiRestClient,
-    broadcaster: Broadcaster,
-):
+    broadcaster: Broadcaster[QUEUE_EVENTS],
+) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(
@@ -886,9 +886,11 @@ def test_get_config_returns_config(test_client: TestClient):
 
 @pytest.mark.skip("Can't get TestClient to play nicely with SSE")
 async def test_stream_events_streams_all_events_from_broadcaster(
-    test_client: TestClient, broadcaster: Broadcaster
+    test_client: TestClient, broadcaster: Broadcaster[QUEUE_EVENTS]
 ):
-    events_to_send = [Event(type="test_stream", data=i) for i in range(5)]
+    events_to_send: list[Event[QUEUE_EVENTS]] = [
+        Event(type="queue_update", data=i) for i in range(5)
+    ]
     received: list[str] = []
 
     def read_stream():
