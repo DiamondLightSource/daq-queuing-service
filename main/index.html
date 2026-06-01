@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>daq_queuing_service &#8212; daq-queuing-service 0.1.6.dev6+gc00e8ed9d documentation</title>
+    <title>daq_queuing_service &#8212; daq-queuing-service 0.1.6.dev7+g7611c7a68 documentation</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
 
-    <script src="_static/documentation_options.js?v=b574e7ea"></script>
+    <script src="_static/documentation_options.js?v=205f1c1a"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -454,12 +454,12 @@
 </tbody>
 </table>
 </div>
-<p>The server is build with FastAPI. For developement and testing, it may be useful to have blueapi and the queue service running locally. To get started, install the required dependencies into a virtual environment and run the FastAPI app with uvicorn:</p>
+<p>The server is build with FastAPI. For development and testing, it may be useful to have blueapi and the queue service running locally. To get started, install dependencies into a virtual environment and run the app:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync
 <span class="nb">source</span><span class="w"> </span>.venv/bin/activate
 podman-compose<span class="w"> </span>-f<span class="w"> </span>tests/system_tests/compose.yaml<span class="w"> </span>up<span class="w">             </span><span class="c1"># Local rabbitmq</span>
 blueapi<span class="w"> </span>--config<span class="w"> </span>tests/test_data/test_blueapi_config.yaml<span class="w"> </span>serve<span class="w">  </span><span class="c1"># Local blueapi</span>
-uvicorn<span class="w"> </span>daq_queuing_service.app.app:app<span class="w"> </span>--port<span class="w"> </span><span class="m">8001</span><span class="w">              </span><span class="c1"># Local queue service</span>
+daq-queuing-service<span class="w"> </span>-p<span class="w"> </span><span class="m">8001</span><span class="w"> </span>--dev<span class="w">                                </span><span class="c1"># Local queue service</span>
 </pre></div>
 </div>
 <section id="how-the-documentation-is-structured">
