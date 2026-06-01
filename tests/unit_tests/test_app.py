@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
@@ -92,3 +93,18 @@ def test_if_worker_crashes_then_error_logged(caplog: LogCaptureFixture):
             pass
 
     assert "Worker crashed!" in caplog.text
+
+
+def test_if_dev_mode_cors_middlewhere_added_to_app():
+    with patch(
+        "daq_queuing_service.app.app.FastAPI.add_middleware"
+    ) as mock_add_middleware:
+        _ = create_app(dev=True)
+
+    mock_add_middleware.assert_called_once_with(
+        CORSMiddleware,
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )

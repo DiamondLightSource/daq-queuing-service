@@ -27,7 +27,9 @@ from daq_queuing_service.worker.worker import QueueWorker
 
 
 def _get_mock_blueapi_client(
-    error: Exception | None = None, plan_error: TaskError | None = None
+    error: Exception | None = None,
+    plan_error: TaskError | None = None,
+    mock_events: list[WorkerEvent | ProgressEvent | DataEvent] | None = None,
 ):
     client = BlueapiClientAdapter(client=MagicMock())
     client.get_state = AsyncMock(
@@ -37,7 +39,8 @@ def _get_mock_blueapi_client(
     )
 
     def mock_run_task(
-        task_request: TaskRequest, on_event: OnAnyEvent
+        task_request: TaskRequest,
+        on_event: OnAnyEvent,
     ) -> BlueapiResult[
         TaskStatus,
         BlueskyRemoteControlError
@@ -45,20 +48,7 @@ def _get_mock_blueapi_client(
         | UnknownPlanError
         | ServiceUnavailableError,
     ]:
-        mock_events = [
-            WorkerEvent(
-                state=WorkerState.RUNNING,
-                task_status=TaskStatus(
-                    task_id="worker_test",
-                    result=None,
-                    task_complete=False,
-                    task_failed=False,
-                ),
-            ),
-            ProgressEvent(task_id="worker_test"),
-            DataEvent(name="data event", doc={}, task_id="worker_test"),
-        ]
-        if not error:
+        if not error and mock_events:
             for event in mock_events:
                 on_event(event)
 
@@ -82,6 +72,34 @@ def _get_mock_blueapi_client(
 
 @pytest.fixture
 def worker(task_queue: TaskQueue):
+    def construct_task_request(experiment_definition: ExperimentDefinition):
+        return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
+
+    mock_events = [
+        WorkerEvent(
+            state=WorkerState.RUNNING,
+            task_status=TaskStatus(
+                task_id="worker_test",
+                result=None,
+                task_complete=False,
+                task_failed=False,
+            ),
+        ),
+        ProgressEvent(task_id="worker_test"),
+        DataEvent(name="data event", doc={}, task_id="worker_test"),
+    ]
+
+    worker = QueueWorker(
+        queue=task_queue,
+        blueapi_client=_get_mock_blueapi_client(mock_events=mock_events),
+        task_request_constructor=construct_task_request,
+        poll_time_s=0.01,
+    )
+    return worker
+
+
+@pytest.fixture
+def worker_with_no_blueapi_events(task_queue: TaskQueue):
     def construct_task_request(experiment_definition: ExperimentDefinition):
         return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
 
@@ -301,3 +319,26 @@ def test__at_loop_end_log_message(worker: QueueWorker, caplog: LogCaptureFixture
     with caplog.at_level(logging.INFO):
         worker._at_loop_end()
     assert "Loop finished" in caplog.text
+
+
+async def test_if_call_not_put_in_progress_by_event_then_call_put_in_progress_and_warn(
+    worker_with_no_blueapi_events: QueueWorker,
+    caplog: LogCaptureFixture,
+    only_loop_once: type[Exception],
+):
+    queue = await worker_with_no_blueapi_events._queue.get_queue()
+    first_task = worker_with_no_blueapi_events._queue._tasks[queue[0].id]
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(only_loop_once):
+            await worker_with_no_blueapi_events.run_loop()
+
+    first_call = first_task.blueapi_calls[0]
+
+    assert first_call.status == CallStatus.SUCCESS
+    assert (
+        "Call (task_request=TaskRequest(name='test', params={}, instrument_session='')"
+        + " parent_task_id='0' status=<CallStatus.CLAIMED: 'Claimed'> time_started=None"
+        + " time_completed=None result=None errors=[] blueapi_id=None) status was not "
+        + "updated to in progress even though the blueapi task is now complete!"
+    ) in caplog.text

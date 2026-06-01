@@ -71,8 +71,8 @@ class QueueWorker:
 
         if call.status == CallStatus.CLAIMED:
             LOGGER.warning(
-                f"Call {call} status was not updated to in progress even"
-                + "though the blueapi task is now complete!"
+                f"Call ({call}) status was not updated to in progress even"
+                + " though the blueapi task is now complete!"
             )
             call.put_in_progress()
 

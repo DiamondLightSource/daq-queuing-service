@@ -1,13 +1,18 @@
 import asyncio
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 import pytest
+from pydantic import BaseModel
 from pytest import LogCaptureFixture
 
-from daq_queuing_service.broadcaster import Broadcaster, Event
+from daq_queuing_service.broadcaster import Broadcaster, Event, serialise
 
 TEST_EVENTS = Literal["test"]
+
+
+class FakeModel(BaseModel):
+    data: str
 
 
 async def test_broadcast_broadcasts_event_to_subscribers():
@@ -64,3 +69,23 @@ def test_if_subscriber_unsubscribes_then_it_no_longer_receives_broadcasts():
     assert sub_1.get_nowait() == {"type": "test", "data": 2}
     with pytest.raises(asyncio.QueueEmpty):
         sub_2.get_nowait()
+
+
+@pytest.mark.parametrize(
+    "data, expected_serialised_data",
+    [
+        ("data", "data"),
+        ([1, 2, "3", "4"], [1, 2, "3", "4"]),
+        (FakeModel(data="test"), {"data": "test"}),
+        (
+            [FakeModel(data="test"), FakeModel(data="test2")],
+            [{"data": "test"}, {"data": "test2"}],
+        ),
+        (
+            {1: FakeModel(data="test"), 2: FakeModel(data="test2")},
+            {1: {"data": "test"}, 2: {"data": "test2"}},
+        ),
+    ],
+)
+def test_serialise_works_as_expected(data: Any, expected_serialised_data: Any):
+    assert serialise(data) == expected_serialised_data
