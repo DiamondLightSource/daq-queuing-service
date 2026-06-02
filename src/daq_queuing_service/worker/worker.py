@@ -17,11 +17,14 @@ from blueapi.worker.event import TaskError, TaskResult
 
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.log import HANDLER
 from daq_queuing_service.task import ExperimentDefinition
 from daq_queuing_service.task_queue.queue import TaskQueue
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("Queue Worker")
+LOGGER.addHandler(HANDLER)
 LOGGER.setLevel(logging.DEBUG)
+LOGGER.propagate = False
 
 
 class QueueWorker:

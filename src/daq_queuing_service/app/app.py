@@ -2,6 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import NoReturn
+from unittest.mock import MagicMock
 
 from blueapi.client import BlueapiClient
 from blueapi.client.rest import BlueapiRestClient
@@ -65,7 +66,8 @@ def create_app(dev: bool = False) -> FastAPI:
 
     app.state.queue = TaskQueue(construct_blueapi_call_list, broadcaster)
 
-    assert config.blueapi.oidc
+    if not config.blueapi.oidc:
+        config.blueapi.oidc = MagicMock()
     session_manager = UDCSessionManager(config.blueapi.oidc, SessionCacheManager(None))
 
     blueapi_rest_client = BlueapiRestClient(

@@ -3,6 +3,8 @@ import os
 import requests
 from blueapi.client.rest import SessionManager
 
+from daq_queuing_service.log import LOGGER
+
 
 class UDCSessionManager(SessionManager):
     def get_valid_access_token(self) -> str:
@@ -11,10 +13,13 @@ class UDCSessionManager(SessionManager):
         )
 
         client_id = "i15-1-udc"
-        client_secret = os.environ["UDC_SECRET"]
+        client_secret = os.environ.get("UDC_SECRET")
 
         if not (client_id and client_secret):
+            LOGGER.debug("No UDC secret found")
             return ""
+
+        LOGGER.debug("Found UDC secret")
 
         response = requests.post(
             token_url,
@@ -25,4 +30,6 @@ class UDCSessionManager(SessionManager):
             },
         )
         response.raise_for_status()
-        return response.json().get("access_token")
+        token = response.json().get("access_token")
+        LOGGER.debug(f"Got token: {token}")
+        return token

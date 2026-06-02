@@ -228,7 +228,7 @@ async def test_when_parameter_error_then_call_failed_and_error_added_to_call(
     worker_with_parameter_error._client.run_task.assert_called_once()  # type: ignore
 
 
-async def test_when_plan_name_error_then_call_failed_and_error_added_to_task(
+async def test_when_plan_name_error_then_call_failed_and_error_added_to_call(
     worker_with_unknown_plan_error: QueueWorker, only_loop_once: type[Exception]
 ):
 
