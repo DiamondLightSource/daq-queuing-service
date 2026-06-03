@@ -24,7 +24,6 @@ from daq_queuing_service.task_queue.queue import TaskQueue
 LOGGER = logging.getLogger("Queue Worker")
 LOGGER.addHandler(HANDLER)
 LOGGER.setLevel(logging.DEBUG)
-LOGGER.propagate = False
 
 
 class QueueWorker:
