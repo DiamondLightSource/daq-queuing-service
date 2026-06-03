@@ -13,6 +13,7 @@ from daq_queuing_service.blueapi_interaction.session_manager import UDCSessionMa
 def get_blueapi_clients(
     blueapi_config: ApplicationConfig,
 ) -> tuple[BlueapiRestClient, BlueapiClient]:
+    # This is only needed until the blueapi client supports udc.
     if not blueapi_config.oidc:
         blueapi_config.oidc = MagicMock()
 

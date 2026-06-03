@@ -24,6 +24,7 @@ from daq_queuing_service.task_queue.queue import TaskQueue
 LOGGER = logging.getLogger("Queue Worker")
 LOGGER.addHandler(HANDLER)
 LOGGER.setLevel(logging.DEBUG)
+LOGGER.propagate = False
 
 
 class QueueWorker:
@@ -102,7 +103,8 @@ class QueueWorker:
                     assert worker_event.task_status
                     call.blueapi_id = worker_event.task_status.task_id
                     LOGGER.info(
-                        f"Call {call} is in progress, blueapi ID: {call.blueapi_id}"
+                        f"Putting call in progress, blueapi ID: {call.blueapi_id}. "
+                        + f"Call: ({call})"
                     )
                     call.put_in_progress()
             case ProgressEvent():

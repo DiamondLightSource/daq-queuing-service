@@ -1,12 +1,21 @@
 import pytest
 from blueapi.worker.event import TaskError, TaskResult
+from pytest import MonkeyPatch
 
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
 )
 from daq_queuing_service.task import ExperimentDefinition, Task
 from daq_queuing_service.task_queue.queue import TaskQueue
+
+
+@pytest.fixture(autouse=True)
+def propagate_logs(monkeypatch: MonkeyPatch):
+    # This is turned off in prod to avoid duplicate logs
+    # but needed in tests for caplog to receive logs
+    monkeypatch.setattr(LOGGER, "propagate", True)
 
 
 @pytest.fixture

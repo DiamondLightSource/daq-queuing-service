@@ -7,6 +7,7 @@ from daq_queuing_service.log import LOGGER
 
 
 class UDCSessionManager(SessionManager):
+    # This is only needed until the blueapi client supports udc.
     def get_valid_access_token(self) -> str:
         token_url = (
             "https://identity.diamond.ac.uk/realms/dls/protocol/openid-connect/token"
