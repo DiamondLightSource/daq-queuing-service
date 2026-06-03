@@ -4,8 +4,8 @@
     "url": "https://DiamondLightSource.github.io/daq-queuing-service/main/"
   },
   {
-    "version": "v0.17a",
-    "url": "https://DiamondLightSource.github.io/daq-queuing-service/v0.17a/"
+    "version": "v0.1.7-alpha1",
+    "url": "https://DiamondLightSource.github.io/daq-queuing-service/v0.1.7-alpha1/"
   },
   {
     "version": "v0.1.7-alpha",
@@ -38,5 +38,9 @@
   {
     "version": "v0.1.0",
     "url": "https://DiamondLightSource.github.io/daq-queuing-service/v0.1.0/"
+  },
+  {
+    "version": "v0.17a",
+    "url": "https://DiamondLightSource.github.io/daq-queuing-service/v0.17a/"
   }
 ]
