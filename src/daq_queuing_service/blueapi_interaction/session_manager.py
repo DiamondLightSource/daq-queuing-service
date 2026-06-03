@@ -9,6 +9,7 @@ from daq_queuing_service.log import LOGGER
 class UDCSessionManager(SessionManager):
     """Session manager for a UDC session. Overrides `get_valid_access_token` to get
     token using a sealed secret instead of from a file.
+    It can probably be deleted once the blueapi client supports UDC.
     """
 
     def get_valid_access_token(self) -> str:
