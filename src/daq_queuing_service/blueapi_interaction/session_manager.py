@@ -7,12 +7,16 @@ from daq_queuing_service.log import LOGGER
 
 
 class UDCSessionManager(SessionManager):
-    # This is only needed until the blueapi client supports udc.
+    """Session manager for a UDC session. Overrides `get_valid_access_token` to get
+    token using a sealed secret instead of from a file.
+    """
+
     def get_valid_access_token(self) -> str:
         token_url = (
             "https://identity.diamond.ac.uk/realms/dls/protocol/openid-connect/token"
         )
 
+        # Need to get this from secret
         client_id = "i15-1-udc"
         client_secret = os.environ.get("UDC_SECRET")
 
