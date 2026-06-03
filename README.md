@@ -20,7 +20,7 @@ The service combines a queue with a worker that consumes items in the queue and 
 The server is build with FastAPI. For development and testing, it may be useful to have blueapi and the queue service running locally. To get started, install dependencies into a virtual environment and run the app:
 
 ```bash
-uv sync
+uv sync --group dev
 source .venv/bin/activate
 podman-compose -f tests/system_tests/compose.yaml up             # Local rabbitmq
 blueapi --config tests/test_data/test_blueapi_config.yaml serve  # Local blueapi
