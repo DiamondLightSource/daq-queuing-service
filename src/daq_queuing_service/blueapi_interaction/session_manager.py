@@ -1,7 +1,7 @@
 import os
 
 import requests
-from blueapi.client.rest import SessionManager
+from blueapi.service.authentication import SessionManager
 
 from daq_queuing_service.log import LOGGER
 
