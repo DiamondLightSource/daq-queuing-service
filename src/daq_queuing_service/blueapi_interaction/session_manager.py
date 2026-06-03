@@ -31,5 +31,5 @@ class UDCSessionManager(SessionManager):
         )
         response.raise_for_status()
         token = response.json().get("access_token")
-        LOGGER.debug(f"Got token: {token}")
+        LOGGER.debug("Returning token")
         return token
