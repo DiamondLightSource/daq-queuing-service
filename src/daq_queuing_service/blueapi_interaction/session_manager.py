@@ -18,7 +18,7 @@ class UDCSessionManager(SessionManager):
         )
 
         # Need to get this from secret
-        client_id = "i15-1-udc"
+        client_id = "i15-1udc"
         client_secret = os.environ.get("UDC_SECRET")
 
         if not (client_id and client_secret):
