@@ -4,10 +4,9 @@ from blueapi.client import BlueapiClient
 from blueapi.client.event_bus import EventBusClient
 from blueapi.client.rest import BlueapiRestClient
 from blueapi.config import ApplicationConfig
-from blueapi.service.authentication import SessionCacheManager
 from bluesky_stomp.messaging import Broker, StompClient
 
-from daq_queuing_service.blueapi_interaction.session_manager import UDCSessionManager
+from daq_queuing_service.blueapi_interaction.token_retriever import UDCTokenRetriever
 
 
 def get_blueapi_clients(
@@ -17,9 +16,8 @@ def get_blueapi_clients(
     if not blueapi_config.oidc:
         blueapi_config.oidc = MagicMock()
 
-    session_manager = UDCSessionManager(blueapi_config.oidc, SessionCacheManager(None))
     blueapi_rest_client = BlueapiRestClient(
-        config=blueapi_config.api, session_manager=session_manager
+        config=blueapi_config.api, token_retreiver=UDCTokenRetriever("i15-1udc")
     )
 
     if blueapi_config.stomp.enabled:
