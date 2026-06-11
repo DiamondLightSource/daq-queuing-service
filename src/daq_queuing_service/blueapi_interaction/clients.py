@@ -12,12 +12,13 @@ from daq_queuing_service.blueapi_interaction.token_retriever import UDCTokenRetr
 def get_blueapi_clients(
     blueapi_config: ApplicationConfig,
 ) -> tuple[BlueapiRestClient, BlueapiClient]:
-    # This should be able to be simplified once the blueapi client supports UDC.
     if not blueapi_config.oidc:
         blueapi_config.oidc = MagicMock()
 
     blueapi_rest_client = BlueapiRestClient(
-        config=blueapi_config.api, token_retreiver=UDCTokenRetriever("i15-1udc")
+        config=blueapi_config.api,
+        #  Waiting on https://github.com/DiamondLightSource/blueapi/pull/1553
+        session_manager=UDCTokenRetriever("i15-1udc"),  # type: ignore
     )
 
     if blueapi_config.stomp.enabled:
