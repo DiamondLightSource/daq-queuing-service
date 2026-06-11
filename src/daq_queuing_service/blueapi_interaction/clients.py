@@ -15,10 +15,13 @@ def get_blueapi_clients(
     if not blueapi_config.oidc:
         blueapi_config.oidc = MagicMock()
 
+    # TODO: Get this from an env variable or config.
+    client_id = "i15-1udc"
+
     blueapi_rest_client = BlueapiRestClient(
         config=blueapi_config.api,
         #  Waiting on https://github.com/DiamondLightSource/blueapi/pull/1553
-        session_manager=UDCTokenRetriever("i15-1udc"),  # type: ignore
+        session_manager=UDCTokenRetriever(client_id),  # type: ignore
     )
 
     if blueapi_config.stomp.enabled:
