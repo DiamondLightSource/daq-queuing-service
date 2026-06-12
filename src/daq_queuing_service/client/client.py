@@ -49,13 +49,17 @@ class QueueClient:
         self,
         experiment_definitions: list[ExperimentDefinition],
         position: int | None = None,
+        validate_with_blueapi: bool = True,
     ) -> list[str]:
         return self._request(
             "/queue",
             list[str],
             method="POST",
             data=[exp_def.model_dump() for exp_def in experiment_definitions],
-            params={"position": position},
+            params={
+                "position": position,
+                "validate_with_blueapi": validate_with_blueapi,
+            },
         )
 
     def move_task(self, task_id: str, new_position: int):
