@@ -78,6 +78,8 @@ class QueueClient:
             data=TaskCancelRequest(task_ids=task_ids).model_dump(),
         )
 
+    # TODO: Should add an endpoint for this.
+    # Potential race condition between the GET and DELETE
     def cancel_all_tasks(self) -> list[TaskWithPosition]:
         task_ids = [task.id for task in self.get_queued_tasks()]
         return self.cancel_tasks(task_ids)
