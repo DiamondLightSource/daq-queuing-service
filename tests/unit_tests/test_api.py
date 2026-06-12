@@ -375,6 +375,29 @@ async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_ta
     )
 
 
+async def test_add_tasks_to_queue_does_not_call_blueapi_if_validation_false(
+    test_client: TestClient,
+):
+    with patch(
+        "daq_queuing_service.api.api._validate_tasks_with_blueapi"
+    ) as mock_validate:
+        response = test_client.post(
+            "/queue",
+            json=[
+                {
+                    "plan_name": "add_tasks",
+                    "sample_id": "1",
+                    "params": {"time": 10},
+                    "instrument_session": "abc",
+                }
+            ],
+            params={"validate_with_blueapi": False},
+        )
+
+    mock_validate.assert_not_called()
+    assert response.status_code == 200
+
+
 @pytest.mark.parametrize(
     "payload, position, expected_status_code, expected_response_json",
     [

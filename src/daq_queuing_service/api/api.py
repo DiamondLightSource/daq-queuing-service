@@ -106,13 +106,18 @@ def create_api_router(
 
     @router.post("/queue")
     async def add_tasks_to_queue(
-        experiment_definitions: list[ExperimentDefinition], position: int | None = None
+        experiment_definitions: list[ExperimentDefinition],
+        position: int | None = None,
+        validate_with_blueapi: bool = True,
     ) -> list[str]:
         tasks = [
             Task(experiment_definition=experiment_definition)
             for experiment_definition in experiment_definitions
         ]
-        _validate_tasks_with_blueapi(tasks, blueapi_client, task_request_constructor)
+        if validate_with_blueapi:
+            _validate_tasks_with_blueapi(
+                tasks, blueapi_client, task_request_constructor
+            )
         task_ids = [task.id for task in tasks]
         await queue.add_tasks(tasks, position)
         return task_ids
