@@ -270,7 +270,7 @@ async def test_when_blueapi_error_then_call_put_back_into_queue(
     assert not await worker_with_blueapi_error._queue.get_history()
 
 
-async def test_when_plan_error_then_task_failed_and_errors_added(
+async def test_when_plan_error_then_queue_paused_and_task_failed_and_errors_added(
     worker_with_plan_error: QueueWorker, only_loop_once: type[Exception]
 ):
 
@@ -280,6 +280,7 @@ async def test_when_plan_error_then_task_failed_and_errors_added(
     with pytest.raises(only_loop_once):
         await worker_with_plan_error.run_loop()
 
+    assert worker_with_plan_error._queue.state.paused is True
     first_call = first_task.blueapi_calls[0]
     assert first_call.status == CallStatus.ERROR
     assert first_call.errors == [

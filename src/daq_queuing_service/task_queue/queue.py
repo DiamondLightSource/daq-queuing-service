@@ -209,7 +209,7 @@ class TaskQueue:
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)
             self._call_history.append(call)
-        LOGGER.info(f"Call {call} has failed with the following errors: {errors}")
+        LOGGER.error(f"Call {call} has failed with the following errors: {errors}")
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
         """Returns a task based on it's task ID
