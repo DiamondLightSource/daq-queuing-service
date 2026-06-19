@@ -809,3 +809,33 @@ async def test__sync_correctly_moves_tasks_with_all_completed_calls_into_history
     task_queue._sync()
     assert a_task_id not in task_queue._queue
     assert a_task_id in task_queue._history
+
+
+async def test_task_with_single_blueapi_calls_new_task_is_received_after_first_complete(
+    task_queue: TaskQueue,
+):
+    first_call = await task_queue.get_next_call_once_available()
+    first_call.put_in_progress()
+    assert first_call.status == CallStatus.IN_PROGRESS
+    await task_queue.complete_call(first_call, TaskResult(result=None, type="NoneType"))
+
+    second_call = await task_queue.get_next_call_once_available()
+
+    assert first_call.parent_task_id != second_call.parent_task_id
+    assert first_call != second_call
+
+
+async def test_task_with_multiple_blueapi_calls_second_returned_when_first_complete(
+    task_queue_one_to_many: TaskQueue,
+):
+    first_call = await task_queue_one_to_many.get_next_call_once_available()
+    first_call.put_in_progress()
+    assert first_call.status == CallStatus.IN_PROGRESS
+    await task_queue_one_to_many.complete_call(
+        first_call, TaskResult(result=None, type="NoneType")
+    )
+
+    second_call = await task_queue_one_to_many.get_next_call_once_available()
+
+    assert first_call.parent_task_id == second_call.parent_task_id
+    assert first_call != second_call
