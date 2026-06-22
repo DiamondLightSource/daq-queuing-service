@@ -14,7 +14,7 @@ def construct_blueapi_task_request(
     )
 
 
-def construct_blueapi_tasks_request_from_experiment(
+def construct_blueapi_tasks_from_i15_1_experiment(
     experiment_definition: ExperimentDefinition,
 ) -> list[TaskRequest]:
     sample_name = experiment_definition.params["sampleName"]
@@ -30,6 +30,11 @@ def construct_blueapi_tasks_request_from_experiment(
         TaskRequest(
             name="centre_sample",
             params={"start_z": -5, "end_z": 5, "steps": 20, "exposure_time": 0.01},
+            instrument_session=experiment_definition.instrument_session,
+        ),
+        TaskRequest(
+            name="robot_unload",
+            params={},
             instrument_session=experiment_definition.instrument_session,
         ),
     ]
@@ -60,11 +65,12 @@ def construct_i15_1_blueapi_call_list(
     call_list: list[BlueapiCall] = []
 
     for task in queue:
+        # Remove plan name from here and UI in https://github.com/DiamondLightSource/daq-queuing-service/issues/51
         if task.experiment_definition.plan_name == "run_full_collection":
             call_list.extend(
                 [
                     BlueapiCall(task_request=blueapi_task, parent_task_id=task.id)
-                    for blueapi_task in construct_blueapi_tasks_request_from_experiment(
+                    for blueapi_task in construct_blueapi_tasks_from_i15_1_experiment(
                         task.experiment_definition
                     )
                 ]
