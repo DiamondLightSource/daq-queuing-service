@@ -13,8 +13,8 @@ from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
-    construct_blueapi_call_list,
     construct_blueapi_task_request,
+    construct_i15_1_blueapi_call_list,
 )
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
@@ -61,7 +61,7 @@ def create_app(dev: bool = False) -> FastAPI:
             allow_headers=["*"],
         )
 
-    app.state.queue = TaskQueue(construct_blueapi_call_list, broadcaster)
+    app.state.queue = TaskQueue(construct_i15_1_blueapi_call_list, broadcaster)
 
     blueapi_rest_client = BlueapiRestClient(config=config.blueapi.api)
     blueapi_client = BlueapiClient.from_config(config.blueapi)
