@@ -14,7 +14,7 @@ docs_type: sphinx
 git_platform: github.com
 github_org: DiamondLightSource
 package_name: daq_queuing_service
-pypi: true
+pypi: false
 repo_name: daq-queuing-service
 strict_typing: true
 type_checker: pyright
