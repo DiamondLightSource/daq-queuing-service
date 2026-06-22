@@ -10,12 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.app._load_converter import get_converter
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_task_request,
 )
+from daq_queuing_service.plugins.converter_utils import get_converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 

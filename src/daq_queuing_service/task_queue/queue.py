@@ -7,13 +7,13 @@ from typing import Any, Literal
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
-from daq_queuing_service.app._load_converter import Converter
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
     CallStatus,
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
+from daq_queuing_service.plugins.converter_utils import Converter
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
