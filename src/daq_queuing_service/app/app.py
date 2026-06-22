@@ -14,6 +14,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClien
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_task_request,
+    construct_i15_1_blueapi_call_list,
 )
 from daq_queuing_service.plugins.converter_utils import get_converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
