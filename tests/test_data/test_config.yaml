@@ -1,6 +1,8 @@
-blueapi_call_constructor: "default"
+converter:
+  relative_path: "construct_task_request"
+  name: "construct_blueapi_call_list"
 blueapi:
-  api: 
+  api:
     url: "http://localhost:8000"
   stomp:
     enabled: true # All other stomp settings will be ignored if this is false

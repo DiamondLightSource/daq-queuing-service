@@ -8,9 +8,14 @@ CONFIG_PATH = "/etc/config/config.yaml"
 TEST_CONFIG_PATH = "tests/test_data/test_config.yaml"
 
 
+class ConverterConfig(BaseModel):
+    relative_path: str
+    name: str
+
+
 class AppConfig(BaseModel):
     blueapi: ApplicationConfig
-    blueapi_call_constructor: str
+    converter: ConverterConfig
 
 
 def load_config() -> AppConfig:

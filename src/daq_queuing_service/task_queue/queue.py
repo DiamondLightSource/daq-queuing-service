@@ -7,6 +7,7 @@ from typing import Any, Literal
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
+from daq_queuing_service.app._load_converter import Converter
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
@@ -24,11 +25,6 @@ from daq_queuing_service.task_queue.queue_utils import (
 )
 
 LOGGER = logging.getLogger(__name__)
-
-Converter = Callable[
-    [list[TaskWithPosition], list[TaskWithPosition], list[BlueapiCall]],
-    list[BlueapiCall],
-]
 
 
 class TaskRegistry(dict[str, Task]):
