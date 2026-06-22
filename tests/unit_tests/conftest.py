@@ -34,7 +34,6 @@ async def task_queue(tasks: list[Task]):
 
 @pytest.fixture
 async def task_queue_one_to_many(tasks: list[Task]):
-
     def construct_blueapi_call_list(
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
@@ -42,26 +41,17 @@ async def task_queue_one_to_many(tasks: list[Task]):
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
         for task in queue:
-            call_list.append(
-                BlueapiCall(
-                    parent_task_id=task.id,
-                    task_request=TaskRequest(
-                        name=task.experiment_definition.plan_name,
-                        params=task.experiment_definition.params,
-                        instrument_session=task.experiment_definition.instrument_session,
-                    ),
+            for _ in range(2):
+                call_list.append(
+                    BlueapiCall(
+                        parent_task_id=task.id,
+                        task_request=TaskRequest(
+                            name=task.experiment_definition.plan_name,
+                            params=task.experiment_definition.params,
+                            instrument_session=task.experiment_definition.instrument_session,
+                        ),
+                    )
                 )
-            )
-            call_list.append(
-                BlueapiCall(
-                    parent_task_id=task.id,
-                    task_request=TaskRequest(
-                        name=task.experiment_definition.plan_name,
-                        params=task.experiment_definition.params,
-                        instrument_session=task.experiment_definition.instrument_session,
-                    ),
-                )
-            )
         return call_list
 
     queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
