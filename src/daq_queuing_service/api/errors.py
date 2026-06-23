@@ -1,12 +1,6 @@
-from blueapi.client.rest import (
-    InvalidParametersError,
-    ServiceUnavailableError,
-    UnknownPlanError,
-)
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from daq_queuing_service.api.api import InvalidExperimentDefinitionsError
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     QueueError,
@@ -19,15 +13,6 @@ from daq_queuing_service.task_queue.queue_utils import (
 
 
 def register_exception_handlers(app: FastAPI):
-    @app.exception_handler(ServiceUnavailableError)
-    async def service_unavailable_error(
-        request: Request, exception: ServiceUnavailableError
-    ):
-        return JSONResponse(
-            status_code=409,
-            content={"error": "blueapi_unavailable", "message": str(exception)},
-        )
-
     @app.exception_handler(TaskInProgressError)
     async def task_in_progress_handler(
         request: Request, exception: TaskInProgressError
@@ -67,28 +52,4 @@ def register_exception_handlers(app: FastAPI):
         return JSONResponse(
             status_code=409,
             content={"error": "queue_error", "message": str(exception)},
-        )
-
-    @app.exception_handler(InvalidExperimentDefinitionsError)
-    async def invalid_experiment_definitions_handler(
-        request: Request, exception: InvalidExperimentDefinitionsError
-    ):
-        def format_error(error: InvalidParametersError | UnknownPlanError):
-            match error:
-                case InvalidParametersError():
-                    return {"type": "invalid_parameters", "details": error.message()}
-                case UnknownPlanError():
-                    return {"type": "unknown_plan", "details": str(error)}
-
-        return JSONResponse(
-            status_code=409,
-            content={
-                "error": "invalid_experiment_definitions_error",
-                "message": f"Found validation errors for {len(exception.errors.keys())}"
-                " experiment definitions. No tasks have been added to the queue.",
-                "details": {
-                    index: format_error(error)
-                    for index, error in exception.errors.items()
-                },
-            },
         )

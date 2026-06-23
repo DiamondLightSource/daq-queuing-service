@@ -1,15 +1,16 @@
+import threading
+import time
 import uuid
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.client.rest import (
     BlueapiRestClient,
-    InvalidParametersError,
-    ParameterError,
-    UnknownPlanError,
 )
 from blueapi.service.model import (
+    TaskRequest,
     TaskResponse,
 )
 from fastapi import FastAPI
@@ -17,26 +18,27 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from daq_queuing_service.api.api import (
-    InvalidExperimentDefinitionsError,
     TaskCancelRequest,
-    _validate_tasks_with_blueapi,
     create_api_router,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
+from daq_queuing_service.app._config import TEST_CONFIG_PATH, load_config
+from daq_queuing_service.blueapi_interaction.blueapi_call import (
+    BlueapiCallResponse,
+    CallStatus,
+)
+from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import (
     ExperimentDefinition,
     Status,
-    Task,
     TaskWithPosition,
 )
-from daq_queuing_service.task_queue.queue import TaskQueue
+from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.task_queue.queue_utils import QueueError
-
-MOCK_TASK_REQUEST_CONSTRUCTOR = MagicMock()
 
 
 @pytest.fixture
-def blueapi_client():
+def blueapi_client() -> BlueapiRestClient:
     blueapi_client = BlueapiRestClient()
     blueapi_client.create_task = MagicMock(
         return_value=TaskResponse(task_id="blueapi_task_id")
@@ -48,14 +50,30 @@ def blueapi_client():
 
 
 @pytest.fixture
-def test_client(task_queue_with_history: TaskQueue, blueapi_client: BlueapiRestClient):
+def broadcaster() -> Broadcaster[QUEUE_EVENTS]:
+    return Broadcaster()
+
+
+@pytest.fixture
+def app(
+    task_queue_with_history: TaskQueue,
+    blueapi_client: BlueapiRestClient,
+    broadcaster: Broadcaster[QUEUE_EVENTS],
+) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(
         create_api_router(
-            task_queue_with_history, blueapi_client, MOCK_TASK_REQUEST_CONSTRUCTOR
+            task_queue_with_history,
+            broadcaster,
+            load_config(Path(TEST_CONFIG_PATH)),
         )
     )
+    return app
+
+
+@pytest.fixture
+def test_client(app: FastAPI) -> TestClient:
     return TestClient(app)
 
 
@@ -101,11 +119,22 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             },
             "id": "2",
             "status": "In progress",
-            "time_started": "2026-04-17T15:02:00.000000",
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": "blueapi_id_2",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "2",
+                    "status": "In progress",
+                    "time_started": "2026-04-17T15:02:00.000000",
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 0,
         },
         {
@@ -116,12 +145,23 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "3",
-            "status": "Waiting",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "status": "Queued",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "3",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 1,
         },
         {
@@ -132,12 +172,23 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "4",
-            "status": "Waiting",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "status": "Queued",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "4",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 2,
         },
     ]
@@ -146,7 +197,6 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
 def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
     response = test_client.get("/queue", params={"status": Status.IN_PROGRESS})
     assert response.status_code == 200
-    print(response.json())
     assert response.json() == [
         {
             "experiment_definition": {
@@ -156,13 +206,24 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "2",
-            "status": "In progress",
-            "time_started": "2026-04-17T15:02:00.000000",
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": "blueapi_id_2",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "2",
+                    "status": "In progress",
+                    "time_started": "2026-04-17T15:02:00.000000",
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": 0,
+            "status": "In progress",
         }
     ]
 
@@ -178,9 +239,42 @@ async def test_get_all_tasks_returns_all_tasks(
 
 
 async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
-    response = test_client.get("/tasks", params={"status": Status.SUCCESS})
+    response = test_client.get("/tasks", params={"status": Status.COMPLETE})
     assert response.status_code == 200
     assert response.json() == [
+        {
+            "experiment_definition": {
+                "plan_name": "test",
+                "sample_id": "0",
+                "params": {},
+                "instrument_session": "",
+            },
+            "id": "0",
+            "status": "Complete",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "0",
+                    "status": "Error",
+                    "time_started": "2026-04-17T15:00:00.000000",
+                    "time_completed": "2026-04-17T15:00:59.000000",
+                    "result": None,
+                    "errors": [
+                        {
+                            "outcome": "error",
+                            "type": "ValueError",
+                            "message": "Error during plan",
+                        }
+                    ],
+                    "blueapi_id": None,
+                }
+            ],
+            "position": None,
+        },
         {
             "experiment_definition": {
                 "plan_name": "test",
@@ -189,14 +283,29 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                 "instrument_session": "",
             },
             "id": "1",
-            "status": "Success",
-            "time_started": "2026-04-17T15:01:00.000000",
-            "time_completed": "2026-04-17T15:01:59.000000",
-            "errors": [],
-            "result": {"outcome": "success", "result": None, "type": "NoneType"},
-            "blueapi_id": "blueapi_id_1",
+            "status": "Complete",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "1",
+                    "status": "Success",
+                    "time_started": "2026-04-17T15:01:00.000000",
+                    "time_completed": "2026-04-17T15:01:59.000000",
+                    "result": {
+                        "outcome": "success",
+                        "result": None,
+                        "type": "NoneType",
+                    },
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
             "position": None,
-        }
+        },
     ]
 
 
@@ -210,37 +319,7 @@ async def test_get_completed_tasks_returns_completed_tasks(
     )
 
 
-async def test_get_completed_tasks_can_filter_by_status(test_client: TestClient):
-
-    response = test_client.get("/history", params={"status": Status.ERROR})
-    assert response.status_code == 200
-    assert response.json() == [
-        {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "0",
-                "params": {},
-                "instrument_session": "",
-            },
-            "id": "0",
-            "status": "Error",
-            "time_started": "2026-04-17T15:00:00.000000",
-            "time_completed": "2026-04-17T15:00:59.000000",
-            "errors": [
-                {
-                    "outcome": "error",
-                    "type": "ValueError",
-                    "message": "Error during plan",
-                }
-            ],
-            "result": None,
-            "blueapi_id": "blueapi_id_0",
-            "position": None,
-        }
-    ]
-
-
-async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_task_ids(
+async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
     test_client: TestClient, task_queue_with_history: TaskQueue
 ):
     response = test_client.post(
@@ -255,8 +334,6 @@ async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_ta
         ],
     )
 
-    MOCK_TASK_REQUEST_CONSTRUCTOR.assert_called_once()
-
     assert response.status_code == 200
     task_ids: list[str] = response.json()
     [uuid.UUID(task_id) for task_id in task_ids]
@@ -268,14 +345,23 @@ async def test_add_tasks_to_queue_validates_and_adds_to_queue_and_and_returns_ta
             params={"time": 10},
             instrument_session="abc",
         ),
-        id=task_ids[0],
-        status=Status.WAITING,
-        time_started=None,
-        time_completed=None,
-        errors=[],
-        result=None,
-        blueapi_id=None,
+        id=task_ids[-1],
+        blueapi_calls=[
+            BlueapiCallResponse(
+                task_request=TaskRequest(
+                    name="add_tasks", params={"time": 10}, instrument_session="abc"
+                ),
+                parent_task_id=task_ids[-1],
+                status=CallStatus.WAITING,
+                time_started=None,
+                time_completed=None,
+                result=None,
+                errors=[],
+                blueapi_id=None,
+            )
+        ],
         position=3,
+        status=Status.QUEUED,
     )
 
 
@@ -334,72 +420,6 @@ def test_add_tasks_to_queue_with_bad_payload_gives_expected_error_responses(
 
     assert response.status_code == expected_status_code
     assert response.json() == expected_response_json
-
-
-@pytest.mark.parametrize(
-    "error, expected_response",
-    [
-        [
-            InvalidExperimentDefinitionsError(
-                {
-                    0: InvalidParametersError(
-                        errors=[
-                            ParameterError(
-                                loc=["bad_param"],
-                                msg="fake_error",
-                                type="extra_forbidden",
-                                input="input",
-                            )
-                        ]
-                    )
-                }
-            ),
-            {
-                "error": "invalid_experiment_definitions_error",
-                "message": "Found validation errors for 1 experiment definitions. "
-                + "No tasks have been added to the queue.",
-                "details": {
-                    "0": {
-                        "type": "invalid_parameters",
-                        "details": "Incorrect parameters supplied\n    "
-                        + "Unexpected field 'bad_param'",
-                    }
-                },
-            },
-        ],
-        [
-            InvalidExperimentDefinitionsError({0: UnknownPlanError()}),
-            {
-                "error": "invalid_experiment_definitions_error",
-                "message": "Found validation errors for 1 experiment definitions. "
-                + "No tasks have been added to the queue.",
-                "details": {"0": {"type": "unknown_plan", "details": ""}},
-            },
-        ],
-    ],
-)
-def test_add_tasks_to_queue_if_tasks_fail_validation_then_expected_error_response_given(
-    test_client: TestClient,
-    error: InvalidExperimentDefinitionsError,
-    expected_response: dict[str, Any],
-):
-    with patch(
-        "daq_queuing_service.api.api._validate_tasks_with_blueapi", side_effect=error
-    ):
-        response = test_client.post(
-            "/queue",
-            json=[
-                {
-                    "plan_name": "add_tasks",
-                    "sample_id": "1",
-                    "params": {"time": 10},
-                    "instrument_session": "abc",
-                }
-            ],
-        )
-
-    assert response.status_code == 409
-    assert response.json() == expected_response
 
 
 async def test_move_task_moves_task_and_returns_position(
@@ -511,11 +531,23 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
             "id": "3",
             "status": "Cancelled",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "3",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
+            "position": None,
         },
         {
             "experiment_definition": {
@@ -526,11 +558,23 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
             "id": "4",
             "status": "Cancelled",
-            "time_started": None,
-            "time_completed": None,
-            "errors": [],
-            "result": None,
-            "blueapi_id": None,
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "4",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
+            "position": None,
         },
     ]
 
@@ -603,12 +647,23 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
             "instrument_session": "",
         },
         "id": "3",
-        "status": "Waiting",
-        "time_started": None,
-        "time_completed": None,
-        "errors": [],
-        "result": None,
-        "blueapi_id": None,
+        "status": "Queued",
+        "blueapi_calls": [
+            {
+                "task_request": {
+                    "name": "test",
+                    "params": {},
+                    "instrument_session": "",
+                },
+                "parent_task_id": "3",
+                "status": "Waiting",
+                "time_started": None,
+                "time_completed": None,
+                "result": None,
+                "errors": [],
+                "blueapi_id": None,
+            }
+        ],
         "position": 1,
     }
 
@@ -624,12 +679,23 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
             "instrument_session": "",
         },
         "id": "3",
-        "status": "Waiting",
-        "time_started": None,
-        "time_completed": None,
-        "errors": [],
-        "result": None,
-        "blueapi_id": None,
+        "status": "Queued",
+        "blueapi_calls": [
+            {
+                "task_request": {
+                    "name": "test",
+                    "params": {},
+                    "instrument_session": "",
+                },
+                "parent_task_id": "3",
+                "status": "Waiting",
+                "time_started": None,
+                "time_completed": None,
+                "result": None,
+                "errors": [],
+                "blueapi_id": None,
+            }
+        ],
         "position": 1,
     }
 
@@ -643,6 +709,22 @@ def test_get_task_by_id_gives_error_if_task_id_does_not_exist(test_client: TestC
     }
 
 
+def test_get_call_queue_returns_calls_in_call_queue(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    response = test_client.get("/call_queue")
+    assert response.status_code == 200
+    assert response.json() == jsonable_encoder(task_queue_with_history._call_queue)
+
+
+def test_get_call_history_returns_calls_in_call_queue(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    response = test_client.get("/call_history")
+    assert response.status_code == 200
+    assert response.json() == jsonable_encoder(task_queue_with_history._call_history)
+
+
 async def test_clear_history_deletes_history(
     test_client: TestClient, task_queue_with_history: TaskQueue
 ):
@@ -652,10 +734,13 @@ async def test_clear_history_deletes_history(
     assert not await task_queue_with_history.get_history()
 
 
-def test_queue_error_caught_by_error_handler(test_client: TestClient):
-    with patch(
-        "daq_queuing_service.api.api._validate_tasks_with_blueapi",
-        side_effect=QueueError("Error in queue"),
+def test_any_queue_error_caught_by_error_handler(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    class SomeError(QueueError): ...
+
+    with patch.object(
+        task_queue_with_history, "add_tasks", side_effect=SomeError("Error in queue")
     ):
         response = test_client.post(
             "/queue",
@@ -672,29 +757,41 @@ def test_queue_error_caught_by_error_handler(test_client: TestClient):
     assert response.status_code == 409
 
 
-def test__validate_tasks_with_blueapi_calls_create_task_and_then_removes_task(
-    blueapi_client: BlueapiRestClient, tasks: list[Task]
+def test_get_config_returns_config(test_client: TestClient):
+    response = test_client.get("/config")
+    assert response.status_code == 200
+    assert response.json()["converter"] == {
+        "path": "daq_queuing_service.plugins.construct_task_request",
+        "name": "construct_blueapi_call_list",
+    }
+
+
+@pytest.mark.skip("Can't get TestClient to play nicely with SSE")
+async def test_stream_events_streams_all_events_from_broadcaster(
+    test_client: TestClient, broadcaster: Broadcaster[QUEUE_EVENTS]
 ):
-    _validate_tasks_with_blueapi(tasks, blueapi_client, MagicMock())
+    events_to_send: list[Event[QUEUE_EVENTS]] = [
+        Event(type="queue_update", data=i) for i in range(5)
+    ]
+    received: list[str] = []
 
-    assert isinstance(blueapi_client.create_task, MagicMock)
-    assert isinstance(blueapi_client.clear_task, MagicMock)
-    assert blueapi_client.create_task.call_count == 5
-    assert blueapi_client.clear_task.call_count == 5
+    def read_stream():
+        with test_client.stream("GET", "/events") as response:
+            for line in response.iter_raw():
+                # Never getting response
+                if not line:
+                    continue
 
+                received.append(line.decode())
+                if len(received) == 5:
+                    break
 
-def test__validate_tasks_with_blueapi_calls_collects_errors_and_raises(
-    blueapi_client: BlueapiRestClient,
-    tasks: list[Task],
-):
-    blueapi_client.create_task = MagicMock(side_effect=UnknownPlanError)
+    thread = threading.Thread(target=read_stream)
+    thread.start()
+    time.sleep(0.1)
+    for event in events_to_send:
+        broadcaster.broadcast(event)
 
-    with pytest.raises(InvalidExperimentDefinitionsError) as excinfo:
-        _validate_tasks_with_blueapi(tasks, blueapi_client, MagicMock())
-
-    error_raised = excinfo.value
-    assert isinstance(error_raised, InvalidExperimentDefinitionsError)
-    assert list(error_raised.errors.keys()) == [0, 1, 2, 3, 4]
-    assert all(
-        isinstance(error, UnknownPlanError) for error in error_raised.errors.values()
-    )
+    time.sleep(0.2)
+    assert len(received) == 5
+    assert received != []

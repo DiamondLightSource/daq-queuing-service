@@ -5,6 +5,22 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Read Root",
@@ -15,6 +31,24 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "summary": "Get Config",
+        "operationId": "get_config_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfig"
+                }
               }
             }
           }
@@ -143,6 +177,16 @@
               ],
               "title": "Position"
             }
+          },
+          {
+            "name": "validate_with_blueapi",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Validate With Blueapi"
+            }
           }
         ],
         "requestBody": {
@@ -257,7 +301,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/Task"
+                    "$ref": "#/components/schemas/TaskWithPosition"
                   },
                   "type": "array",
                   "title": "Response Cancel Tasks Queue Tasks Delete"
@@ -477,10 +521,475 @@
           }
         }
       }
+    },
+    "/call_queue": {
+      "get": {
+        "summary": "Get Call Queue",
+        "operationId": "get_call_queue_call_queue_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BlueapiCallResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Call Queue Call Queue Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/call_history": {
+      "get": {
+        "summary": "Get Call History",
+        "operationId": "get_call_history_call_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BlueapiCallResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Call History Call History Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "summary": "Stream Events",
+        "operationId": "stream_events_events_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AppConfig": {
+        "properties": {
+          "blueapi": {
+            "$ref": "#/components/schemas/ApplicationConfig"
+          },
+          "converter": {
+            "$ref": "#/components/schemas/ConverterConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "blueapi",
+          "converter"
+        ],
+        "title": "AppConfig"
+      },
+      "ApplicationConfig": {
+        "properties": {
+          "stomp": {
+            "$ref": "#/components/schemas/StompConfig"
+          },
+          "tiled": {
+            "$ref": "#/components/schemas/TiledConfig"
+          },
+          "env": {
+            "$ref": "#/components/schemas/EnvironmentConfig"
+          },
+          "logging": {
+            "$ref": "#/components/schemas/LoggingConfig"
+          },
+          "api": {
+            "$ref": "#/components/schemas/RestConfig"
+          },
+          "scratch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScratchConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "oidc": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OIDCConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auth_token_path": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Token Path"
+          },
+          "numtracker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumtrackerConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ApplicationConfig",
+        "description": "Config for the worker application as a whole. Root of\nconfig tree."
+      },
+      "BasicAuthentication": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Unique identifier for user"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Password to verify user's identity"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "BasicAuthentication",
+        "description": "User credentials for basic authentication"
+      },
+      "BlueapiCallResponse": {
+        "properties": {
+          "task_request": {
+            "$ref": "#/components/schemas/TaskRequest"
+          },
+          "parent_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Task Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatus"
+          },
+          "time_started": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Started"
+          },
+          "time_completed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Completed"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "errors": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/TaskError"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "blueapi_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blueapi Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_request",
+          "parent_task_id",
+          "status",
+          "time_started",
+          "time_completed",
+          "result",
+          "errors",
+          "blueapi_id"
+        ],
+        "title": "BlueapiCallResponse"
+      },
+      "CORSConfig": {
+        "properties": {
+          "origins": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Origins"
+          },
+          "allow_credentials": {
+            "type": "boolean",
+            "title": "Allow Credentials",
+            "default": false
+          },
+          "allow_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allow Methods",
+            "default": [
+              "*"
+            ]
+          },
+          "allow_headers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allow Headers",
+            "default": [
+              "*"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origins"
+        ],
+        "title": "CORSConfig"
+      },
+      "CallStatus": {
+        "type": "string",
+        "enum": [
+          "Waiting",
+          "Claimed",
+          "In progress",
+          "Success",
+          "Error"
+        ],
+        "title": "CallStatus"
+      },
+      "ConverterConfig": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "name"
+        ],
+        "title": "ConverterConfig"
+      },
+      "DeviceManagerSource": {
+        "properties": {
+          "module": {
+            "type": "string",
+            "title": "Module",
+            "description": "Module to be imported"
+          },
+          "kind": {
+            "type": "string",
+            "const": "deviceManager",
+            "title": "Kind",
+            "default": "deviceManager"
+          },
+          "mock": {
+            "type": "boolean",
+            "title": "Mock",
+            "description": "If true, ophyd_async device connections are mocked",
+            "default": false
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the device manager in the module",
+            "default": "devices"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "module"
+        ],
+        "title": "DeviceManagerSource"
+      },
+      "DeviceSource": {
+        "properties": {
+          "module": {
+            "type": "string",
+            "title": "Module",
+            "description": "Module to be imported"
+          },
+          "kind": {
+            "type": "string",
+            "const": "deviceFunctions",
+            "title": "Kind",
+            "default": "deviceFunctions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "module"
+        ],
+        "title": "DeviceSource"
+      },
+      "DodalSource": {
+        "properties": {
+          "module": {
+            "type": "string",
+            "title": "Module",
+            "description": "Module to be imported"
+          },
+          "kind": {
+            "type": "string",
+            "const": "dodal",
+            "title": "Kind",
+            "default": "dodal"
+          },
+          "mock": {
+            "type": "boolean",
+            "title": "Mock",
+            "description": "If true, ophyd_async device connections are mocked",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "module"
+        ],
+        "title": "DodalSource"
+      },
+      "EnvironmentConfig": {
+        "properties": {
+          "sources": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PlanSource"
+                },
+                {
+                  "$ref": "#/components/schemas/DeviceSource"
+                },
+                {
+                  "$ref": "#/components/schemas/DodalSource"
+                },
+                {
+                  "$ref": "#/components/schemas/DeviceManagerSource"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "deviceFunctions": "#/components/schemas/DeviceSource",
+                  "deviceManager": "#/components/schemas/DeviceManagerSource",
+                  "dodal": "#/components/schemas/DodalSource",
+                  "planFunctions": "#/components/schemas/PlanSource"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": [
+              {
+                "module": "dodal.plans",
+                "kind": "planFunctions"
+              },
+              {
+                "module": "dodal.plan_stubs.wrapped",
+                "kind": "planFunctions"
+              }
+            ]
+          },
+          "events": {
+            "$ref": "#/components/schemas/WorkerEventConfig"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetadataConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EnvironmentConfig",
+        "description": "Config for the RunEngine environment"
+      },
       "ExperimentDefinition": {
         "properties": {
           "plan_name": {
@@ -510,6 +1019,25 @@
         ],
         "title": "ExperimentDefinition"
       },
+      "GraylogConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "default": "tcp://localhost:5555"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GraylogConfig"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -522,6 +1050,121 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "LoggingConfig": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "NOTSET",
+              "DEBUG",
+              "INFO",
+              "WARNING",
+              "ERROR",
+              "CRITICAL"
+            ],
+            "title": "Level",
+            "default": "INFO"
+          },
+          "graylog": {
+            "$ref": "#/components/schemas/GraylogConfig",
+            "default": {
+              "enabled": false,
+              "url": "tcp://localhost:5555"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LoggingConfig"
+      },
+      "MetadataConfig": {
+        "properties": {
+          "instrument": {
+            "type": "string",
+            "title": "Instrument"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instrument"
+        ],
+        "title": "MetadataConfig"
+      },
+      "NumtrackerConfig": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "default": "http://localhost:8406/graphql"
+          },
+          "detector_file_template": {
+            "type": "string",
+            "title": "Detector File Template",
+            "default": "{instrument}-{scan_id}-{device_name}"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NumtrackerConfig"
+      },
+      "OIDCConfig": {
+        "properties": {
+          "well_known_url": {
+            "type": "string",
+            "title": "Well Known Url",
+            "description": "URL to fetch OIDC config from the provider"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "Client ID"
+          },
+          "client_audience": {
+            "type": "string",
+            "title": "Client Audience",
+            "description": "Client Audience(s)",
+            "default": "blueapi"
+          },
+          "logout_redirect_endpoint": {
+            "type": "string",
+            "title": "Logout Redirect Endpoint",
+            "description": "The oidc endpoint required to logout",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "well_known_url",
+          "client_id"
+        ],
+        "title": "OIDCConfig"
+      },
+      "PlanSource": {
+        "properties": {
+          "module": {
+            "type": "string",
+            "title": "Module",
+            "description": "Module to be imported"
+          },
+          "kind": {
+            "type": "string",
+            "const": "planFunctions",
+            "title": "Kind",
+            "default": "planFunctions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "module"
+        ],
+        "title": "PlanSource"
       },
       "QueueState": {
         "properties": {
@@ -553,94 +1196,151 @@
         "type": "object",
         "title": "QueueStateUpdate"
       },
-      "Status": {
-        "type": "string",
-        "enum": [
-          "Waiting",
-          "Claimed",
-          "In progress",
-          "Success",
-          "Error",
-          "Cancelled"
-        ],
-        "title": "Status"
-      },
-      "Task": {
+      "RestConfig": {
         "properties": {
-          "experiment_definition": {
-            "$ref": "#/components/schemas/ExperimentDefinition"
-          },
-          "id": {
+          "url": {
             "type": "string",
-            "title": "Id"
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "default": "http://localhost:8000/"
           },
-          "status": {
-            "$ref": "#/components/schemas/Status",
-            "default": "Waiting"
-          },
-          "time_started": {
+          "cors": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Started"
-          },
-          "time_completed": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Completed"
-          },
-          "errors": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/components/schemas/TaskError"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Errors"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TaskResult"
+                "$ref": "#/components/schemas/CORSConfig"
               },
               {
                 "type": "null"
               }
             ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RestConfig"
+      },
+      "ScratchConfig": {
+        "properties": {
+          "root": {
+            "type": "string",
+            "format": "path",
+            "title": "Root",
+            "description": "The root directory of the scratch area, all repositories will be cloned under this directory.",
+            "default": "/tmp/scratch/blueapi"
           },
-          "blueapi_id": {
+          "required_gid": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Blueapi Id"
+            "title": "Required Gid",
+            "description": "\nRequired owner GID for the scratch directory. If supplied, the setup-scratch\ncommand will check the scratch area ownership and raise an error if it is\nnot owned by <GID>, or if it does not have SGID permission bit set.\n"
+          },
+          "repositories": {
+            "items": {
+              "$ref": "#/components/schemas/ScratchRepository"
+            },
+            "type": "array",
+            "title": "Repositories",
+            "description": "Details of repositories to be cloned and imported into blueapi"
           }
         },
+        "additionalProperties": false,
         "type": "object",
-        "required": [
-          "experiment_definition"
+        "title": "ScratchConfig"
+      },
+      "ScratchRepository": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Unique name for this repository in the scratch directory",
+            "default": "example"
+          },
+          "remote_url": {
+            "type": "string",
+            "title": "Remote Url",
+            "description": "URL to clone from",
+            "default": "https://github.com/example/example.git"
+          },
+          "target_revision": {
+            "type": "string",
+            "title": "Target Revision",
+            "description": "Revision (branch or tag) to check out when cloning - defaults to remote's HEAD. If a tag is used, the repo will be left in a 'detached head' state."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScratchRepository"
+      },
+      "ServiceAccount": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "Service account client ID",
+            "default": ""
+          },
+          "client_secret": {
+            "type": "string",
+            "format": "password",
+            "title": "Client Secret",
+            "description": "Service account client secret",
+            "default": "",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ServiceAccount"
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "Queued",
+          "In progress",
+          "Complete",
+          "Cancelled"
         ],
-        "title": "Task"
+        "title": "Status"
+      },
+      "StompConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "True if blueapi should connect to stomp for asynchronous event publishing",
+            "default": false
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "default": "tcp://localhost:61613"
+          },
+          "auth": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BasicAuthentication"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Auth information for communicating with STOMP broker, if required"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StompConfig",
+        "description": "Config for connecting to stomp broker"
       },
       "TaskCancelRequest": {
         "properties": {
@@ -684,6 +1384,34 @@
         "title": "TaskError",
         "description": "Wrapper around an exception raised by a plan"
       },
+      "TaskRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of plan to run"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params",
+            "description": "Values for parameters to plan, if any"
+          },
+          "instrument_session": {
+            "type": "string",
+            "title": "Instrument Session",
+            "description": "Instrument session associated with this task"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "instrument_session"
+        ],
+        "title": "TaskRequest",
+        "description": "Request to run a task with related info"
+      },
       "TaskResult": {
         "properties": {
           "outcome": {
@@ -718,65 +1446,14 @@
             "title": "Id"
           },
           "status": {
-            "$ref": "#/components/schemas/Status",
-            "default": "Waiting"
+            "$ref": "#/components/schemas/Status"
           },
-          "time_started": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Started"
-          },
-          "time_completed": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Completed"
-          },
-          "errors": {
+          "blueapi_calls": {
             "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/components/schemas/TaskError"
-                }
-              ]
+              "$ref": "#/components/schemas/BlueapiCallResponse"
             },
             "type": "array",
-            "title": "Errors"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TaskResult"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "blueapi_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Blueapi Id"
+            "title": "Blueapi Calls"
           },
           "position": {
             "anyOf": [
@@ -793,9 +1470,48 @@
         "type": "object",
         "required": [
           "experiment_definition",
+          "id",
+          "status",
+          "blueapi_calls",
           "position"
         ],
         "title": "TaskWithPosition"
+      },
+      "TiledConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "True if blueapi should forward data to a Tiled instance",
+            "default": false
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "default": "http://localhost:8407/"
+          },
+          "authentication": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/ServiceAccount"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authentication",
+            "description": "Tiled Authentication can be API_KEY or OIDC Service account"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TiledConfig"
       },
       "ValidationError": {
         "properties": {
@@ -836,6 +1552,19 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WorkerEventConfig": {
+        "properties": {
+          "broadcast_status_events": {
+            "type": "boolean",
+            "title": "Broadcast Status Events",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorkerEventConfig",
+        "description": "Config for event broadcasting via the message bus"
       }
     }
   }
