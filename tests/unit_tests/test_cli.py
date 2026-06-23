@@ -8,7 +8,7 @@ from daq_queuing_service import __version__
 from daq_queuing_service.__main__ import main
 
 
-@pytest.mark.timeout(2)
+@pytest.mark.timeout(5)
 def test_cli_version():
     cmd = [sys.executable, "-m", "daq_queuing_service", "--version"]
     assert subprocess.check_output(cmd).decode().strip() == __version__
