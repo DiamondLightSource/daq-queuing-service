@@ -14,3 +14,11 @@ def my_converter(
 ```
 
 Conversion is run any time the queue changes and right before a call is made to blueapi, so the blueapi call list stays up to date. This means converters can make use of current information on a beamline such as PV values to inform the conversion.
+
+In config, under the converter section, add the path and name of the converter you want to use. For example:
+
+```yaml
+converter:
+  path: "daq_queuing_service.plugins.construct_task_request"
+  name: "construct_blueapi_call_list"
+```
