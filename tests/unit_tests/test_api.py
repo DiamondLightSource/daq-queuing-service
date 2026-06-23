@@ -757,7 +757,10 @@ def test_any_queue_error_caught_by_error_handler(
 def test_get_config_returns_config(test_client: TestClient):
     response = test_client.get("/config")
     assert response.status_code == 200
-    assert response.json()["blueapi_call_constructor"] == "default"
+    assert response.json()["converter"] == {
+        "path": "daq_queuing_service.plugins.construct_task_request",
+        "name": "construct_blueapi_call_list",
+    }
 
 
 @pytest.mark.skip("Can't get TestClient to play nicely with SSE")
