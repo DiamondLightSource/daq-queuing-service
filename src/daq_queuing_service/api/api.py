@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 from collections.abc import AsyncGenerator
 
 from blueapi.client.rest import (
@@ -11,7 +10,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
 
-from daq_queuing_service.app._config import AppConfig, load_config
+from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
@@ -23,8 +22,6 @@ from daq_queuing_service.task_queue.queue import (
 )
 
 # pyright: reportUnusedFunction=false
-
-LOGGER = logging.getLogger(__name__)
 
 
 class InvalidExperimentDefinitionsError(Exception):
@@ -53,6 +50,7 @@ def _filter_by_status(
 def create_api_router(
     queue: TaskQueue,
     broadcaster: Broadcaster[QUEUE_EVENTS],
+    config: AppConfig,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -69,7 +67,7 @@ def create_api_router(
 
     @router.get("/config")
     def get_config() -> AppConfig:
-        return load_config()
+        return config
 
     @router.patch("/queue/state")
     async def update_queue_state(payload: QueueStateUpdate) -> QueueState:

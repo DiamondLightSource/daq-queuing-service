@@ -1,6 +1,7 @@
 import threading
 import time
 import uuid
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -21,6 +22,7 @@ from daq_queuing_service.api.api import (
     create_api_router,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
+from daq_queuing_service.app._config import TEST_CONFIG_PATH, load_config
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
     BlueapiCallResponse,
     CallStatus,
@@ -64,6 +66,7 @@ def app(
         create_api_router(
             task_queue_with_history,
             broadcaster,
+            load_config(Path(TEST_CONFIG_PATH)),
         )
     )
     return app

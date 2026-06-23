@@ -1,11 +1,10 @@
 import asyncio
-import logging
 from collections.abc import Iterable, Mapping
 from typing import Any, Generic, TypedDict, TypeVar
 
 from pydantic import BaseModel
 
-LOGGER = logging.getLogger(__name__)
+from daq_queuing_service.log import LOGGER
 
 T = TypeVar("T", bound=str)
 

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pathlib import Path
 from typing import NoReturn
 from unittest.mock import AsyncMock, patch
 
@@ -9,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
+from daq_queuing_service.app._config import TEST_CONFIG_PATH
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
@@ -24,7 +26,7 @@ def patch_config_path():
 
 
 def test_create_app_returns_fast_api_object():
-    app = create_app()
+    app = create_app(Path(TEST_CONFIG_PATH))
     assert isinstance(app, FastAPI)
 
 
@@ -32,7 +34,7 @@ def test_create_app_registers_exception_handlers():
     with patch(
         "daq_queuing_service.app.app.register_exception_handlers"
     ) as mock_register_exception_handlers:
-        create_app()
+        create_app(Path(TEST_CONFIG_PATH))
 
     mock_register_exception_handlers.assert_called_once()
 
@@ -41,13 +43,13 @@ def test_create_app_adds_router():
     with patch(
         "daq_queuing_service.app.app.create_api_router"
     ) as mock_create_api_router:
-        create_app()
+        create_app(Path(TEST_CONFIG_PATH))
 
     mock_create_api_router.assert_called_once()
 
 
 def test_lifespan_runs_without_error():
-    app = create_app()
+    app = create_app(Path(TEST_CONFIG_PATH))
 
     with TestClient(app):
         # Startup run by now
@@ -57,7 +59,7 @@ def test_lifespan_runs_without_error():
 
 
 def test_worker_task_cancelled_on_shutdown():
-    app = create_app()
+    app = create_app(Path(TEST_CONFIG_PATH))
 
     with TestClient(app):
         worker_task: asyncio.Task[NoReturn] = app.state.worker_task
@@ -70,7 +72,7 @@ def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
     with patch(
         "daq_queuing_service.app.app.create_api_router"
     ) as mock_create_api_router:
-        app = create_app()
+        app = create_app(Path(TEST_CONFIG_PATH))
 
     app_queue = app.state.queue
     app_worker = app.state.worker
@@ -86,7 +88,7 @@ def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
     AsyncMock(side_effect=Exception("Worker crashed!")),
 )
 def test_if_worker_crashes_then_error_logged(caplog: LogCaptureFixture):
-    app = create_app()
+    app = create_app(Path(TEST_CONFIG_PATH))
 
     with caplog.at_level(logging.ERROR):
         with TestClient(app):
@@ -99,7 +101,7 @@ def test_if_dev_mode_cors_middlewhere_added_to_app():
     with patch(
         "daq_queuing_service.app.app.FastAPI.add_middleware"
     ) as mock_add_middleware:
-        _ = create_app(dev=True)
+        _ = create_app(Path(TEST_CONFIG_PATH), dev=True)
 
     mock_add_middleware.assert_called_once_with(
         CORSMiddleware,

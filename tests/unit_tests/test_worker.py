@@ -14,7 +14,7 @@ from blueapi.client.rest import (
 from blueapi.core import DataEvent
 from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
-from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture, MonkeyPatch
 
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
     BlueapiClientAdapter,
@@ -23,7 +23,14 @@ from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
 from daq_queuing_service.blueapi_interaction.blueapi_call import CallStatus
 from daq_queuing_service.task import Status
 from daq_queuing_service.task_queue.queue import TaskError, TaskQueue, TaskResult
-from daq_queuing_service.worker.worker import QueueWorker
+from daq_queuing_service.worker.worker import LOGGER, QueueWorker
+
+
+@pytest.fixture(autouse=True)
+def propagate_logs(monkeypatch: MonkeyPatch):
+    # This is turned off in prod to avoid duplicate logs
+    # but needed in tests for caplog to receive logs
+    monkeypatch.setattr(LOGGER, "propagate", True)
 
 
 def _get_mock_blueapi_client(
@@ -198,7 +205,7 @@ async def test_when_parameter_error_then_call_failed_and_error_added_to_call(
     worker_with_parameter_error._client.run_task.assert_called_once()  # type: ignore
 
 
-async def test_when_plan_name_error_then_call_failed_and_error_added_to_task(
+async def test_when_plan_name_error_then_call_failed_and_error_added_to_call(
     worker_with_unknown_plan_error: QueueWorker, only_loop_once: type[Exception]
 ):
 

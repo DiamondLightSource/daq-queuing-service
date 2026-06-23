@@ -75,3 +75,11 @@ volumeMounts: []
 volumes: []
 nodeSelector: {}
 tolerations: []
+
+env: []
+
+udcSecret:
+  enabled: false
+  name: ""
+  key: udc-secret
+  clientId: ""

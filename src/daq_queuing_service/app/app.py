@@ -1,15 +1,16 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import NoReturn
 
-from blueapi.client import BlueapiClient
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.blueapi_interaction.clients import get_blueapi_clients
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.converter_utils import get_converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
@@ -22,7 +23,7 @@ logging.basicConfig(
 )
 
 
-def create_app(dev: bool = False) -> FastAPI:
+def create_app(config_path: Path, dev: bool = False) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         worker_task = asyncio.create_task(app.state.worker.run_loop())
@@ -43,7 +44,7 @@ def create_app(dev: bool = False) -> FastAPI:
             worker_task.cancel()
             await asyncio.gather(worker_task, return_exceptions=True)
 
-    config = load_config()
+    config = load_config(config_path)
 
     broadcaster: Broadcaster[QUEUE_EVENTS] = Broadcaster()
 
@@ -64,7 +65,7 @@ def create_app(dev: bool = False) -> FastAPI:
 
     app.state.queue = TaskQueue(converter, broadcaster)
 
-    blueapi_client = BlueapiClient.from_config(config.blueapi)
+    _, blueapi_client = get_blueapi_clients(config.blueapi)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
 
     app.state.worker = QueueWorker(
@@ -77,6 +78,7 @@ def create_app(dev: bool = False) -> FastAPI:
         create_api_router(
             app.state.queue,
             broadcaster,
+            config,
         )
     )
 

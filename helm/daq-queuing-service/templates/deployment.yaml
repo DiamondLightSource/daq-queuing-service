@@ -60,6 +60,22 @@ spec:
           {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if or .Values.udcSecret.enabled .Values.env }}
+          env:
+            {{- if .Values.udcSecret.enabled }}
+            - name: UDC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.udcSecret.name }}
+                  key: {{ .Values.udcSecret.key }}
+
+            - name: UDC_CLIENT_ID
+              value: "{{ .Values.udcSecret.clientId }}"
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
       volumes:
       {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
