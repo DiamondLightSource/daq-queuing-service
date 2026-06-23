@@ -6,16 +6,3 @@ stomp:
   auth:
     username: guest
     password: guest
-env:
-  sources:
-  - kind: deviceManager
-    module: dodal.beamlines.i15_1
-    mock: true
-  - kind: planFunctions
-    module: dodal.plans
-  - kind: planFunctions
-    module: dodal.plan_stubs
-  - kind: planFunctions
-    module: crystallography_bluesky.i15_1.plans
-  - kind: planFunctions
-    module: crystallography_bluesky.common.plans
