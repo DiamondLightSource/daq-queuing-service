@@ -13,4 +13,4 @@ def my_converter(
     ...
 ```
 
-Conversion is run any time the queue changes, so the blueapi call list stays up to date. This means converters can make use of current information on a beamline such as PV values to inform the conversion.
+Conversion is run any time the queue changes and right before a call is made to blueapi, so the blueapi call list stays up to date. This means converters can make use of current information on a beamline such as PV values to inform the conversion.
