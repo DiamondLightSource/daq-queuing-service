@@ -4,14 +4,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import NoReturn
 
-from blueapi.client import BlueapiClient
-from blueapi.client.rest import BlueapiRestClient
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
+from daq_queuing_service.blueapi_interaction.clients import get_blueapi_clients
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_task_request,
@@ -69,8 +68,7 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
 
     app.state.queue = TaskQueue(converter, broadcaster)
 
-    blueapi_rest_client = BlueapiRestClient(config=config.blueapi.api)
-    blueapi_client = BlueapiClient.from_config(config.blueapi)
+    blueapi_rest_client, blueapi_client = get_blueapi_clients(config.blueapi)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
 
     app.state.worker = QueueWorker(

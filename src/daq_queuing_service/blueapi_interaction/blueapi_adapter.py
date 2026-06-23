@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
@@ -14,7 +13,7 @@ from blueapi.client.rest import (
 from blueapi.service.model import TaskRequest
 from blueapi.worker import TaskStatus, WorkerState
 
-LOGGER = logging.getLogger(__name__)
+from daq_queuing_service.log import LOGGER
 
 T = TypeVar("T")
 E = TypeVar("E", bound=Exception)

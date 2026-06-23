@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 from collections.abc import AsyncGenerator, Callable
 
 from blueapi.client.rest import (
@@ -16,6 +15,7 @@ from pydantic import BaseModel
 from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.task import ExperimentDefinition, Status, Task
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
@@ -25,8 +25,6 @@ from daq_queuing_service.task_queue.queue import (
 )
 
 # pyright: reportUnusedFunction=false
-
-LOGGER = logging.getLogger(__name__)
 
 
 class InvalidExperimentDefinitionsError(Exception):
