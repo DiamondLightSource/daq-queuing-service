@@ -21,7 +21,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
     BlueapiResult,
 )
 from daq_queuing_service.blueapi_interaction.blueapi_call import CallStatus
-from daq_queuing_service.task import ExperimentDefinition, Status
+from daq_queuing_service.task import Status
 from daq_queuing_service.task_queue.queue import TaskError, TaskQueue, TaskResult
 from daq_queuing_service.worker.worker import LOGGER, QueueWorker
 
@@ -79,9 +79,6 @@ def _get_mock_blueapi_client(
 
 @pytest.fixture
 def worker(task_queue: TaskQueue):
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
     mock_events = [
         WorkerEvent(
             state=WorkerState.RUNNING,
@@ -99,7 +96,6 @@ def worker(task_queue: TaskQueue):
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(mock_events=mock_events),
-        task_request_constructor=construct_task_request,
         poll_time_s=0.01,
     )
     return worker
@@ -107,13 +103,9 @@ def worker(task_queue: TaskQueue):
 
 @pytest.fixture
 def worker_with_no_blueapi_events(task_queue: TaskQueue):
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(),
-        task_request_constructor=construct_task_request,
         poll_time_s=0.01,
     )
     return worker
@@ -121,11 +113,6 @@ def worker_with_no_blueapi_events(task_queue: TaskQueue):
 
 @pytest.fixture
 def worker_with_parameter_error(task_queue: TaskQueue):
-    task_request = TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return task_request
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(
@@ -135,51 +122,35 @@ def worker_with_parameter_error(task_queue: TaskQueue):
                         loc=["bad_param"],
                         msg="fake_error",
                         type="extra_forbidden",
-                        input=task_request.model_dump_json(),
+                        input="blah",
                     )
                 ]
             )
         ),
-        task_request_constructor=construct_task_request,
     )
     return worker
 
 
 @pytest.fixture
 def worker_with_unknown_plan_error(task_queue: TaskQueue):
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(UnknownPlanError()),
-        task_request_constructor=construct_task_request,
     )
     return worker
 
 
 @pytest.fixture
 def worker_with_blueapi_error(task_queue: TaskQueue):
-    task_request = TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return task_request
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(BlueskyRemoteControlError()),
-        task_request_constructor=construct_task_request,
     )
     return worker
 
 
 @pytest.fixture
 def worker_with_plan_error(task_queue: TaskQueue):
-    task_request = TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return task_request
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(
@@ -187,7 +158,6 @@ def worker_with_plan_error(task_queue: TaskQueue):
                 outcome="error", type="ValueError", message="Error during plan"
             )
         ),
-        task_request_constructor=construct_task_request,
     )
     return worker
 

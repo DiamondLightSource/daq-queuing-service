@@ -24,7 +24,3 @@ class NegativePositionError(QueueError):
 
 class TaskNotClaimedError(QueueError):
     pass
-
-
-class TaskIsCompleteError(QueueError):
-    pass
