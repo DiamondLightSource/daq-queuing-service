@@ -2,10 +2,6 @@ import asyncio
 import json
 from collections.abc import AsyncGenerator
 
-from blueapi.client.rest import (
-    InvalidParametersError,
-    UnknownPlanError,
-)
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
@@ -22,13 +18,6 @@ from daq_queuing_service.task_queue.queue import (
 )
 
 # pyright: reportUnusedFunction=false
-
-
-class InvalidExperimentDefinitionsError(Exception):
-    def __init__(self, errors: dict[int, InvalidParametersError | UnknownPlanError]):
-        self.errors = errors
-
-    pass
 
 
 class QueueStateUpdate(BaseModel):

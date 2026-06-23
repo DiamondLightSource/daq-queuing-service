@@ -15,16 +15,13 @@ def test_get_blueapi_clients_constructs_clients_with_expected_args_and_returns_c
     mock_token_retriever: MagicMock,
 ):
     rest_config = RestConfig(url=HttpUrl("http://test_url.com"))
-    rest_client, blueapi_client = get_blueapi_clients(
-        ApplicationConfig(api=rest_config)
-    )
+    blueapi_client = get_blueapi_clients(ApplicationConfig(api=rest_config))
 
     mock_rest_client.assert_called_once_with(
         config=rest_config, session_manager=mock_token_retriever.return_value
     )
-    mock_blueapi_client.assert_called_once_with(rest_client)
+    mock_blueapi_client.assert_called_once_with(mock_rest_client.return_value)
 
-    assert rest_client is mock_rest_client.return_value
     assert blueapi_client is mock_blueapi_client.return_value
 
 
@@ -37,10 +34,10 @@ def test_get_blueapi_clients_constructs_blueapi_client_with_stomp_if_enabled_in_
     mock_event_bus_client: MagicMock,
 ):
     rest_config = RestConfig(url=HttpUrl("http://test_url.com"))
-    rest_client, _ = get_blueapi_clients(
+    _ = get_blueapi_clients(
         ApplicationConfig(api=rest_config, stomp=StompConfig(enabled=True))
     )
 
     mock_blueapi_client.assert_called_once_with(
-        rest_client, mock_event_bus_client.return_value
+        mock_rest_client.return_value, mock_event_bus_client.return_value
     )
