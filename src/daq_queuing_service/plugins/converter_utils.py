@@ -10,7 +10,7 @@ Converter = Callable[
 ]
 
 
-def get_converter(path: str, converter_name: str) -> Converter:
+def get_converter(path: str, name: str) -> Converter:
     """Gets the converter function based on its path and name
 
     Args:
@@ -23,5 +23,5 @@ def get_converter(path: str, converter_name: str) -> Converter:
         Converter: Converter function
     """
     module = importlib.import_module(path)
-    converter = getattr(module, converter_name)
+    converter = getattr(module, name)
     return converter
