@@ -52,7 +52,7 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
 
     broadcaster: Broadcaster[QUEUE_EVENTS] = Broadcaster()
 
-    converter_path = config.converter.relative_path
+    converter_path = config.converter.path
     converter_name = config.converter.name
     converter = get_converter(converter_path, converter_name)
 

@@ -57,7 +57,7 @@ config:
         username: guest
         password: guest
   converter:
-    relative_path: "construct_task_request"
+    path: "daq_queuing_service.plugins.construct_task_request"
     name: "construct_blueapi_call_list"
   uvicorn:
     workers: 1

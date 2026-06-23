@@ -177,6 +177,16 @@
               ],
               "title": "Position"
             }
+          },
+          {
+            "name": "validate_with_blueapi",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Validate With Blueapi"
+            }
           }
         ],
         "requestBody": {
@@ -580,15 +590,14 @@
           "blueapi": {
             "$ref": "#/components/schemas/ApplicationConfig"
           },
-          "blueapi_call_constructor": {
-            "type": "string",
-            "title": "Blueapi Call Constructor"
+          "converter": {
+            "$ref": "#/components/schemas/ConverterConfig"
           }
         },
         "type": "object",
         "required": [
           "blueapi",
-          "blueapi_call_constructor"
+          "converter"
         ],
         "title": "AppConfig"
       },
@@ -821,6 +830,24 @@
           "Error"
         ],
         "title": "CallStatus"
+      },
+      "ConverterConfig": {
+        "properties": {
+          "relative_path": {
+            "type": "string",
+            "title": "Relative Path"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "relative_path",
+          "name"
+        ],
+        "title": "ConverterConfig"
       },
       "DeviceManagerSource": {
         "properties": {

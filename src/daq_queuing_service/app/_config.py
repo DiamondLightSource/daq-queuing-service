@@ -10,7 +10,7 @@ TEST_CONFIG_PATH = "tests/test_data/test_config.yaml"
 
 
 class ConverterConfig(BaseModel):
-    relative_path: str
+    path: str
     name: str
 
 
