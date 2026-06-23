@@ -833,9 +833,9 @@
       },
       "ConverterConfig": {
         "properties": {
-          "relative_path": {
+          "path": {
             "type": "string",
-            "title": "Relative Path"
+            "title": "Path"
           },
           "name": {
             "type": "string",
@@ -844,7 +844,7 @@
         },
         "type": "object",
         "required": [
-          "relative_path",
+          "path",
           "name"
         ],
         "title": "ConverterConfig"
