@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from collections.abc import Callable
 from functools import partial
 
 from blueapi.client.event_bus import AnyEvent
@@ -11,13 +10,11 @@ from blueapi.client.rest import (
     UnknownPlanError,
 )
 from blueapi.core import DataEvent
-from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
 from blueapi.worker.event import TaskError, TaskResult
 
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
-from daq_queuing_service.task import ExperimentDefinition
 from daq_queuing_service.task_queue.queue import TaskQueue
 
 LOGGER = logging.getLogger(__name__)
@@ -29,13 +26,11 @@ class QueueWorker:
         self,
         queue: TaskQueue,
         blueapi_client: BlueapiClientAdapter,
-        task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
         poll_time_s: float = 1.0,
     ):
         self.poll_time_s = poll_time_s
         self._queue = queue
         self._client = blueapi_client
-        self._task_request_constructor = task_request_constructor
 
     async def run_loop(self):
         while True:

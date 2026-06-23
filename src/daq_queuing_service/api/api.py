@@ -1,14 +1,12 @@
 import asyncio
 import json
 import logging
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator
 
 from blueapi.client.rest import (
-    BlueapiRestClient,
     InvalidParametersError,
     UnknownPlanError,
 )
-from blueapi.service.model import TaskRequest
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
@@ -52,29 +50,8 @@ def _filter_by_status(
     return [task for task in tasks if task.status == status]
 
 
-def _validate_tasks_with_blueapi(
-    tasks: list[Task],
-    blueapi_client: BlueapiRestClient,
-    task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
-) -> None:
-    errors: dict[int, InvalidParametersError | UnknownPlanError] = {}
-    LOGGER.info(f"Using blueapi client: {blueapi_client._config}")  # type: ignore # noqa
-    for i, task in enumerate(tasks):
-        try:
-            task_response = blueapi_client.create_task(
-                task_request_constructor(task.experiment_definition)
-            )
-            blueapi_client.clear_task(task_response.task_id)
-        except (InvalidParametersError, UnknownPlanError) as e:
-            errors[i] = e
-    if errors:
-        raise InvalidExperimentDefinitionsError(errors)
-
-
 def create_api_router(
     queue: TaskQueue,
-    blueapi_client: BlueapiRestClient,
-    task_request_constructor: Callable[[ExperimentDefinition], TaskRequest],
     broadcaster: Broadcaster[QUEUE_EVENTS],
 ) -> APIRouter:
     router = APIRouter()
@@ -110,16 +87,11 @@ def create_api_router(
     async def add_tasks_to_queue(
         experiment_definitions: list[ExperimentDefinition],
         position: int | None = None,
-        validate_with_blueapi: bool = True,
     ) -> list[str]:
         tasks = [
             Task(experiment_definition=experiment_definition)
             for experiment_definition in experiment_definitions
         ]
-        if validate_with_blueapi:
-            _validate_tasks_with_blueapi(
-                tasks, blueapi_client, task_request_constructor
-            )
         task_ids = [task.id for task in tasks]
         await queue.add_tasks(tasks, position)
         return task_ids
