@@ -65,7 +65,7 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
 
     app.state.queue = TaskQueue(converter, broadcaster)
 
-    _, blueapi_client = get_blueapi_clients(config.blueapi)
+    blueapi_client = get_blueapi_clients(config.blueapi)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
 
     app.state.worker = QueueWorker(
