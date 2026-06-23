@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import NoReturn
 
 from fastapi import FastAPI
@@ -25,7 +26,7 @@ logging.basicConfig(
 )
 
 
-def create_app(dev: bool = False) -> FastAPI:
+def create_app(config_path: Path, dev: bool = False) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         worker_task = asyncio.create_task(app.state.worker.run_loop())
@@ -46,7 +47,7 @@ def create_app(dev: bool = False) -> FastAPI:
             worker_task.cancel()
             await asyncio.gather(worker_task, return_exceptions=True)
 
-    config = load_config()
+    config = load_config(config_path)
 
     broadcaster: Broadcaster[QUEUE_EVENTS] = Broadcaster()
 
@@ -83,6 +84,7 @@ def create_app(dev: bool = False) -> FastAPI:
             blueapi_rest_client,
             construct_blueapi_task_request,
             broadcaster,
+            config,
         )
     )
 

@@ -8,7 +8,7 @@ from daq_queuing_service.api.api import create_api_router
 
 app = FastAPI()
 app.include_router(
-    create_api_router(MagicMock(), MagicMock(), MagicMock(), MagicMock())
+    create_api_router(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
 )
 
 openapi = get_openapi(

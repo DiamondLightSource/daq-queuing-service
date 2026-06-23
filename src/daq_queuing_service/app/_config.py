@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import yaml
 from blueapi.config import ApplicationConfig
@@ -18,8 +19,11 @@ class AppConfig(BaseModel):
     converter: ConverterConfig
 
 
-def load_config() -> AppConfig:
-    path = CONFIG_PATH if os.path.isfile(CONFIG_PATH) else TEST_CONFIG_PATH
-    with open(path) as f:
+def get_default_config() -> str:
+    return CONFIG_PATH if os.path.isfile(CONFIG_PATH) else TEST_CONFIG_PATH
+
+
+def load_config(config_path: Path) -> AppConfig:
+    with open(config_path) as f:
         data = yaml.safe_load(f)
     return AppConfig(**data)
