@@ -1,4 +1,6 @@
-blueapi_call_constructor: "default"
+converter:
+  path: "daq_queuing_service.plugins.construct_task_request"
+  name: "construct_blueapi_call_list"
 blueapi:
   api:
     url: "http://localhost:8000"
