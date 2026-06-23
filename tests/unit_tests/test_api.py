@@ -2,7 +2,7 @@ import threading
 import time
 import uuid
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.client.rest import (
@@ -32,6 +32,7 @@ from daq_queuing_service.task import (
     TaskWithPosition,
 )
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
+from daq_queuing_service.task_queue.queue_utils import QueueError
 
 
 @pytest.fixture
@@ -728,6 +729,29 @@ async def test_clear_history_deletes_history(
     response = test_client.delete("/history")
     assert response.status_code == 200
     assert not await task_queue_with_history.get_history()
+
+
+def test_any_queue_error_caught_by_error_handler(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    class SomeError(QueueError): ...
+
+    with patch.object(
+        task_queue_with_history, "add_tasks", side_effect=SomeError("Error in queue")
+    ):
+        response = test_client.post(
+            "/queue",
+            json=[
+                {
+                    "plan_name": "add_tasks",
+                    "sample_id": "1",
+                    "params": {"time": 10},
+                    "instrument_session": "abc",
+                }
+            ],
+        )
+
+    assert response.status_code == 409
 
 
 def test_get_config_returns_config(test_client: TestClient):
