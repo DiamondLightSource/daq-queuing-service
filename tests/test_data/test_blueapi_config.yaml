@@ -1,4 +1,4 @@
-api: 
+api:
   url: "http://localhost:8000"
 stomp:
   enabled: true # All other stomp settings will be ignored if this is false
