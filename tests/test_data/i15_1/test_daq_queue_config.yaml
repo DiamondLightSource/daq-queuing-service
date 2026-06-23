@@ -1,5 +1,5 @@
 converter:
-  relative_path: "i15_1_converter"
+  path: "daq_queuing_service.plugins.i15_1_converter"
   name: "construct_i15_1_blueapi_call_list"
 blueapi:
   api:
