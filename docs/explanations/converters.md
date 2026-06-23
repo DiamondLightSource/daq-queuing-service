@@ -14,11 +14,3 @@ def my_converter(
 ```
 
 Conversion is run any time the queue changes, so the blueapi call list stays up to date. This means converters can make use of current information on a beamline such as PV values to inform the conversion.
-
-See reference below
-
-:class:`TaskWithPosition`
-``
-
-:class:`BlueapiCall`
-``
