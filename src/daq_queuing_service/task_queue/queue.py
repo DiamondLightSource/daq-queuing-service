@@ -93,7 +93,7 @@ class TaskQueue:
                 task.blueapi_calls = []
 
         self._call_queue = [
-            # Persist calls who's parent task is in progress
+            # Persist calls which aren't complete but who's parent task is in progress
             # Once a task is in progress it is not provided to the converter
             # More work needed to allow for interleaved calls from different tasks,
             # and for in progress tasks to inform conversion
@@ -102,6 +102,7 @@ class TaskQueue:
             if call.parent_task_id
             and call.parent_task_id in self._queue
             and self._tasks[call.parent_task_id].status == Status.IN_PROGRESS
+            and call.status not in (CallStatus.SUCCESS, CallStatus.ERROR)
         ]
 
         new_calls = self._convert(
