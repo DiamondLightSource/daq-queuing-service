@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from typing import Any, Self
 from uuid import uuid4
 
-from blueapi.service.model import StrEnum
+from blueapi.service.model import StrEnum, TaskRequest
 from pydantic import BaseModel, Field, computed_field
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
@@ -23,19 +23,28 @@ class Status(StrEnum):
     CANCELLED = "Cancelled"
 
 
+class Sample(BaseModel):
+    name: str
+    id: str
+    data: Mapping[str, Any]
+
+
 class ExperimentDefinition(BaseModel):
-    plan_name: str
-    sample_id: str
-    params: Mapping[str, Any] = Field(
-        description="Values for parameters to plan, if any", default_factory=dict
-    )
+    name: str
+    id: str
+    data: Mapping[str, Any]
+
+
+class Experiment(BaseModel):
     instrument_session: str
+    sample: Sample
+    experiment_definition: ExperimentDefinition
 
 
 class Task(BaseModel):
-    experiment_definition: ExperimentDefinition
+    experiment: Experiment | TaskRequest
     id: str = Field(default_factory=create_uuid_str)
-    blueapi_calls: list[BlueapiCall] = []
+    blueapi_calls: list[BlueapiCall] = Field(default_factory=lambda: [])
     _cancelled: bool = False
 
     def cancel(self):
@@ -64,9 +73,20 @@ class Task(BaseModel):
             return Status.IN_PROGRESS
         return Status.QUEUED
 
+    @computed_field
+    @property
+    def kind(self) -> str:
+        match self.experiment:
+            case Experiment():
+                return "experiment"
+            case TaskRequest():
+                return "plan"
+            case _:
+                raise TypeError(f"Unexpected experiment type: {type(self.experiment)}")
+
 
 class TaskWithPosition(BaseModel):
-    experiment_definition: ExperimentDefinition
+    experiment: Experiment | TaskRequest
     id: str
     status: Status
     blueapi_calls: list[BlueapiCallResponse]
