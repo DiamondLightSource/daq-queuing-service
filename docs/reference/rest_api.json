@@ -1421,6 +1421,14 @@
         "title": "TaskError",
         "description": "Wrapper around an exception raised by a plan"
       },
+      "TaskKind": {
+        "type": "string",
+        "enum": [
+          "Experiment",
+          "Plan"
+        ],
+        "title": "TaskKind"
+      },
       "TaskRequest": {
         "properties": {
           "name": {
@@ -1512,12 +1520,7 @@
             "title": "Position"
           },
           "kind": {
-            "type": "string",
-            "enum": [
-              "experiment",
-              "plan"
-            ],
-            "title": "Kind"
+            "$ref": "#/components/schemas/TaskKind"
           }
         },
         "type": "object",
