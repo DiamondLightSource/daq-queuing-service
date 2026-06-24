@@ -29,7 +29,6 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import (
-    ExperimentDefinition,
     Status,
     TaskWithPosition,
 )
@@ -111,11 +110,10 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == [
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "2",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_2", "id": "2", "data": {}},
+                "experiment_definition": {"name": "test", "id": "2", "data": {}},
             },
             "id": "2",
             "status": "In progress",
@@ -138,11 +136,10 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "position": 0,
         },
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "3",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_3", "id": "3", "data": {}},
+                "experiment_definition": {"name": "test", "id": "3", "data": {}},
             },
             "id": "3",
             "status": "Queued",
@@ -165,11 +162,10 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "position": 1,
         },
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "4",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_4", "id": "4", "data": {}},
+                "experiment_definition": {"name": "test", "id": "4", "data": {}},
             },
             "id": "4",
             "status": "Queued",
@@ -199,13 +195,13 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == [
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "2",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_2", "id": "2", "data": {}},
+                "experiment_definition": {"name": "test", "id": "2", "data": {}},
             },
             "id": "2",
+            "status": "In progress",
             "blueapi_calls": [
                 {
                     "task_request": {
@@ -223,7 +219,6 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                 }
             ],
             "position": 0,
-            "status": "In progress",
         }
     ]
 
@@ -243,11 +238,10 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == [
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "0",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_0", "id": "0", "data": {}},
+                "experiment_definition": {"name": "test", "id": "0", "data": {}},
             },
             "id": "0",
             "status": "Complete",
@@ -276,11 +270,10 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
             "position": None,
         },
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "1",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_1", "id": "1", "data": {}},
+                "experiment_definition": {"name": "test", "id": "1", "data": {}},
             },
             "id": "1",
             "status": "Complete",
@@ -326,8 +319,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         "/queue",
         json=[
             {
-                "plan_name": "add_tasks",
-                "sample_id": "1",
+                "name": "add_tasks",
                 "params": {"time": 10},
                 "instrument_session": "abc",
             }
@@ -339,9 +331,8 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
     [uuid.UUID(task_id) for task_id in task_ids]
 
     assert await task_queue_with_history.get_task_by_position(-1) == TaskWithPosition(
-        experiment_definition=ExperimentDefinition(
-            plan_name="add_tasks",
-            sample_id="1",
+        experiment=TaskRequest(
+            name="add_tasks",
             params={"time": 10},
             instrument_session="abc",
         ),
@@ -371,8 +362,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         [
             [
                 {
-                    "plan_name": "add_tasks",
-                    "sample_id": "1",
+                    "name": "test",
                     "params": {"time": 10},
                     "instrument_session": "abc",
                 }
@@ -384,9 +374,8 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         [
             [
                 {
-                    "plan_name": "add_tasks",
+                    "name": "test",
                     "params": {"time": 10},
-                    "instrument_session": "abc",
                 }
             ],
             0,
@@ -395,14 +384,28 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
                 "detail": [
                     {
                         "type": "missing",
-                        "loc": ["body", 0, "sample_id"],
+                        "loc": ["body", 0, "TaskRequest", "instrument_session"],
                         "msg": "Field required",
-                        "input": {
-                            "plan_name": "add_tasks",
-                            "params": {"time": 10},
-                            "instrument_session": "abc",
-                        },
-                    }
+                        "input": {"name": "test", "params": {"time": 10}},
+                    },
+                    {
+                        "type": "missing",
+                        "loc": ["body", 0, "Experiment", "instrument_session"],
+                        "msg": "Field required",
+                        "input": {"name": "test", "params": {"time": 10}},
+                    },
+                    {
+                        "type": "missing",
+                        "loc": ["body", 0, "Experiment", "sample"],
+                        "msg": "Field required",
+                        "input": {"name": "test", "params": {"time": 10}},
+                    },
+                    {
+                        "type": "missing",
+                        "loc": ["body", 0, "Experiment", "experiment_definition"],
+                        "msg": "Field required",
+                        "input": {"name": "test", "params": {"time": 10}},
+                    },
                 ]
             },
         ],
@@ -523,11 +526,10 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
     assert not any(task_id in task_ids_after for task_id in last_two_task_ids)
     assert response.json() == [
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "3",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_3", "id": "3", "data": {}},
+                "experiment_definition": {"name": "test", "id": "3", "data": {}},
             },
             "id": "3",
             "status": "Cancelled",
@@ -550,11 +552,10 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "position": None,
         },
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "4",
-                "params": {},
+            "experiment": {
                 "instrument_session": "",
+                "sample": {"name": "test_8_4", "id": "4", "data": {}},
+                "experiment_definition": {"name": "test", "id": "4", "data": {}},
             },
             "id": "4",
             "status": "Cancelled",
@@ -640,11 +641,10 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
     response = test_client.get("/queue/1")
     assert response.status_code == 200
     assert response.json() == {
-        "experiment_definition": {
-            "plan_name": "test",
-            "sample_id": "3",
-            "params": {},
+        "experiment": {
             "instrument_session": "",
+            "sample": {"name": "test_8_3", "id": "3", "data": {}},
+            "experiment_definition": {"name": "test", "id": "3", "data": {}},
         },
         "id": "3",
         "status": "Queued",
@@ -672,11 +672,10 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
     response = test_client.get("/tasks/3")
     assert response.status_code == 200
     assert response.json() == {
-        "experiment_definition": {
-            "plan_name": "test",
-            "sample_id": "3",
-            "params": {},
+        "experiment": {
             "instrument_session": "",
+            "sample": {"name": "test_8_3", "id": "3", "data": {}},
+            "experiment_definition": {"name": "test", "id": "3", "data": {}},
         },
         "id": "3",
         "status": "Queued",
@@ -746,8 +745,7 @@ def test_any_queue_error_caught_by_error_handler(
             "/queue",
             json=[
                 {
-                    "plan_name": "add_tasks",
-                    "sample_id": "1",
+                    "name": "add_tasks",
                     "params": {"time": 10},
                     "instrument_session": "abc",
                 }

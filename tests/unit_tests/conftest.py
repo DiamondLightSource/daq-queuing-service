@@ -9,7 +9,13 @@ from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
 )
-from daq_queuing_service.task import ExperimentDefinition, Task, TaskWithPosition
+from daq_queuing_service.task import (
+    Experiment,
+    ExperimentDefinition,
+    Sample,
+    Task,
+    TaskWithPosition,
+)
 from daq_queuing_service.task_queue.queue import TaskQueue
 
 
@@ -24,8 +30,12 @@ def propagate_logs(monkeypatch: MonkeyPatch):
 def tasks() -> list[Task]:
     return [
         Task(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id=str(i), params={}, instrument_session=""
+            experiment=Experiment(
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id=str(i), data={}
+                ),
+                sample=Sample(name=f"test_8_{i}", id=str(i), data={}),
             ),
             id=str(i),
         )
@@ -51,13 +61,14 @@ async def task_queue_one_to_many(tasks: list[Task]):
         call_list: list[BlueapiCall] = []
         for task in queue:
             for _ in range(2):
+                assert isinstance(task.experiment, Experiment)
                 call_list.append(
                     BlueapiCall(
                         parent_task_id=task.id,
                         task_request=TaskRequest(
-                            name=task.experiment_definition.plan_name,
-                            params=task.experiment_definition.params,
-                            instrument_session=task.experiment_definition.instrument_session,
+                            name=task.experiment.experiment_definition.name,
+                            params=task.experiment.experiment_definition.data,
+                            instrument_session=task.experiment.instrument_session,
                         ),
                     )
                 )
