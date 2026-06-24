@@ -30,6 +30,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.task import (
     Status,
+    TaskKind,
     TaskWithPosition,
 )
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
@@ -134,6 +135,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 }
             ],
             "position": 0,
+            "kind": "Experiment",
         },
         {
             "experiment": {
@@ -160,6 +162,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 }
             ],
             "position": 1,
+            "kind": "Experiment",
         },
         {
             "experiment": {
@@ -186,6 +189,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 }
             ],
             "position": 2,
+            "kind": "Experiment",
         },
     ]
 
@@ -219,6 +223,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                 }
             ],
             "position": 0,
+            "kind": "Experiment",
         }
     ]
 
@@ -268,6 +273,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                 }
             ],
             "position": None,
+            "kind": "Experiment",
         },
         {
             "experiment": {
@@ -298,6 +304,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                 }
             ],
             "position": None,
+            "kind": "Experiment",
         },
     ]
 
@@ -353,6 +360,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         ],
         position=3,
         status=Status.QUEUED,
+        kind=TaskKind.PLAN,
     )
 
 
@@ -550,6 +558,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                 }
             ],
             "position": None,
+            "kind": "Experiment",
         },
         {
             "experiment": {
@@ -576,6 +585,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                 }
             ],
             "position": None,
+            "kind": "Experiment",
         },
     ]
 
@@ -665,6 +675,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
             }
         ],
         "position": 1,
+        "kind": "Experiment",
     }
 
 
@@ -696,6 +707,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
             }
         ],
         "position": 1,
+        "kind": "Experiment",
     }
 
 

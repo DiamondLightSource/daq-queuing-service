@@ -9,6 +9,7 @@ from daq_queuing_service.task import (
     ExperimentDefinition,
     Sample,
     Status,
+    TaskKind,
     TaskWithPosition,
 )
 
@@ -67,6 +68,7 @@ def test_experiment_with_correct_plan_name_are_converted():
         status=Status.QUEUED,
         blueapi_calls=[],
         position=None,
+        kind=TaskKind.EXPERIMENT,
     )
     call_list = construct_i15_1_blueapi_call_list([task], [], [])
     assert len(call_list) == 3
@@ -86,6 +88,7 @@ def test_mix_of_experiments_with_correct_plan_name_are_converted():
         status=Status.QUEUED,
         blueapi_calls=[],
         position=None,
+        kind=TaskKind.EXPERIMENT,
     )
 
     bad_task = deepcopy(good_task)

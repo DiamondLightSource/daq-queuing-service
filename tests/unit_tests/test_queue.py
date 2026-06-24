@@ -21,6 +21,7 @@ from daq_queuing_service.task import (
     Sample,
     Status,
     Task,
+    TaskKind,
 )
 from daq_queuing_service.task_queue.queue import (
     TaskQueue,
@@ -291,6 +292,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 )
             ],
             position=0,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -315,6 +317,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 )
             ],
             position=1,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -339,6 +342,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 )
             ],
             position=2,
+            kind=TaskKind.EXPERIMENT,
         ),
     ]
 
@@ -378,6 +382,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -402,6 +407,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
     ]
 
@@ -442,6 +448,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -466,6 +473,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -490,6 +498,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=0,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -514,6 +523,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=1,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -538,6 +548,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=2,
+            kind=TaskKind.EXPERIMENT,
         ),
     ]
 
