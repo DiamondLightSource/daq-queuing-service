@@ -177,16 +177,6 @@
               ],
               "title": "Position"
             }
-          },
-          {
-            "name": "validate_with_blueapi",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Validate With Blueapi"
-            }
           }
         ],
         "requestBody": {
@@ -196,9 +186,16 @@
               "schema": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/ExperimentDefinition"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TaskRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Experiment"
+                    }
+                  ]
                 },
-                "title": "Experiment Definitions"
+                "title": "Experiments"
               }
             }
           }
@@ -990,32 +987,48 @@
         "title": "EnvironmentConfig",
         "description": "Config for the RunEngine environment"
       },
-      "ExperimentDefinition": {
+      "Experiment": {
         "properties": {
-          "plan_name": {
-            "type": "string",
-            "title": "Plan Name"
-          },
-          "sample_id": {
-            "type": "string",
-            "title": "Sample Id"
-          },
-          "params": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Params",
-            "description": "Values for parameters to plan, if any"
-          },
           "instrument_session": {
             "type": "string",
             "title": "Instrument Session"
+          },
+          "sample": {
+            "$ref": "#/components/schemas/Sample"
+          },
+          "experiment_definition": {
+            "$ref": "#/components/schemas/ExperimentDefinition"
           }
         },
         "type": "object",
         "required": [
-          "plan_name",
-          "sample_id",
-          "instrument_session"
+          "instrument_session",
+          "sample",
+          "experiment_definition"
+        ],
+        "title": "Experiment"
+      },
+      "ExperimentDefinition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "data"
         ],
         "title": "ExperimentDefinition"
       },
@@ -1220,6 +1233,30 @@
         "additionalProperties": false,
         "type": "object",
         "title": "RestConfig"
+      },
+      "Sample": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "data"
+        ],
+        "title": "Sample"
       },
       "ScratchConfig": {
         "properties": {
@@ -1438,8 +1475,16 @@
       },
       "TaskWithPosition": {
         "properties": {
-          "experiment_definition": {
-            "$ref": "#/components/schemas/ExperimentDefinition"
+          "experiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Experiment"
+              },
+              {
+                "$ref": "#/components/schemas/TaskRequest"
+              }
+            ],
+            "title": "Experiment"
           },
           "id": {
             "type": "string",
@@ -1469,7 +1514,7 @@
         },
         "type": "object",
         "required": [
-          "experiment_definition",
+          "experiment",
           "id",
           "status",
           "blueapi_calls",
