@@ -12,17 +12,6 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 
 
-def create_uuid_str() -> str:
-    return str(uuid4())
-
-
-class Status(StrEnum):
-    QUEUED = "Queued"
-    IN_PROGRESS = "In progress"
-    COMPLETE = "Complete"
-    CANCELLED = "Cancelled"
-
-
 class Sample(BaseModel):
     name: str
     id: str
@@ -39,6 +28,22 @@ class Experiment(BaseModel):
     instrument_session: str
     sample: Sample
     experiment_definition: ExperimentDefinition
+
+
+def create_uuid_str() -> str:
+    return str(uuid4())
+
+
+class Status(StrEnum):
+    QUEUED = "Queued"
+    IN_PROGRESS = "In progress"
+    COMPLETE = "Complete"
+    CANCELLED = "Cancelled"
+
+
+class TaskKind(StrEnum):
+    EXPERIMENT = "Experiment"
+    PLAN = "Plan"
 
 
 class Task(BaseModel):
@@ -75,12 +80,12 @@ class Task(BaseModel):
 
     @computed_field
     @property
-    def kind(self) -> str:
+    def kind(self) -> TaskKind:
         match self.experiment:
             case Experiment():
-                return "experiment"
+                return TaskKind.EXPERIMENT
             case TaskRequest():
-                return "plan"
+                return TaskKind.PLAN
             case _:
                 raise TypeError(f"Unexpected experiment type: {type(self.experiment)}")
 
