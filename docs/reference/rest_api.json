@@ -1510,6 +1510,14 @@
               }
             ],
             "title": "Position"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "experiment",
+              "plan"
+            ],
+            "title": "Kind"
           }
         },
         "type": "object",
@@ -1518,7 +1526,8 @@
           "id",
           "status",
           "blueapi_calls",
-          "position"
+          "position",
+          "kind"
         ],
         "title": "TaskWithPosition"
       },

@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Self
+from typing import Any, Literal, Self
 from uuid import uuid4
 
 from blueapi.service.model import StrEnum, TaskRequest
@@ -41,9 +41,7 @@ class Status(StrEnum):
     CANCELLED = "Cancelled"
 
 
-class TaskKind(StrEnum):
-    EXPERIMENT = "Experiment"
-    PLAN = "Plan"
+TASK_KIND = Literal["experiment", "plan"]
 
 
 class Task(BaseModel):
@@ -80,12 +78,12 @@ class Task(BaseModel):
 
     @computed_field
     @property
-    def kind(self) -> TaskKind:
+    def kind(self) -> TASK_KIND:
         match self.experiment:
             case Experiment():
-                return TaskKind.EXPERIMENT
+                return "experiment"
             case TaskRequest():
-                return TaskKind.PLAN
+                return "plan"
             case _:
                 raise TypeError(f"Unexpected experiment type: {type(self.experiment)}")
 
@@ -96,6 +94,7 @@ class TaskWithPosition(BaseModel):
     status: Status
     blueapi_calls: list[BlueapiCallResponse]
     position: int | None
+    kind: TASK_KIND
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:
