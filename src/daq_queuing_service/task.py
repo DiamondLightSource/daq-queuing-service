@@ -20,6 +20,7 @@ class Status(StrEnum):
     QUEUED = "Queued"
     IN_PROGRESS = "In progress"
     COMPLETE = "Complete"
+    ERROR = "Error"
     CANCELLED = "Cancelled"
 
 
@@ -47,17 +48,17 @@ class Task(BaseModel):
         if self._cancelled:
             return Status.CANCELLED
         if self.blueapi_calls and all(
-            call.status in [CallStatus.SUCCESS, CallStatus.ERROR]
-            for call in self.blueapi_calls
+            call.status == CallStatus.SUCCESS for call in self.blueapi_calls
         ):
             return Status.COMPLETE
+        if any(call.status == CallStatus.ERROR for call in self.blueapi_calls):
+            return Status.ERROR
         if any(
             call.status
             in [
-                Status.IN_PROGRESS,
+                CallStatus.IN_PROGRESS,
                 CallStatus.CLAIMED,
                 CallStatus.SUCCESS,
-                CallStatus.ERROR,
             ]
             for call in self.blueapi_calls
         ):
