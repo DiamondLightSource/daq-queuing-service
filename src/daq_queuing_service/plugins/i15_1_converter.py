@@ -39,19 +39,19 @@ def construct_i15_1_blueapi_call_list(
     call_list: list[BlueapiCall] = []
 
     for task in queue:
-        if isinstance(task.experiment, TaskRequest):
-            call_list.append(
-                BlueapiCall(task_request=task.experiment, parent_task_id=task.id)
-            )
-        # Remove plan name from here and UI in https://github.com/DiamondLightSource/daq-queuing-service/issues/51
-        elif task.experiment.experiment_definition.name == "run_full_collection":
-            call_list.extend(
-                [
-                    BlueapiCall(task_request=blueapi_task, parent_task_id=task.id)
-                    for blueapi_task in construct_blueapi_tasks_from_i15_1_experiment(
-                        task.experiment
-                    )
-                ]
-            )
+        match task.experiment:
+            case TaskRequest():
+                call_list.append(
+                    BlueapiCall(task_request=task.experiment, parent_task_id=task.id)
+                )
+            case Experiment():
+                call_list.extend(
+                    [
+                        BlueapiCall(task_request=blueapi_task, parent_task_id=task.id)
+                        for blueapi_task in construct_blueapi_tasks_from_i15_1_experiment(
+                            task.experiment
+                        )
+                    ]
+                )
 
     return call_list

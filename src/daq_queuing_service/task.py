@@ -1,8 +1,9 @@
 from collections.abc import Mapping
+from enum import StrEnum
 from typing import Any, Self
 from uuid import uuid4
 
-from blueapi.service.model import StrEnum, TaskRequest
+from blueapi.service.model import TaskRequest
 from pydantic import BaseModel, Field, computed_field
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import (

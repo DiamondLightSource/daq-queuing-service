@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+from blueapi.service.model import TaskRequest
+
 from daq_queuing_service.plugins.i15_1_converter import (
     construct_blueapi_tasks_from_i15_1_experiment,
     construct_i15_1_blueapi_call_list,
@@ -54,7 +56,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         assert task.instrument_session == "cm12345-1"
 
 
-def test_experiment_with_correct_plan_name_are_converted():
+def test_experiment_with_correct_experiment_type_are_converted():
     experiment = Experiment(
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
@@ -74,7 +76,7 @@ def test_experiment_with_correct_plan_name_are_converted():
     assert len(call_list) == 3
 
 
-def test_mix_of_experiments_with_correct_plan_name_are_converted():
+def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     good_experiment = Experiment(
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
@@ -91,9 +93,13 @@ def test_mix_of_experiments_with_correct_plan_name_are_converted():
         kind=TaskKind.EXPERIMENT,
     )
 
+    class BadExperiment: ...
+
     bad_task = deepcopy(good_task)
-    assert isinstance(bad_task.experiment, Experiment)
-    bad_task.experiment.experiment_definition.name = "_"
-    tasks = [good_task, bad_task, good_task]
+    bad_task.experiment = BadExperiment()  # type: ignore
+    plan_task = deepcopy(good_task)
+    plan_task.experiment = TaskRequest(name="", instrument_session="")
+    plan_task.kind = TaskKind.PLAN
+    tasks = [good_task, bad_task, plan_task, good_task]
     call_list = construct_i15_1_blueapi_call_list(tasks, [], [])
-    assert len(call_list) == 6
+    assert len(call_list) == 7
