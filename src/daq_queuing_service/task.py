@@ -87,8 +87,6 @@ class Task(BaseModel):
                 return TaskKind.EXPERIMENT
             case TaskRequest():
                 return TaskKind.PLAN
-            case _:
-                raise TypeError(f"Unexpected experiment type: {type(self.experiment)}")
 
 
 class TaskWithPosition(BaseModel):
