@@ -7,7 +7,7 @@ from daq_queuing_service.task import Experiment, TaskWithPosition
 def construct_blueapi_tasks_from_i15_1_experiment(
     experiment: Experiment,
 ) -> list[TaskRequest]:
-    sample_name = experiment.sample.data["sampleName"]
+    sample_name = experiment.sample.name
     # Assume sample name is of form test_8_1 to load from position 8 on puck 1
     _, position, puck = sample_name.split("_")
 
