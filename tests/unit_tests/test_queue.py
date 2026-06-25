@@ -330,7 +330,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.COMPLETE,
+            status=Status.ERROR,
             blueapi_calls=[
                 BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),
@@ -386,7 +386,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 plan_name="test", sample_id="0", instrument_session=""
             ),
             id="0",
-            status=Status.COMPLETE,
+            status=Status.ERROR,
             blueapi_calls=[
                 BlueapiCallResponse(
                     task_request=TaskRequest(name="test", instrument_session=""),

@@ -245,39 +245,6 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
         {
             "experiment_definition": {
                 "plan_name": "test",
-                "sample_id": "0",
-                "params": {},
-                "instrument_session": "",
-            },
-            "id": "0",
-            "status": "Complete",
-            "blueapi_calls": [
-                {
-                    "task_request": {
-                        "name": "test",
-                        "params": {},
-                        "instrument_session": "",
-                    },
-                    "parent_task_id": "0",
-                    "status": "Error",
-                    "time_started": "2026-04-17T15:00:00.000000",
-                    "time_completed": "2026-04-17T15:00:59.000000",
-                    "result": None,
-                    "errors": [
-                        {
-                            "outcome": "error",
-                            "type": "ValueError",
-                            "message": "Error during plan",
-                        }
-                    ],
-                    "blueapi_id": None,
-                }
-            ],
-            "position": None,
-        },
-        {
-            "experiment_definition": {
-                "plan_name": "test",
                 "sample_id": "1",
                 "params": {},
                 "instrument_session": "",
