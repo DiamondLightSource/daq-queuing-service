@@ -811,6 +811,28 @@ async def test__sync_correctly_moves_tasks_with_all_completed_calls_into_history
     assert a_task_id in task_queue._history
 
 
+async def test__sync_correctly_moves_tasks_with_any_errored_calls_into_history(
+    task_queue_one_to_many: TaskQueue,
+):
+    task_queue_one_to_many._modifying = MagicMock()
+
+    a_task_id = task_queue_one_to_many._queue[3]
+    a_task = task_queue_one_to_many._tasks[a_task_id]
+    errored_blueapi_call = BlueapiCall(
+        task_request=TaskRequest(name="sync_test", instrument_session=""),
+        status=CallStatus.ERROR,
+    )
+
+    a_task.blueapi_calls[0] = errored_blueapi_call
+    assert a_task.blueapi_calls[1].status == CallStatus.WAITING
+
+    assert a_task_id in task_queue_one_to_many._queue
+    assert a_task_id not in task_queue_one_to_many._history
+    task_queue_one_to_many._sync()
+    assert a_task_id not in task_queue_one_to_many._queue
+    assert a_task_id in task_queue_one_to_many._history
+
+
 async def test_task_with_single_blueapi_calls_new_task_is_received_after_first_complete(
     task_queue: TaskQueue,
 ):
@@ -839,3 +861,22 @@ async def test_task_with_multiple_blueapi_calls_second_returned_when_first_compl
 
     assert first_call.parent_task_id == second_call.parent_task_id
     assert first_call != second_call
+
+
+async def test__sync_skips_subsequent_calls_if_previous_one_failed_within_a_task(
+    task_queue_one_to_many: TaskQueue,
+):
+    task_queue_one_to_many._modifying = MagicMock()
+
+    a_task_id = task_queue_one_to_many._queue[3]
+    a_task = task_queue_one_to_many._tasks[a_task_id]
+    errored_blueapi_call = BlueapiCall(
+        task_request=TaskRequest(name="sync_test", instrument_session=""),
+        status=CallStatus.ERROR,
+    )
+
+    a_task.blueapi_calls[0] = errored_blueapi_call
+
+    task_queue_one_to_many._sync()
+    assert a_task.blueapi_calls[0].status == Status.ERROR
+    assert all(call.status == CallStatus.SKIPPED for call in a_task.blueapi_calls[1:])

@@ -80,11 +80,16 @@ class TaskQueue:
         LOGGER.debug("Syncing")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
-            if task.status == Status.COMPLETE:
+            if task.status in (Status.COMPLETE, Status.ERROR):
                 # Move task from queue to history if all blueapi calls complete
+                # Or an error occurred during one of them
                 self._queue.remove(task_id)
                 self._history.append(task_id)
-            elif task.status != Status.IN_PROGRESS:
+                for call in filter(
+                    lambda call: call.status == CallStatus.WAITING, task.blueapi_calls
+                ):
+                    call.skip()
+            elif task.status == Status.QUEUED:
                 # If task is not in progress calls will be re-calculated
                 task.blueapi_calls = []
 
