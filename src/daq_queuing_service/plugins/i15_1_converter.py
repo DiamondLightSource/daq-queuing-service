@@ -47,8 +47,8 @@ def construct_i15_1_blueapi_call_list(
             case Experiment():
                 call_list.extend(
                     [
-                        BlueapiCall(task_request=blueapi_task, parent_task_id=task.id)
-                        for blueapi_task in construct_blueapi_tasks_from_i15_1_experiment(
+                        BlueapiCall(task_request=b_api_task, parent_task_id=task.id)
+                        for b_api_task in construct_blueapi_tasks_from_i15_1_experiment(
                             task.experiment
                         )
                     ]
