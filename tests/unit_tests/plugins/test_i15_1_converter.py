@@ -17,7 +17,7 @@ from daq_queuing_service.task import (
 def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     experiment = Experiment(
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
-        sample=Sample(name="test_sample", id="", data={"sampleName": "test_8_1"}),
+        sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
     tasks = construct_blueapi_tasks_from_i15_1_experiment(experiment)
@@ -29,7 +29,7 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
 def test_sample_centre_uses_expected_params():
     experiment = Experiment(
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
-        sample=Sample(name="test_sample", id="", data={"sampleName": "test_8_1"}),
+        sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
     tasks = construct_blueapi_tasks_from_i15_1_experiment(experiment)
@@ -45,7 +45,7 @@ def test_sample_centre_uses_expected_params():
 def test_session_and_number_of_tasks_per_experiment_is_expected():
     experiment = Experiment(
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
-        sample=Sample(name="test_sample", id="", data={"sampleName": "test_8_1"}),
+        sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
     tasks = construct_blueapi_tasks_from_i15_1_experiment(experiment)
@@ -59,7 +59,7 @@ def test_experiment_with_correct_plan_name_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
         ),
-        sample=Sample(name="test_sample", id="", data={"sampleName": "test_8_1"}),
+        sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
     task = TaskWithPosition(
@@ -79,7 +79,7 @@ def test_mix_of_experiments_with_correct_plan_name_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
         ),
-        sample=Sample(name="test_sample", id="", data={"sampleName": "test_8_1"}),
+        sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
     good_task = TaskWithPosition(
