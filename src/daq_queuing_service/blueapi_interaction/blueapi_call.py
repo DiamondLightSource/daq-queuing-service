@@ -12,11 +12,12 @@ class CallStatus(StrEnum):
     IN_PROGRESS = "In progress"  # In progress inside BlueAPI
     SUCCESS = "Success"  # Completed successfully
     ERROR = "Error"  # Error while trying to run
+    SKIPPED = "Skipped"  # Skipped due to error in a previous plan within task
 
     @property
     def allowed_transitions(self):
         allowed_transitions: dict[CallStatus, set[CallStatus]] = {  # from: to
-            CallStatus.WAITING: {CallStatus.CLAIMED},
+            CallStatus.WAITING: {CallStatus.CLAIMED, CallStatus.SKIPPED},
             CallStatus.CLAIMED: {
                 CallStatus.WAITING,
                 CallStatus.IN_PROGRESS,
@@ -25,6 +26,7 @@ class CallStatus(StrEnum):
             CallStatus.IN_PROGRESS: {CallStatus.SUCCESS, CallStatus.ERROR},
             CallStatus.SUCCESS: set(),
             CallStatus.ERROR: set(),
+            CallStatus.SKIPPED: set(),
         }
         return allowed_transitions[self]
 
@@ -95,6 +97,9 @@ class BlueapiCall(BaseModel):
         self.time_completed = datetime.now().isoformat()
         if errors:
             self.errors.extend(errors)
+
+    def skip(self):
+        self._update_status(CallStatus.SKIPPED)
 
     def to_response(self) -> "BlueapiCallResponse":
         return BlueapiCallResponse.from_blueapi_call(self)
