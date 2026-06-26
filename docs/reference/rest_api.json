@@ -177,16 +177,6 @@
               ],
               "title": "Position"
             }
-          },
-          {
-            "name": "validate_with_blueapi",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Validate With Blueapi"
-            }
           }
         ],
         "requestBody": {
@@ -827,7 +817,8 @@
           "Claimed",
           "In progress",
           "Success",
-          "Error"
+          "Error",
+          "Skipped"
         ],
         "title": "CallStatus"
       },
@@ -1306,6 +1297,7 @@
           "Queued",
           "In progress",
           "Complete",
+          "Error",
           "Cancelled"
         ],
         "title": "Status"
