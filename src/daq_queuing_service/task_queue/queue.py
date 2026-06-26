@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from collections.abc import Callable, Sequence
 from types import TracebackType
 from typing import Any, Literal
@@ -13,6 +12,8 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
     CallStatus,
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
+from daq_queuing_service.log import LOGGER
+from daq_queuing_service.plugins.converter_utils import Converter
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
@@ -22,13 +23,6 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotFoundError,
     TaskNotInQueueError,
 )
-
-LOGGER = logging.getLogger(__name__)
-
-Converter = Callable[
-    [list[TaskWithPosition], list[TaskWithPosition], list[BlueapiCall]],
-    list[BlueapiCall],
-]
 
 
 class TaskRegistry(dict[str, Task]):
@@ -86,16 +80,21 @@ class TaskQueue:
         LOGGER.debug("Syncing")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
-            if task.status == Status.COMPLETE:
+            if task.status in (Status.COMPLETE, Status.ERROR):
                 # Move task from queue to history if all blueapi calls complete
+                # Or an error occurred during one of them
                 self._queue.remove(task_id)
                 self._history.append(task_id)
-            elif task.status != Status.IN_PROGRESS:
+                for call in filter(
+                    lambda call: call.status == CallStatus.WAITING, task.blueapi_calls
+                ):
+                    call.skip()
+            elif task.status == Status.QUEUED:
                 # If task is not in progress calls will be re-calculated
                 task.blueapi_calls = []
 
         self._call_queue = [
-            # Persist calls who's parent task is in progress
+            # Persist calls which aren't complete but who's parent task is in progress
             # Once a task is in progress it is not provided to the converter
             # More work needed to allow for interleaved calls from different tasks,
             # and for in progress tasks to inform conversion
@@ -104,6 +103,7 @@ class TaskQueue:
             if call.parent_task_id
             and call.parent_task_id in self._queue
             and self._tasks[call.parent_task_id].status == Status.IN_PROGRESS
+            and call.status not in (CallStatus.SUCCESS, CallStatus.ERROR)
         ]
 
         new_calls = self._convert(
@@ -211,7 +211,7 @@ class TaskQueue:
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)
             self._call_history.append(call)
-        LOGGER.info(f"Call {call} has failed with the following errors: {errors}")
+        LOGGER.error(f"Call {call} has failed with the following errors: {errors}")
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
         """Returns a task based on it's task ID

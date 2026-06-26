@@ -1,12 +1,23 @@
 import pytest
+from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
+from pytest import MonkeyPatch
 
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
 )
-from daq_queuing_service.task import ExperimentDefinition, Task
+from daq_queuing_service.task import ExperimentDefinition, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue import TaskQueue
+
+
+@pytest.fixture(autouse=True)
+def propagate_logs(monkeypatch: MonkeyPatch):
+    # This is turned off in prod to avoid duplicate logs
+    # but needed in tests for caplog to receive logs
+    monkeypatch.setattr(LOGGER, "propagate", True)
 
 
 @pytest.fixture
@@ -24,6 +35,34 @@ def tasks() -> list[Task]:
 
 @pytest.fixture
 async def task_queue(tasks: list[Task]):
+    queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
+    await queue.update_state(paused=False)
+    await queue.add_tasks(tasks)
+    return queue
+
+
+@pytest.fixture
+async def task_queue_one_to_many(tasks: list[Task]):
+    def construct_blueapi_call_list(
+        queue: list[TaskWithPosition],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCall],
+    ) -> list[BlueapiCall]:
+        call_list: list[BlueapiCall] = []
+        for task in queue:
+            for _ in range(2):
+                call_list.append(
+                    BlueapiCall(
+                        parent_task_id=task.id,
+                        task_request=TaskRequest(
+                            name=task.experiment_definition.plan_name,
+                            params=task.experiment_definition.params,
+                            instrument_session=task.experiment_definition.instrument_session,
+                        ),
+                    )
+                )
+        return call_list
+
     queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
     await queue.update_state(paused=False)
     await queue.add_tasks(tasks)

@@ -580,15 +580,14 @@
           "blueapi": {
             "$ref": "#/components/schemas/ApplicationConfig"
           },
-          "blueapi_call_constructor": {
-            "type": "string",
-            "title": "Blueapi Call Constructor"
+          "converter": {
+            "$ref": "#/components/schemas/ConverterConfig"
           }
         },
         "type": "object",
         "required": [
           "blueapi",
-          "blueapi_call_constructor"
+          "converter"
         ],
         "title": "AppConfig"
       },
@@ -818,9 +817,28 @@
           "Claimed",
           "In progress",
           "Success",
-          "Error"
+          "Error",
+          "Skipped"
         ],
         "title": "CallStatus"
+      },
+      "ConverterConfig": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "name"
+        ],
+        "title": "ConverterConfig"
       },
       "DeviceManagerSource": {
         "properties": {
@@ -1279,6 +1297,7 @@
           "Queued",
           "In progress",
           "Complete",
+          "Error",
           "Cancelled"
         ],
         "title": "Status"

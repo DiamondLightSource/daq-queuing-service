@@ -14,16 +14,23 @@ from blueapi.client.rest import (
 from blueapi.core import DataEvent
 from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
-from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture, MonkeyPatch
 
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
     BlueapiClientAdapter,
     BlueapiResult,
 )
 from daq_queuing_service.blueapi_interaction.blueapi_call import CallStatus
-from daq_queuing_service.task import ExperimentDefinition, Status
+from daq_queuing_service.task import Status
 from daq_queuing_service.task_queue.queue import TaskError, TaskQueue, TaskResult
-from daq_queuing_service.worker.worker import QueueWorker
+from daq_queuing_service.worker.worker import LOGGER, QueueWorker
+
+
+@pytest.fixture(autouse=True)
+def propagate_logs(monkeypatch: MonkeyPatch):
+    # This is turned off in prod to avoid duplicate logs
+    # but needed in tests for caplog to receive logs
+    monkeypatch.setattr(LOGGER, "propagate", True)
 
 
 def _get_mock_blueapi_client(
@@ -72,9 +79,6 @@ def _get_mock_blueapi_client(
 
 @pytest.fixture
 def worker(task_queue: TaskQueue):
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
     mock_events = [
         WorkerEvent(
             state=WorkerState.RUNNING,
@@ -92,7 +96,6 @@ def worker(task_queue: TaskQueue):
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(mock_events=mock_events),
-        task_request_constructor=construct_task_request,
         poll_time_s=0.01,
     )
     return worker
@@ -100,13 +103,9 @@ def worker(task_queue: TaskQueue):
 
 @pytest.fixture
 def worker_with_no_blueapi_events(task_queue: TaskQueue):
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(),
-        task_request_constructor=construct_task_request,
         poll_time_s=0.01,
     )
     return worker
@@ -114,11 +113,6 @@ def worker_with_no_blueapi_events(task_queue: TaskQueue):
 
 @pytest.fixture
 def worker_with_parameter_error(task_queue: TaskQueue):
-    task_request = TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return task_request
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(
@@ -128,51 +122,35 @@ def worker_with_parameter_error(task_queue: TaskQueue):
                         loc=["bad_param"],
                         msg="fake_error",
                         type="extra_forbidden",
-                        input=task_request.model_dump_json(),
+                        input="blah",
                     )
                 ]
             )
         ),
-        task_request_constructor=construct_task_request,
     )
     return worker
 
 
 @pytest.fixture
 def worker_with_unknown_plan_error(task_queue: TaskQueue):
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(UnknownPlanError()),
-        task_request_constructor=construct_task_request,
     )
     return worker
 
 
 @pytest.fixture
 def worker_with_blueapi_error(task_queue: TaskQueue):
-    task_request = TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return task_request
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(BlueskyRemoteControlError()),
-        task_request_constructor=construct_task_request,
     )
     return worker
 
 
 @pytest.fixture
 def worker_with_plan_error(task_queue: TaskQueue):
-    task_request = TaskRequest(name="sleep", params={}, instrument_session="cm12345-1")
-
-    def construct_task_request(experiment_definition: ExperimentDefinition):
-        return task_request
-
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(
@@ -180,7 +158,6 @@ def worker_with_plan_error(task_queue: TaskQueue):
                 outcome="error", type="ValueError", message="Error during plan"
             )
         ),
-        task_request_constructor=construct_task_request,
     )
     return worker
 
@@ -228,7 +205,7 @@ async def test_when_parameter_error_then_call_failed_and_error_added_to_call(
     worker_with_parameter_error._client.run_task.assert_called_once()  # type: ignore
 
 
-async def test_when_plan_name_error_then_call_failed_and_error_added_to_task(
+async def test_when_plan_name_error_then_call_failed_and_error_added_to_call(
     worker_with_unknown_plan_error: QueueWorker, only_loop_once: type[Exception]
 ):
 
@@ -263,7 +240,7 @@ async def test_when_blueapi_error_then_call_put_back_into_queue(
     assert not await worker_with_blueapi_error._queue.get_history()
 
 
-async def test_when_plan_error_then_task_failed_and_errors_added(
+async def test_when_plan_error_then_queue_paused_and_task_failed_and_errors_added(
     worker_with_plan_error: QueueWorker, only_loop_once: type[Exception]
 ):
 
@@ -273,6 +250,7 @@ async def test_when_plan_error_then_task_failed_and_errors_added(
     with pytest.raises(only_loop_once):
         await worker_with_plan_error.run_loop()
 
+    assert worker_with_plan_error._queue.state.paused is True
     first_call = first_task.blueapi_calls[0]
     assert first_call.status == CallStatus.ERROR
     assert first_call.errors == [
