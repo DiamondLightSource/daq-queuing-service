@@ -18,6 +18,7 @@ from daq_queuing_service.task import (
 
 def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     experiment = Experiment(
+        name="test_experiment",
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
@@ -30,6 +31,7 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
 
 def test_sample_centre_uses_expected_params():
     experiment = Experiment(
+        name="test_experiment",
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
@@ -46,6 +48,7 @@ def test_sample_centre_uses_expected_params():
 
 def test_session_and_number_of_tasks_per_experiment_is_expected():
     experiment = Experiment(
+        name="test_experiment",
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
@@ -58,6 +61,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
 
 def test_experiment_with_correct_experiment_type_are_converted():
     experiment = Experiment(
+        name="test_experiment",
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
         ),
@@ -78,6 +82,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
 
 def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     good_experiment = Experiment(
+        name="test_experiment",
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
         ),

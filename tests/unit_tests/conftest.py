@@ -31,6 +31,7 @@ def tasks() -> list[Task]:
     return [
         Task(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id=str(i), data={}

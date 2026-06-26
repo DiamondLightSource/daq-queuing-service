@@ -42,6 +42,7 @@ def make_new_task(id_str: str):
     return Task(
         id=id_str,
         experiment=Experiment(
+            name="test_experiment",
             instrument_session="",
             experiment_definition=ExperimentDefinition(
                 name="test",
@@ -271,6 +272,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
     assert result == [
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="2", data={}
@@ -296,6 +298,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
         ),
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="3", data={}
@@ -321,6 +324,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
         ),
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="4", data={}
@@ -355,6 +359,7 @@ async def test_get_history_only_returns_tasks_in_history(
     assert result == [
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="0", data={}
@@ -386,6 +391,7 @@ async def test_get_history_only_returns_tasks_in_history(
         ),
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="1", data={}
@@ -421,6 +427,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
     assert result == [
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="0", data={}
@@ -452,6 +459,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
         ),
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="1", data={}
@@ -477,6 +485,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
         ),
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="2", data={}
@@ -502,6 +511,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
         ),
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="3", data={}
@@ -527,6 +537,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
         ),
         TaskWithPosition(
             experiment=Experiment(
+                name="test_experiment",
                 instrument_session="",
                 experiment_definition=ExperimentDefinition(
                     name="test", id="4", data={}

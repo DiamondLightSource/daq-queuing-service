@@ -9,6 +9,7 @@ from daq_queuing_service.task import Experiment, ExperimentDefinition, Sample
 def test_construct_task_request_produces_expected_task_request_from_exp_definition():
     result = _construct_blueapi_task_request(
         experiment=Experiment(
+            name="test_experiment",
             instrument_session="cm12345-1",
             experiment_definition=ExperimentDefinition(
                 name="sleep",

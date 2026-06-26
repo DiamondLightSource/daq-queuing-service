@@ -112,6 +112,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
     assert response.json() == [
         {
             "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
                 "sample": {"name": "test_8_2", "id": "2", "data": {}},
                 "experiment_definition": {"name": "test", "id": "2", "data": {}},
@@ -139,6 +140,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
         },
         {
             "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
                 "sample": {"name": "test_8_3", "id": "3", "data": {}},
                 "experiment_definition": {"name": "test", "id": "3", "data": {}},
@@ -166,6 +168,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
         },
         {
             "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
                 "sample": {"name": "test_8_4", "id": "4", "data": {}},
                 "experiment_definition": {"name": "test", "id": "4", "data": {}},
@@ -200,6 +203,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
     assert response.json() == [
         {
             "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
                 "sample": {"name": "test_8_2", "id": "2", "data": {}},
                 "experiment_definition": {"name": "test", "id": "2", "data": {}},
@@ -244,6 +248,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
     assert response.json() == [
         {
             "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
                 "sample": {"name": "test_8_1", "id": "1", "data": {}},
                 "experiment_definition": {"name": "test", "id": "1", "data": {}},
@@ -502,6 +507,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
     assert response.json() == [
         {
             "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
                 "sample": {"name": "test_8_3", "id": "3", "data": {}},
                 "experiment_definition": {"name": "test", "id": "3", "data": {}},
@@ -529,6 +535,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
         },
         {
             "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
                 "sample": {"name": "test_8_4", "id": "4", "data": {}},
                 "experiment_definition": {"name": "test", "id": "4", "data": {}},
@@ -619,6 +626,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == {
         "experiment": {
+            "name": "test_experiment",
             "instrument_session": "",
             "sample": {"name": "test_8_3", "id": "3", "data": {}},
             "experiment_definition": {"name": "test", "id": "3", "data": {}},
@@ -651,6 +659,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == {
         "experiment": {
+            "name": "test_experiment",
             "instrument_session": "",
             "sample": {"name": "test_8_3", "id": "3", "data": {}},
             "experiment_definition": {"name": "test", "id": "3", "data": {}},
