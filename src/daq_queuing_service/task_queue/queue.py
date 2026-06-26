@@ -319,7 +319,7 @@ class TaskQueue:
             self._remove_tasks_from_queue([task_id])
             self._queue[position:position] = [task_id]
             new_position = self._queue.index(task_id)
-        LOGGER.info(f"Succesfully moved task {task_id} to position {new_position}")
+        LOGGER.info(f"Successfully moved task {task_id} to position {new_position}")
         return new_position
 
     async def cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
@@ -335,14 +335,20 @@ class TaskQueue:
             queue.
         """
         async with self._modifying:
-            task_ids = list(task_ids)
-            self._validate_tasks_for_move_or_deletion(task_ids)
-            self._remove_tasks_from_queue(task_ids)
-            tasks = self._remove_tasks_from_registry(task_ids)
-            for task in tasks:
-                task.cancel()
-        LOGGER.info(f"Succesfully cancelled tasks: {task_ids}")
-        return [TaskWithPosition.from_task(task) for task in tasks]
+            cancelled_tasks = self._cancel_tasks(task_ids)
+        LOGGER.info(f"Successfully cancelled tasks: {task_ids}")
+        return cancelled_tasks
+
+    async def cancel_all_tasks(self) -> list[TaskWithPosition]:
+        async with self._modifying:
+            task_ids = [
+                id
+                for id in self._queue
+                if self._get_task_by_id(id).status == Status.QUEUED
+            ]
+            cancelled_tasks = self._cancel_tasks(task_ids)
+        LOGGER.info("Successfully cleared all queued tasks")
+        return cancelled_tasks
 
     async def clear_history(self):
         """Clears the history list. Any task in the history list at the time will be
@@ -352,7 +358,7 @@ class TaskQueue:
             for task_id in self._history:
                 self._tasks.pop(task_id)
             self._history.clear()
-        LOGGER.info("Succesfully cleared history")
+        LOGGER.info("Successfully cleared history")
 
     async def update_state(self, paused: bool | None = None) -> QueueState:
         """Update the state of the queue.
@@ -368,7 +374,7 @@ class TaskQueue:
                 paused=self._state.paused if paused is None else paused
             )
             self._broadcaster.broadcast(Event(type="state_update", data=self._state))
-        LOGGER.info(f"Succesfully updated queue state to {self._state}")
+        LOGGER.info(f"Successfully updated queue state to {self._state}")
         return self._state
 
     @property
@@ -426,6 +432,15 @@ class TaskQueue:
             self._queue[position:position] = task_ids
         for task in tasks:
             self._tasks[task.id] = task
+
+    def _cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
+        task_ids = list(task_ids)
+        self._validate_tasks_for_move_or_deletion(task_ids)
+        self._remove_tasks_from_queue(task_ids)
+        tasks = self._remove_tasks_from_registry(task_ids)
+        for task in tasks:
+            task.cancel()
+        return [TaskWithPosition.from_task(task) for task in tasks]
 
     def _remove_tasks_from_queue(self, task_ids: list[str]) -> list[str]:
         #  Only removes tasks in the queue (not history or registry)

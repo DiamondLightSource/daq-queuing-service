@@ -214,12 +214,12 @@ async def test_move_task_raises_error_if_wrong_task_id_given(
     assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
 
 
-async def test_remove_tasks_works_as_expected(task_queue: TaskQueue):
+async def test_cancel_tasks_works_as_expected(task_queue: TaskQueue):
     await task_queue.cancel_tasks(["4", "2"])
     assert task_queue._queue == ["0", "1", "3"]
 
 
-async def test_remove_tasks_does_not_remove_task_that_is_in_progress_and_raises_error(
+async def test_cancel_tasks_does_not_cancel_task_that_is_in_progress_and_raises_error(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
@@ -232,10 +232,18 @@ async def test_remove_tasks_does_not_remove_task_that_is_in_progress_and_raises_
     assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
-async def test_remove_tasks_raises_error_if_wrong_task_id_used(task_queue: TaskQueue):
+async def test_cancel_tasks_raises_error_if_wrong_task_id_used(task_queue: TaskQueue):
     with pytest.raises(TaskNotFoundError):
         await task_queue.cancel_tasks(["4", "11", "2", "10"])
     assert task_queue._queue == ["0", "1", "2", "3", "4"]
+
+
+async def test_cancel_all_tasks_cancels_all_queued_tasks(
+    task_queue_in_progress: TaskQueue,
+):
+    cancelled_tasks = await task_queue_in_progress.cancel_all_tasks()
+    assert [task.id for task in cancelled_tasks] == ["1", "2", "3", "4"]
+    assert task_queue_in_progress._queue == ["0"]  # This one is in progress
 
 
 async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_history(
