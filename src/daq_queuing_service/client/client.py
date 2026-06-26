@@ -2,10 +2,11 @@ from collections.abc import Mapping
 from typing import Any, TypeVar
 
 import requests
+from blueapi.service.model import TaskRequest
 from pydantic import HttpUrl, TypeAdapter
 
 from daq_queuing_service.api.api import TaskCancelRequest
-from daq_queuing_service.task import ExperimentDefinition, TaskWithPosition
+from daq_queuing_service.task import Experiment, TaskWithPosition
 from daq_queuing_service.task_queue.queue import QueueState
 
 T = TypeVar("T")
@@ -47,18 +48,16 @@ class QueueClient:
 
     def add_tasks_to_queue(
         self,
-        experiment_definitions: list[ExperimentDefinition],
+        experiments: list[Experiment | TaskRequest],
         position: int | None = None,
-        validate_with_blueapi: bool = True,
     ) -> list[str]:
         return self._request(
             "/queue",
             list[str],
             method="POST",
-            data=[exp_def.model_dump() for exp_def in experiment_definitions],
+            data=[experiment.model_dump() for experiment in experiments],
             params={
                 "position": position,
-                "validate_with_blueapi": validate_with_blueapi,
             },
         )
 
