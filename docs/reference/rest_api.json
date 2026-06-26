@@ -990,6 +990,10 @@
       },
       "Experiment": {
         "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
           "instrument_session": {
             "type": "string",
             "title": "Instrument Session"
@@ -1003,6 +1007,7 @@
         },
         "type": "object",
         "required": [
+          "name",
           "instrument_session",
           "sample",
           "experiment_definition"
