@@ -118,6 +118,9 @@ class TaskQueue:
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
+        if not self._call_queue:
+            self._set_state(True)
+
         self._broadcast_changes()
         self._modifying.notify_all()
 
@@ -360,6 +363,10 @@ class TaskQueue:
             self._history.clear()
         LOGGER.info("Successfully cleared history")
 
+    def _set_state(self, new_state: bool):
+        self._state = QueueState(paused=new_state)
+        self._broadcaster.broadcast(Event(type="state_update", data=self._state))
+
     async def update_state(self, paused: bool | None = None) -> QueueState:
         """Update the state of the queue.
 
@@ -370,10 +377,7 @@ class TaskQueue:
             QueueState: The new state of the queue.
         """
         async with self._modifying:
-            self._state = QueueState(
-                paused=self._state.paused if paused is None else paused
-            )
-            self._broadcaster.broadcast(Event(type="state_update", data=self._state))
+            self._set_state(self._state.paused if paused is None else paused)
         LOGGER.info(f"Successfully updated queue state to {self._state}")
         return self._state
 

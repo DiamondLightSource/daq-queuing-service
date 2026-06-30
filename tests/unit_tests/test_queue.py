@@ -962,3 +962,16 @@ async def test__sync_skips_subsequent_calls_if_previous_one_failed_within_a_task
     task_queue_one_to_many._sync()
     assert a_task.blueapi_calls[0].status == Status.ERROR
     assert all(call.status == CallStatus.SKIPPED for call in a_task.blueapi_calls[1:])
+
+
+async def test__sync_pauses_queue_if_no_more_items(
+    task_queue: TaskQueue,
+):
+    task_queue._modifying = MagicMock()
+    task_queue.state.paused = False
+    task_queue._queue = []
+    task_queue._call_queue = []
+
+    task_queue._sync()
+
+    assert task_queue.state.paused
