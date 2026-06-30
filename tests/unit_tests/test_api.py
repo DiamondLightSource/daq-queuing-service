@@ -634,11 +634,11 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
     assert not any(task_id in task_ids_after for task_id in should_be_cancelled)
     assert response.json() == [
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "3",
-                "params": {},
+            "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
+                "sample": {"name": "test_8_3", "id": "3", "data": {}},
+                "experiment_definition": {"name": "test", "id": "3", "data": {}},
             },
             "id": "3",
             "status": "Cancelled",
@@ -659,13 +659,14 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                 }
             ],
             "position": None,
+            "kind": "Experiment",
         },
         {
-            "experiment_definition": {
-                "plan_name": "test",
-                "sample_id": "4",
-                "params": {},
+            "experiment": {
+                "name": "test_experiment",
                 "instrument_session": "",
+                "sample": {"name": "test_8_4", "id": "4", "data": {}},
+                "experiment_definition": {"name": "test", "id": "4", "data": {}},
             },
             "id": "4",
             "status": "Cancelled",
@@ -686,6 +687,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                 }
             ],
             "position": None,
+            "kind": "Experiment",
         },
     ]
 
