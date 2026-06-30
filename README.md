@@ -27,6 +27,17 @@ blueapi --config tests/test_data/test_blueapi_config.yaml serve  # Local blueapi
 daq-queuing-service -p 8001 --dev                                # Local queue service
 ```
 
+To instead run the i15-1 setup in a development environment first clone `crystallography-bluesky`. Then run:
+
+```bash
+uv sync --group dev
+source .venv/bin/activate
+uv pip install -e `PATH_TO_CRYSTALLOGRAPHY_BLUESKY`
+podman-compose -f tests/system_tests/compose.yaml up                                            # Local rabbitmq
+blueapi --config tests/test_data/i15_1/test_blueapi_config.yaml serve                           # Local blueapi pointing at i15-1 plans
+daq-queuing-service --config tests/test_data/i15_1/test_daq_queue_config.yaml -p 8001 --dev     # Local queue service pointing at i15-1 converters
+```
+
 <!-- README only content. Anything below this line won't be included in index.md -->
 
 See https://diamondlightsource.github.io/daq-queuing-service for more detailed documentation.
