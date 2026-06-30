@@ -186,9 +186,16 @@
               "schema": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/ExperimentDefinition"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TaskRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Experiment"
+                    }
+                  ]
                 },
-                "title": "Experiment Definitions"
+                "title": "Experiments"
               }
             }
           }
@@ -1001,32 +1008,53 @@
         "title": "EnvironmentConfig",
         "description": "Config for the RunEngine environment"
       },
-      "ExperimentDefinition": {
+      "Experiment": {
         "properties": {
-          "plan_name": {
+          "name": {
             "type": "string",
-            "title": "Plan Name"
-          },
-          "sample_id": {
-            "type": "string",
-            "title": "Sample Id"
-          },
-          "params": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Params",
-            "description": "Values for parameters to plan, if any"
+            "title": "Name"
           },
           "instrument_session": {
             "type": "string",
             "title": "Instrument Session"
+          },
+          "sample": {
+            "$ref": "#/components/schemas/Sample"
+          },
+          "experiment_definition": {
+            "$ref": "#/components/schemas/ExperimentDefinition"
           }
         },
         "type": "object",
         "required": [
-          "plan_name",
-          "sample_id",
-          "instrument_session"
+          "name",
+          "instrument_session",
+          "sample",
+          "experiment_definition"
+        ],
+        "title": "Experiment"
+      },
+      "ExperimentDefinition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "data"
         ],
         "title": "ExperimentDefinition"
       },
@@ -1232,6 +1260,30 @@
         "type": "object",
         "title": "RestConfig"
       },
+      "Sample": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "data"
+        ],
+        "title": "Sample"
+      },
       "ScratchConfig": {
         "properties": {
           "root": {
@@ -1396,6 +1448,14 @@
         "title": "TaskError",
         "description": "Wrapper around an exception raised by a plan"
       },
+      "TaskKind": {
+        "type": "string",
+        "enum": [
+          "Experiment",
+          "Plan"
+        ],
+        "title": "TaskKind"
+      },
       "TaskRequest": {
         "properties": {
           "name": {
@@ -1450,8 +1510,16 @@
       },
       "TaskWithPosition": {
         "properties": {
-          "experiment_definition": {
-            "$ref": "#/components/schemas/ExperimentDefinition"
+          "experiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Experiment"
+              },
+              {
+                "$ref": "#/components/schemas/TaskRequest"
+              }
+            ],
+            "title": "Experiment"
           },
           "id": {
             "type": "string",
@@ -1477,15 +1545,19 @@
               }
             ],
             "title": "Position"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TaskKind"
           }
         },
         "type": "object",
         "required": [
-          "experiment_definition",
+          "experiment",
           "id",
           "status",
           "blueapi_calls",
-          "position"
+          "position",
+          "kind"
         ],
         "title": "TaskWithPosition"
       },
