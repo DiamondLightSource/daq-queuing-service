@@ -226,6 +226,26 @@
             }
           }
         }
+      },
+      "delete": {
+        "summary": "Cancel All Tasks",
+        "operationId": "cancel_all_tasks_queue_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskWithPosition"
+                  },
+                  "title": "Response Cancel All Tasks Queue Delete"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/queue/move": {

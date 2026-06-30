@@ -81,6 +81,10 @@ def create_api_router(
         await queue.add_tasks(tasks, position)
         return task_ids
 
+    @router.delete("/queue")
+    async def cancel_all_tasks() -> list[TaskWithPosition]:
+        return await queue.cancel_all_tasks()
+
     @router.post("/queue/move")
     async def move_task(task_id: str, new_position: int) -> int:
         return await queue.move_task(task_id, new_position)

@@ -621,6 +621,75 @@ def test_cancel_tasks_with_bad_payloads_gives_expected_error_responses(
     assert response.json() == expected_response_json
 
 
+async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_them(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    queue = await task_queue_with_history.get_queue()
+    should_be_cancelled = [task for task in queue if task.status == Status.QUEUED]
+    response = test_client.request("DELETE", "/queue")
+
+    queue_after = await task_queue_with_history.get_queue()
+    task_ids_after = [task.id for task in queue_after]
+    assert response.status_code == 200
+    assert not any(task_id in task_ids_after for task_id in should_be_cancelled)
+    assert response.json() == [
+        {
+            "experiment_definition": {
+                "plan_name": "test",
+                "sample_id": "3",
+                "params": {},
+                "instrument_session": "",
+            },
+            "id": "3",
+            "status": "Cancelled",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "3",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
+            "position": None,
+        },
+        {
+            "experiment_definition": {
+                "plan_name": "test",
+                "sample_id": "4",
+                "params": {},
+                "instrument_session": "",
+            },
+            "id": "4",
+            "status": "Cancelled",
+            "blueapi_calls": [
+                {
+                    "task_request": {
+                        "name": "test",
+                        "params": {},
+                        "instrument_session": "",
+                    },
+                    "parent_task_id": "4",
+                    "status": "Waiting",
+                    "time_started": None,
+                    "time_completed": None,
+                    "result": None,
+                    "errors": [],
+                    "blueapi_id": None,
+                }
+            ],
+            "position": None,
+        },
+    ]
+
+
 def test_get_task_by_position_returns_expected_task(test_client: TestClient):
     response = test_client.get("/queue/1")
     assert response.status_code == 200
