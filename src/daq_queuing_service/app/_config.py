@@ -26,4 +26,5 @@ def get_default_config() -> str:
 def load_config(config_path: Path) -> AppConfig:
     with open(config_path) as f:
         data = yaml.safe_load(f)
+    print(data)
     return AppConfig(**data)
