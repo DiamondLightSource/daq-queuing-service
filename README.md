@@ -38,8 +38,6 @@ blueapi --config tests/test_data/i15_1/test_blueapi_config.yaml serve           
 daq-queuing-service --config tests/test_data/i15_1/test_daq_queue_config.yaml -p 8001 --dev     # Local queue service pointing at i15-1 converters
 ```
 
-See [here](./docs/explanations/queue_items.md) for more about the items inside the queue.
-
 <!-- README only content. Anything below this line won't be included in index.md -->
 
 See https://diamondlightsource.github.io/daq-queuing-service for more detailed documentation.
