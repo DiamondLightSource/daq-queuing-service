@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>daq_queuing_service &#8212; daq-queuing-service 0.1.9a2.dev3+g0709c9c97 documentation</title>
+    <title>daq_queuing_service &#8212; daq-queuing-service 0.1.9a2.dev4+g3bb7cd42e documentation</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
 
-    <script src="_static/documentation_options.js?v=8448497f"></script>
+    <script src="_static/documentation_options.js?v=23f0932b"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -460,6 +460,15 @@
 podman-compose<span class="w"> </span>-f<span class="w"> </span>tests/system_tests/compose.yaml<span class="w"> </span>up<span class="w">             </span><span class="c1"># Local rabbitmq</span>
 blueapi<span class="w"> </span>--config<span class="w"> </span>tests/test_data/test_blueapi_config.yaml<span class="w"> </span>serve<span class="w">  </span><span class="c1"># Local blueapi</span>
 daq-queuing-service<span class="w"> </span>-p<span class="w"> </span><span class="m">8001</span><span class="w"> </span>--dev<span class="w">                                </span><span class="c1"># Local queue service</span>
+</pre></div>
+</div>
+<p>To instead run the i15-1 setup in a development environment first clone <code class="docutils literal notranslate"><span class="pre">crystallography-bluesky</span></code>. Then run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>dev
+<span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="sb">`</span>PATH_TO_CRYSTALLOGRAPHY_BLUESKY<span class="sb">`</span>
+podman-compose<span class="w"> </span>-f<span class="w"> </span>tests/system_tests/compose.yaml<span class="w"> </span>up<span class="w">                                            </span><span class="c1"># Local rabbitmq</span>
+blueapi<span class="w"> </span>--config<span class="w"> </span>tests/test_data/i15_1/test_blueapi_config.yaml<span class="w"> </span>serve<span class="w">                           </span><span class="c1"># Local blueapi pointing at i15-1 plans</span>
+daq-queuing-service<span class="w"> </span>--config<span class="w"> </span>tests/test_data/i15_1/test_daq_queue_config.yaml<span class="w"> </span>-p<span class="w"> </span><span class="m">8001</span><span class="w"> </span>--dev<span class="w">     </span><span class="c1"># Local queue service pointing at i15-1 converters</span>
 </pre></div>
 </div>
 <section id="how-the-documentation-is-structured">
