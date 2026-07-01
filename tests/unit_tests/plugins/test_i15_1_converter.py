@@ -30,8 +30,8 @@ def test_sample_centre_uses_expected_params():
     tasks = construct_blueapi_tasks_from_i15_1_experiment(experiment_definition)
     assert tasks[1].name == "centre_sample"
     assert tasks[1].params == {
-        "start_z": -5,
-        "end_z": 5,
+        "start_z": -20,
+        "end_z": 0,
         "steps": 20,
         "exposure_time": 0.01,
     }
