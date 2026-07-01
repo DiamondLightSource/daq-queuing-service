@@ -1175,7 +1175,6 @@
         ],
         "title": "OpaConfig"
       },
-<<<<<<< 64_pause_when_empty
       "PauseReason": {
         "type": "string",
         "enum": [
@@ -1185,8 +1184,6 @@
         ],
         "title": "PauseReason"
       },
-=======
->>>>>>> main
       "PlanSource": {
         "properties": {
           "module": {
