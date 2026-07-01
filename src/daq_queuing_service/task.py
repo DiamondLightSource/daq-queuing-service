@@ -1,8 +1,9 @@
 from collections.abc import Mapping
+from enum import StrEnum
 from typing import Any, Self
 from uuid import uuid4
 
-from blueapi.service.model import StrEnum
+from blueapi.service.model import TaskRequest
 from pydantic import BaseModel, Field, computed_field
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
@@ -10,6 +11,25 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
     BlueapiCallResponse,
     CallStatus,
 )
+
+
+class Sample(BaseModel):
+    name: str
+    id: str
+    data: Mapping[str, Any]
+
+
+class ExperimentDefinition(BaseModel):
+    name: str
+    id: str
+    data: Mapping[str, Any]
+
+
+class Experiment(BaseModel):
+    name: str
+    instrument_session: str
+    sample: Sample
+    experiment_definition: ExperimentDefinition
 
 
 def create_uuid_str() -> str:
@@ -24,19 +44,15 @@ class Status(StrEnum):
     CANCELLED = "Cancelled"
 
 
-class ExperimentDefinition(BaseModel):
-    plan_name: str
-    sample_id: str
-    params: Mapping[str, Any] = Field(
-        description="Values for parameters to plan, if any", default_factory=dict
-    )
-    instrument_session: str
+class TaskKind(StrEnum):
+    EXPERIMENT = "Experiment"
+    PLAN = "Plan"
 
 
 class Task(BaseModel):
-    experiment_definition: ExperimentDefinition
+    experiment: Experiment | TaskRequest
     id: str = Field(default_factory=create_uuid_str)
-    blueapi_calls: list[BlueapiCall] = []
+    blueapi_calls: list[BlueapiCall] = Field(default_factory=lambda: [])
     _cancelled: bool = False
 
     def cancel(self):
@@ -65,13 +81,23 @@ class Task(BaseModel):
             return Status.IN_PROGRESS
         return Status.QUEUED
 
+    @computed_field
+    @property
+    def kind(self) -> TaskKind:
+        match self.experiment:
+            case Experiment():
+                return TaskKind.EXPERIMENT
+            case TaskRequest():
+                return TaskKind.PLAN
+
 
 class TaskWithPosition(BaseModel):
-    experiment_definition: ExperimentDefinition
+    experiment: Experiment | TaskRequest
     id: str
     status: Status
     blueapi_calls: list[BlueapiCallResponse]
     position: int | None
+    kind: TaskKind
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:
