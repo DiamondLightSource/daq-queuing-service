@@ -95,7 +95,10 @@ def test_healthz_returns_healthy(test_client: TestClient):
 def test_get_queue_state_returns_queue_state(test_client: TestClient):
     response = test_client.get("/queue/state")
     assert response.status_code == 200
-    assert response.json() == {"paused": False}
+    assert response.json() == {
+        "paused": False,
+        "last_pause_reason": "Paused as queue completed",
+    }
 
 
 def test_update_queue_state_changes_queue_state_and_returns_new_state(
@@ -103,7 +106,10 @@ def test_update_queue_state_changes_queue_state_and_returns_new_state(
 ):
     response = test_client.patch("/queue/state", json={"paused": False})
     assert response.status_code == 200
-    assert response.json() == {"paused": False}
+    assert response.json() == {
+        "paused": False,
+        "last_pause_reason": "Paused as queue completed",
+    }
 
 
 def test_get_queued_tasks_returns_queued_task(test_client: TestClient):

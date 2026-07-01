@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Callable, Sequence
+from enum import StrEnum
 from types import TracebackType
 from typing import Any, Literal
 
@@ -30,8 +31,15 @@ class TaskRegistry(dict[str, Task]):
         raise TaskNotFoundError(f"No task found matching id: {task_id}")
 
 
+class PauseReason(StrEnum):
+    USER_REQUESTED = "Pause requested by user"
+    EMPTY_QUEUE = "Paused as queue completed"
+    ERROR = "Paused as last task errored"
+
+
 class QueueState(BaseModel):
     paused: bool
+    last_pause_reason: PauseReason
 
 
 class Modifying(asyncio.Condition):
@@ -67,7 +75,9 @@ class TaskQueue:
         self._call_queue: list[BlueapiCall] = []
         self._call_history: list[BlueapiCall] = []
         self._queue_history: list[BlueapiCall] = []
-        self._state: QueueState = QueueState(paused=True)
+        self._state: QueueState = QueueState(
+            paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE
+        )
         self._convert = convert
         self._modifying = Modifying(on_exit=self._sync)
         self._broadcaster = broadcaster
@@ -364,10 +374,12 @@ class TaskQueue:
         LOGGER.info("Successfully cleared history")
 
     def _set_state(self, new_state: bool):
-        self._state = QueueState(paused=new_state)
+        self._state = QueueState(
+            paused=new_state, last_pause_reason=PauseReason.EMPTY_QUEUE
+        )
         self._broadcaster.broadcast(Event(type="state_update", data=self._state))
 
-    async def update_state(self, paused: bool | None = None) -> QueueState:
+    async def update_state(self, paused: bool) -> QueueState:
         """Update the state of the queue.
 
         Args:
@@ -377,7 +389,7 @@ class TaskQueue:
             QueueState: The new state of the queue.
         """
         async with self._modifying:
-            self._set_state(self._state.paused if paused is None else paused)
+            self._set_state(paused)
         LOGGER.info(f"Successfully updated queue state to {self._state}")
         return self._state
 
