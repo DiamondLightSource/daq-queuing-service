@@ -129,7 +129,7 @@ class TaskQueue:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
         if not self._call_queue:
-            self._set_state(True)
+            self._pause_queue(PauseReason.EMPTY_QUEUE)
 
         self._broadcast_changes()
         self._modifying.notify_all()
@@ -373,24 +373,36 @@ class TaskQueue:
             self._history.clear()
         LOGGER.info("Successfully cleared history")
 
-    def _set_state(self, new_state: bool):
-        self._state = QueueState(
-            paused=new_state, last_pause_reason=PauseReason.EMPTY_QUEUE
-        )
+    def _pause_queue(self, reason: PauseReason):
+        self._state = QueueState(paused=True, last_pause_reason=reason)
         self._broadcaster.broadcast(Event(type="state_update", data=self._state))
 
-    async def update_state(self, paused: bool) -> QueueState:
-        """Update the state of the queue.
+    async def pause_queue(self, reason: PauseReason) -> QueueState:
+        """Pause the queue if running.
 
         Args:
-            paused (bool | None, optional): Whether or not the queue should be paused.
+            paused (PauseReason): The reason for pausing the queue.
 
         Returns:
             QueueState: The new state of the queue.
         """
         async with self._modifying:
-            self._set_state(paused)
-        LOGGER.info(f"Successfully updated queue state to {self._state}")
+            self._pause_queue(reason)
+        LOGGER.info(f"Successfully paused queue due to {reason}")
+        return self._state
+
+    async def resume_queue(self) -> QueueState:
+        """Resume the queue if paused.
+
+        Returns:
+            QueueState: The new state of the queue.
+        """
+        async with self._modifying:
+            self._state = QueueState(
+                paused=False, last_pause_reason=self._state.last_pause_reason
+            )
+            self._broadcaster.broadcast(Event(type="state_update", data=self._state))
+        LOGGER.info("Successfully resumed queue")
         return self._state
 
     @property

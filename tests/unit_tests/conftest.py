@@ -48,7 +48,7 @@ def tasks() -> list[Task]:
 async def task_queue(tasks: list[Task]):
     queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
-    await queue.update_state(paused=False)
+    await queue.resume_queue()
     return queue
 
 
@@ -77,7 +77,7 @@ async def task_queue_one_to_many(tasks: list[Task]):
 
     queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
-    await queue.update_state(paused=False)
+    await queue.resume_queue()
     return queue
 
 

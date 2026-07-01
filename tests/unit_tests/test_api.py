@@ -33,7 +33,7 @@ from daq_queuing_service.task import (
     TaskKind,
     TaskWithPosition,
 )
-from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
+from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, PauseReason, TaskQueue
 from daq_queuing_service.task_queue.queue_utils import QueueError
 
 
@@ -101,14 +101,25 @@ def test_get_queue_state_returns_queue_state(test_client: TestClient):
     }
 
 
-def test_update_queue_state_changes_queue_state_and_returns_new_state(
+def test_resume_changes_queue_state_and_returns_new_state(
     test_client: TestClient,
 ):
     response = test_client.patch("/queue/state", json={"paused": False})
     assert response.status_code == 200
     assert response.json() == {
         "paused": False,
-        "last_pause_reason": "Paused as queue completed",
+        "last_pause_reason": PauseReason.EMPTY_QUEUE,
+    }
+
+
+def test_pause_changes_queue_state_and_returns_new_state(
+    test_client: TestClient,
+):
+    response = test_client.patch("/queue/state", json={"paused": True})
+    assert response.status_code == 200
+    assert response.json() == {
+        "paused": True,
+        "last_pause_reason": PauseReason.USER_REQUESTED,
     }
 
 

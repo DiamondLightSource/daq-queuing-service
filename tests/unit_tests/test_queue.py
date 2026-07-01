@@ -24,6 +24,7 @@ from daq_queuing_service.task import (
     TaskKind,
 )
 from daq_queuing_service.task_queue.queue import (
+    PauseReason,
     TaskQueue,
     TaskWithPosition,
 )
@@ -633,14 +634,14 @@ async def test_clear_history_removes_history_and_removes_completed_tasks_from_re
 
 
 async def test_pausing_queue_prevents_task_from_being_claimed(task_queue: TaskQueue):
-    await task_queue.update_state(paused=True)
+    await task_queue.pause_queue(PauseReason.EMPTY_QUEUE)
     assert task_queue.state.paused
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.get_next_call_once_available(), timeout=0.05)
 
 
 async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQueue):
-    await task_queue.update_state(paused=False)
+    await task_queue.resume_queue()
     assert not task_queue.state.paused
     await task_queue.get_next_call_once_available()
 
@@ -699,7 +700,7 @@ async def test_wait_until_call_available_waits_if_next_task_is_in_progress(
 async def test_wait_until_call_available_waits_if_queue_paused(
     task_queue: TaskQueue,
 ):
-    await task_queue.update_state(paused=True)
+    await task_queue.pause_queue(PauseReason.EMPTY_QUEUE)
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
@@ -975,3 +976,4 @@ async def test__sync_pauses_queue_if_no_more_items(
     task_queue._sync()
 
     assert task_queue.state.paused
+    assert task_queue.state.last_pause_reason == PauseReason.EMPTY_QUEUE
