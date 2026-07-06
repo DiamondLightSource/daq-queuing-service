@@ -676,6 +676,16 @@
                 "type": "null"
               }
             ]
+          },
+          "opa": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpaConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -900,54 +910,6 @@
         ],
         "title": "DeviceManagerSource"
       },
-      "DeviceSource": {
-        "properties": {
-          "module": {
-            "type": "string",
-            "title": "Module",
-            "description": "Module to be imported"
-          },
-          "kind": {
-            "type": "string",
-            "const": "deviceFunctions",
-            "title": "Kind",
-            "default": "deviceFunctions"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "module"
-        ],
-        "title": "DeviceSource"
-      },
-      "DodalSource": {
-        "properties": {
-          "module": {
-            "type": "string",
-            "title": "Module",
-            "description": "Module to be imported"
-          },
-          "kind": {
-            "type": "string",
-            "const": "dodal",
-            "title": "Kind",
-            "default": "dodal"
-          },
-          "mock": {
-            "type": "boolean",
-            "title": "Mock",
-            "description": "If true, ophyd_async device connections are mocked",
-            "default": false
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "module"
-        ],
-        "title": "DodalSource"
-      },
       "EnvironmentConfig": {
         "properties": {
           "sources": {
@@ -957,37 +919,20 @@
                   "$ref": "#/components/schemas/PlanSource"
                 },
                 {
-                  "$ref": "#/components/schemas/DeviceSource"
-                },
-                {
-                  "$ref": "#/components/schemas/DodalSource"
-                },
-                {
                   "$ref": "#/components/schemas/DeviceManagerSource"
                 }
               ],
               "discriminator": {
                 "propertyName": "kind",
                 "mapping": {
-                  "deviceFunctions": "#/components/schemas/DeviceSource",
                   "deviceManager": "#/components/schemas/DeviceManagerSource",
-                  "dodal": "#/components/schemas/DodalSource",
                   "planFunctions": "#/components/schemas/PlanSource"
                 }
               }
             },
             "type": "array",
             "title": "Sources",
-            "default": [
-              {
-                "module": "dodal.plans",
-                "kind": "planFunctions"
-              },
-              {
-                "module": "dodal.plan_stubs.wrapped",
-                "kind": "planFunctions"
-              }
-            ]
+            "default": []
           },
           "events": {
             "$ref": "#/components/schemas/WorkerEventConfig"
@@ -1154,9 +1099,29 @@
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider"
+            "description": "URL to fetch OIDC config from the provider",
+            "deprecated": true
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer",
+            "description": "URL of OIDC provider"
           },
           "client_id": {
             "type": "string",
@@ -1179,10 +1144,36 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
+      },
+      "OpaConfig": {
+        "properties": {
+          "root": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Root",
+            "default": "http://localhost:8181/"
+          },
+          "audience": {
+            "type": "string",
+            "title": "Audience",
+            "default": "account"
+          },
+          "tiled_service_account_check": {
+            "type": "string",
+            "title": "Tiled Service Account Check"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tiled_service_account_check"
+        ],
+        "title": "OpaConfig"
       },
       "PlanSource": {
         "properties": {
