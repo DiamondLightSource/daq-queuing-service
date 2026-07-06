@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Queue &#8212; daq-queuing-service 0.1.9a2.dev4+g3bb7cd42e documentation</title>
+    <title>Queue Items &#8212; daq-queuing-service 0.1.10.dev1+gab104c59f documentation</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
 
-    <script src="../_static/documentation_options.js?v=23f0932b"></script>
+    <script src="../_static/documentation_options.js?v=7e534b90"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,7 +59,7 @@
     <link rel="icon" href="../_static/dls-logo.svg"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Tasks" href="tasks.html" />
+    <link rel="next" title="Worker" href="worker.html" />
     <link rel="prev" title="2. Adopt python-copier-template for project structure" href="decisions/0002-switched-to-python-copier-template.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -415,8 +415,8 @@
 <li class="toctree-l2"><a class="reference internal" href="decisions/0002-switched-to-python-copier-template.html">2. Adopt python-copier-template for project structure</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Queue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tasks.html">Tasks</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Queue Items</a></li>
+
 <li class="toctree-l1"><a class="reference internal" href="worker.html">Worker</a></li>
 </ul>
 </div>
@@ -461,7 +461,7 @@
     
     <li class="breadcrumb-item"><a href="../explanations.html" class="nav-link">Explanations</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Queue</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Queue Items</span></li>
   </ul>
 </nav>
 </div>
@@ -478,11 +478,26 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="queue">
+  <section id="queue-items">
+<h1>Queue Items<a class="headerlink" href="#queue-items" title="Link to this heading">#</a></h1>
+<p>The items inside the queue contain either an <code class="docutils literal notranslate"><span class="pre">Experiment</span></code> object or a <code class="docutils literal notranslate"><span class="pre">TaskRequest</span></code> object. These determine which bluesky plans will run. Experiment objects match the format of an experiment in ulims, and can involve multiple bluesky plans. It always contains a sample, experiment definition and instrument session. A TaskRequest object matches the format blueapi expects to receive to run a single plan.</p>
+<p>Allowing both in the queue means you can queue up whole experiments as well as individual bluesky plans.</p>
+<p>The queue will convert the entire list of experiments and task requests to a list of blueapi calls (the task request objects are already in the right format). See <a class="reference internal" href="converters.html"><span class="std std-doc">converters</span></a> on how this is done.</p>
+<p>A queue item’s status is derived from the status of the underlying bluesky plans it has produced:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Queued</span></code> - None of its bluesky plans have started</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">In</span> <span class="pre">progress</span></code> - At least one of its bluesky plans have started</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Complete</span></code> - All of its bluesky plans have completed successfully</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Error</span></code> - One of its bluesky plans failed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Cancelled</span></code> - The item was cancelled (removed from the queue)</p></li>
+</ul>
+</section>
+<section id="queue">
 <h1>Queue<a class="headerlink" href="#queue" title="Link to this heading">#</a></h1>
-<p>The queue is essentially a list of <a class="reference internal" href="tasks.html"><span class="std std-doc">tasks</span></a>. Tasks can be added, deleted, and moved around the queue through the REST API. A worker takes the task at the top of the queue, if one is available, and sends it to blueapi. Once this task is in progress, it can’t be moved or deleted, and no other task can be sent to blueapi until this one has finished.</p>
-<p>The queue can be paused, meaning no task can be taken and sent to blueapi until the queue is unpaused. This will not pause a task that is already in progress. While the queue is paused, tasks can still be added, deleted and moved around.</p>
-<p>Once a task is complete, it is added to a history list, which is a chronological list of completed tasks.</p>
+<p>Items can be added, deleted, and moved around the queue through the REST API. The worker takes bluesky plans from the top of the queue, if one is available, and sends it to blueapi. Once this plan is in progress, it can’t be moved or deleted, and no other plan can be sent to blueapi until this one has finished.</p>
+<p>The queue can be paused, meaning no plan can be taken and sent to blueapi until the queue is unpaused. This will not pause a plan that is already in progress. While the queue is paused, tasks can still be added, deleted and moved around.</p>
+<p>If an error occurs while running a plan, the queue will be paused, and any remaining plans that need to be run as part of the current experiment will be skipped.</p>
+<p>Once an item is complete, it is added to a history list, which is a chronological list of completed tasks.</p>
 <p>See the <a class="reference internal" href="../reference/rest-api.html"><span class="std std-doc">API reference</span></a> for how to interact with the queue.</p>
 </section>
 
@@ -506,11 +521,11 @@
       </div>
     </a>
     <a class="right-next"
-       href="tasks.html"
+       href="worker.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Tasks</p>
+        <p class="prev-next-title">Worker</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -524,6 +539,20 @@
                 <dialog id="pst-secondary-sidebar-modal"></dialog>
                 <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Queue Items</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#queue">Queue</a></li>
+</ul>
+
+  </nav></div>
 
   <div class="sidebar-secondary-item">
 
