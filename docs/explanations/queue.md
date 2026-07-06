@@ -1,6 +1,6 @@
 # Queue
 
-Items can be added, deleted, and moved around the queue through the REST API. The worker takes bluesky plans from the top of the queue, if one is available, and sends it to blueapi. Once this plan is in progress, it can't be moved or deleted, and no other plan can be sent to blueapi until this one has finished. An experiment's status is `In progress` if any of its underlying plans have started. It is `Complete` once all of its plans have finished.
+Items can be added, deleted, and moved around the queue through the REST API. The worker takes bluesky plans from the top of the queue, if one is available, and sends it to blueapi. Once this plan is in progress, it can't be moved or deleted, and no other plan can be sent to blueapi until this one has finished.
 
 The queue can be paused, meaning no plan can be taken and sent to blueapi until the queue is unpaused. This will not pause a plan that is already in progress. While the queue is paused, tasks can still be added, deleted and moved around.
 
