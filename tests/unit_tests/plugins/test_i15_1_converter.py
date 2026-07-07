@@ -43,6 +43,10 @@ def test_sample_centre_uses_expected_params():
         "end_z": 0,
         "steps": 20,
         "exposure_time": 0.01,
+        "metadata": {
+            "experiment_definition": ExperimentDefinition(name=" ", id="", data={}),
+            "sample": Sample(name="test_8_1", id="", data={}),
+        },
     }
 
 

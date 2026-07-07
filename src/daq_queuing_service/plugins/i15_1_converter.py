@@ -19,7 +19,16 @@ def construct_blueapi_tasks_from_i15_1_experiment(
         ),
         TaskRequest(
             name="centre_sample",
-            params={"start_z": -20, "end_z": 0, "steps": 20, "exposure_time": 0.01},
+            params={
+                "start_z": -20,
+                "end_z": 0,
+                "steps": 20,
+                "exposure_time": 0.01,
+                "metadata": {
+                    "sample": experiment.sample,
+                    "experiment_definition": experiment.experiment_definition,
+                },
+            },
             instrument_session=experiment.instrument_session,
         ),
         TaskRequest(
