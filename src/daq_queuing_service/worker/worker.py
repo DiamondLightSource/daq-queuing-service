@@ -80,7 +80,7 @@ class QueueWorker:
         match task_status.result:
             case TaskResult():
                 LOGGER.debug(
-                    f"Call {call} completed succesfully:  {task_status.result}"
+                    f"Call {call} completed successfully:  {task_status.result}"
                 )
                 await self._queue.complete_call(call, task_status.result)
             case TaskError():
@@ -115,8 +115,7 @@ class QueueWorker:
         error: InvalidParametersError
         | UnknownPlanError
         | ServiceUnavailableError
-        | BlueskyRemoteControlError
-        | ServiceUnavailableError,
+        | BlueskyRemoteControlError,
     ):
         match error:
             case InvalidParametersError():

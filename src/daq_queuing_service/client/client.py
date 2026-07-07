@@ -5,6 +5,8 @@ import requests
 from pydantic import HttpUrl, TypeAdapter
 
 from daq_queuing_service.api.api import TaskCancelRequest
+from daq_queuing_service.app._config import AppConfig
+from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.task import ExperimentDefinition, TaskWithPosition
 from daq_queuing_service.task_queue.queue import QueueState
 
@@ -33,6 +35,12 @@ class QueueClient:
         )
 
         return TypeAdapter(target_type).validate_python(response.json())
+
+    def healthz(self):
+        return self._request("/healthz", str)
+
+    def get_config(self):
+        return self._request("/config", AppConfig)
 
     def get_queue_state(self) -> QueueState:
         return self._request("/queue/state", QueueState)
@@ -78,8 +86,26 @@ class QueueClient:
             data=TaskCancelRequest(task_ids=task_ids).model_dump(),
         )
 
-    # TODO: Should add an endpoint for this.
-    # Potential race condition between the GET and DELETE
     def cancel_all_tasks(self) -> list[TaskWithPosition]:
-        task_ids = [task.id for task in self.get_queued_tasks()]
-        return self.cancel_tasks(task_ids)
+        return self.cancel_all_tasks()
+
+    def get_task_by_position(self, position: int) -> TaskWithPosition:
+        return self._request(f"/queue/{position}", TaskWithPosition)
+
+    def get_all_tasks(self) -> list[TaskWithPosition]:
+        return self._request("/tasks", list[TaskWithPosition])
+
+    def get_task_by_id(self, task_id: str) -> TaskWithPosition:
+        return self._request(f"/tasks/{task_id}", TaskWithPosition)
+
+    def get_completed_tasks(self) -> list[TaskWithPosition]:
+        return self._request("/history", list[TaskWithPosition])
+
+    def clear_history(self):
+        return self._request("/history", str, "DELETE")
+
+    def get_call_queue(self) -> list[BlueapiCallResponse]:
+        return self._request("/call_queue", list[BlueapiCallResponse])
+
+    def get_call_history(self) -> list[BlueapiCallResponse]:
+        return self._request("/call_history", list[BlueapiCallResponse])
