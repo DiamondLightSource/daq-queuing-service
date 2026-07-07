@@ -186,9 +186,16 @@
               "schema": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/ExperimentDefinition"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TaskRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Experiment"
+                    }
+                  ]
                 },
-                "title": "Experiment Definitions"
+                "title": "Experiments"
               }
             }
           }
@@ -214,6 +221,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Cancel All Tasks",
+        "operationId": "cancel_all_tasks_queue_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskWithPosition"
+                  },
+                  "title": "Response Cancel All Tasks Queue Delete"
                 }
               }
             }
@@ -649,6 +676,16 @@
                 "type": "null"
               }
             ]
+          },
+          "opa": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpaConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -873,54 +910,6 @@
         ],
         "title": "DeviceManagerSource"
       },
-      "DeviceSource": {
-        "properties": {
-          "module": {
-            "type": "string",
-            "title": "Module",
-            "description": "Module to be imported"
-          },
-          "kind": {
-            "type": "string",
-            "const": "deviceFunctions",
-            "title": "Kind",
-            "default": "deviceFunctions"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "module"
-        ],
-        "title": "DeviceSource"
-      },
-      "DodalSource": {
-        "properties": {
-          "module": {
-            "type": "string",
-            "title": "Module",
-            "description": "Module to be imported"
-          },
-          "kind": {
-            "type": "string",
-            "const": "dodal",
-            "title": "Kind",
-            "default": "dodal"
-          },
-          "mock": {
-            "type": "boolean",
-            "title": "Mock",
-            "description": "If true, ophyd_async device connections are mocked",
-            "default": false
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "module"
-        ],
-        "title": "DodalSource"
-      },
       "EnvironmentConfig": {
         "properties": {
           "sources": {
@@ -930,37 +919,20 @@
                   "$ref": "#/components/schemas/PlanSource"
                 },
                 {
-                  "$ref": "#/components/schemas/DeviceSource"
-                },
-                {
-                  "$ref": "#/components/schemas/DodalSource"
-                },
-                {
                   "$ref": "#/components/schemas/DeviceManagerSource"
                 }
               ],
               "discriminator": {
                 "propertyName": "kind",
                 "mapping": {
-                  "deviceFunctions": "#/components/schemas/DeviceSource",
                   "deviceManager": "#/components/schemas/DeviceManagerSource",
-                  "dodal": "#/components/schemas/DodalSource",
                   "planFunctions": "#/components/schemas/PlanSource"
                 }
               }
             },
             "type": "array",
             "title": "Sources",
-            "default": [
-              {
-                "module": "dodal.plans",
-                "kind": "planFunctions"
-              },
-              {
-                "module": "dodal.plan_stubs.wrapped",
-                "kind": "planFunctions"
-              }
-            ]
+            "default": []
           },
           "events": {
             "$ref": "#/components/schemas/WorkerEventConfig"
@@ -981,32 +953,53 @@
         "title": "EnvironmentConfig",
         "description": "Config for the RunEngine environment"
       },
-      "ExperimentDefinition": {
+      "Experiment": {
         "properties": {
-          "plan_name": {
+          "name": {
             "type": "string",
-            "title": "Plan Name"
-          },
-          "sample_id": {
-            "type": "string",
-            "title": "Sample Id"
-          },
-          "params": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Params",
-            "description": "Values for parameters to plan, if any"
+            "title": "Name"
           },
           "instrument_session": {
             "type": "string",
             "title": "Instrument Session"
+          },
+          "sample": {
+            "$ref": "#/components/schemas/Sample"
+          },
+          "experiment_definition": {
+            "$ref": "#/components/schemas/ExperimentDefinition"
           }
         },
         "type": "object",
         "required": [
-          "plan_name",
-          "sample_id",
-          "instrument_session"
+          "name",
+          "instrument_session",
+          "sample",
+          "experiment_definition"
+        ],
+        "title": "Experiment"
+      },
+      "ExperimentDefinition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "data"
         ],
         "title": "ExperimentDefinition"
       },
@@ -1106,9 +1099,29 @@
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider"
+            "description": "URL to fetch OIDC config from the provider",
+            "deprecated": true
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer",
+            "description": "URL of OIDC provider"
           },
           "client_id": {
             "type": "string",
@@ -1131,10 +1144,36 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
+      },
+      "OpaConfig": {
+        "properties": {
+          "root": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Root",
+            "default": "http://localhost:8181/"
+          },
+          "audience": {
+            "type": "string",
+            "title": "Audience",
+            "default": "account"
+          },
+          "tiled_service_account_check": {
+            "type": "string",
+            "title": "Tiled Service Account Check"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tiled_service_account_check"
+        ],
+        "title": "OpaConfig"
       },
       "PlanSource": {
         "properties": {
@@ -1211,6 +1250,30 @@
         "additionalProperties": false,
         "type": "object",
         "title": "RestConfig"
+      },
+      "Sample": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "data"
+        ],
+        "title": "Sample"
       },
       "ScratchConfig": {
         "properties": {
@@ -1376,6 +1439,14 @@
         "title": "TaskError",
         "description": "Wrapper around an exception raised by a plan"
       },
+      "TaskKind": {
+        "type": "string",
+        "enum": [
+          "Experiment",
+          "Plan"
+        ],
+        "title": "TaskKind"
+      },
       "TaskRequest": {
         "properties": {
           "name": {
@@ -1430,8 +1501,16 @@
       },
       "TaskWithPosition": {
         "properties": {
-          "experiment_definition": {
-            "$ref": "#/components/schemas/ExperimentDefinition"
+          "experiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Experiment"
+              },
+              {
+                "$ref": "#/components/schemas/TaskRequest"
+              }
+            ],
+            "title": "Experiment"
           },
           "id": {
             "type": "string",
@@ -1457,15 +1536,19 @@
               }
             ],
             "title": "Position"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TaskKind"
           }
         },
         "type": "object",
         "required": [
-          "experiment_definition",
+          "experiment",
           "id",
           "status",
           "blueapi_calls",
-          "position"
+          "position",
+          "kind"
         ],
         "title": "TaskWithPosition"
       },

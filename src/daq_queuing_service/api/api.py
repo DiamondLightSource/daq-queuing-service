@@ -2,6 +2,7 @@ import asyncio
 import json
 from collections.abc import AsyncGenerator
 
+from blueapi.service.model import TaskRequest
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
@@ -9,7 +10,7 @@ from pydantic import BaseModel
 from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
-from daq_queuing_service.task import ExperimentDefinition, Status, Task
+from daq_queuing_service.task import Experiment, Status, Task
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
     QueueState,
@@ -72,16 +73,17 @@ def create_api_router(
 
     @router.post("/queue")
     async def add_tasks_to_queue(
-        experiment_definitions: list[ExperimentDefinition],
+        experiments: list[TaskRequest | Experiment],
         position: int | None = None,
     ) -> list[str]:
-        tasks = [
-            Task(experiment_definition=experiment_definition)
-            for experiment_definition in experiment_definitions
-        ]
+        tasks = [Task(experiment=experiment) for experiment in experiments]
         task_ids = [task.id for task in tasks]
         await queue.add_tasks(tasks, position)
         return task_ids
+
+    @router.delete("/queue")
+    async def cancel_all_tasks() -> list[TaskWithPosition]:
+        return await queue.cancel_all_tasks()
 
     @router.post("/queue/move")
     async def move_task(task_id: str, new_position: int) -> int:

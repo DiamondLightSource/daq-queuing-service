@@ -2,7 +2,7 @@ import pytest
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
-from daq_queuing_service.task import ExperimentDefinition, Status, Task
+from daq_queuing_service.task import Status, Task
 
 
 @pytest.mark.parametrize(
@@ -36,8 +36,6 @@ def test_task_status_derived_correctly_from_call_statuses(
             )
             for status in blueapi_call_statuses
         ],
-        experiment_definition=ExperimentDefinition(
-            plan_name="", sample_id="", instrument_session=""
-        ),
+        experiment=TaskRequest(name="", instrument_session=""),
     )
     assert task.status == expected_task_status

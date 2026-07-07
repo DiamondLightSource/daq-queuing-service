@@ -15,7 +15,14 @@ from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.construct_task_request import (
     construct_blueapi_call_list,
 )
-from daq_queuing_service.task import ExperimentDefinition, Status, Task
+from daq_queuing_service.task import (
+    Experiment,
+    ExperimentDefinition,
+    Sample,
+    Status,
+    Task,
+    TaskKind,
+)
 from daq_queuing_service.task_queue.queue import (
     TaskQueue,
     TaskWithPosition,
@@ -33,10 +40,17 @@ pytest_plugins = ("pytest_asyncio",)
 
 def make_new_task(id_str: str):
     return Task(
-        experiment_definition=ExperimentDefinition(
-            plan_name="test", sample_id=id_str, params={}, instrument_session=""
-        ),
         id=id_str,
+        experiment=Experiment(
+            name="test_experiment",
+            instrument_session="",
+            experiment_definition=ExperimentDefinition(
+                name="test",
+                id=id_str,
+                data={},
+            ),
+            sample=Sample(name="test_sample", id=id_str, data={}),
+        ),
     )
 
 
@@ -214,12 +228,12 @@ async def test_move_task_raises_error_if_wrong_task_id_given(
     assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
 
 
-async def test_remove_tasks_works_as_expected(task_queue: TaskQueue):
+async def test_cancel_tasks_works_as_expected(task_queue: TaskQueue):
     await task_queue.cancel_tasks(["4", "2"])
     assert task_queue._queue == ["0", "1", "3"]
 
 
-async def test_remove_tasks_does_not_remove_task_that_is_in_progress_and_raises_error(
+async def test_cancel_tasks_does_not_cancel_task_that_is_in_progress_and_raises_error(
     task_queue_in_progress: TaskQueue,
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
@@ -232,10 +246,18 @@ async def test_remove_tasks_does_not_remove_task_that_is_in_progress_and_raises_
     assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
-async def test_remove_tasks_raises_error_if_wrong_task_id_used(task_queue: TaskQueue):
+async def test_cancel_tasks_raises_error_if_wrong_task_id_used(task_queue: TaskQueue):
     with pytest.raises(TaskNotFoundError):
         await task_queue.cancel_tasks(["4", "11", "2", "10"])
     assert task_queue._queue == ["0", "1", "2", "3", "4"]
+
+
+async def test_cancel_all_tasks_cancels_all_queued_tasks(
+    task_queue_in_progress: TaskQueue,
+):
+    cancelled_tasks = await task_queue_in_progress.cancel_all_tasks()
+    assert [task.id for task in cancelled_tasks] == ["1", "2", "3", "4"]
+    assert task_queue_in_progress._queue == ["0"]  # This one is in progress
 
 
 async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_history(
@@ -257,8 +279,13 @@ async def test_get_queue_only_returns_tasks_in_queue(
     result = await task_queue_with_history.get_queue()
     assert result == [
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="2", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="2", data={}
+                ),
+                sample=Sample(name="test_8_2", id="2", data={}),
             ),
             id="2",
             status=Status.IN_PROGRESS,
@@ -275,10 +302,16 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 )
             ],
             position=0,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="3", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="3", data={}
+                ),
+                sample=Sample(name="test_8_3", id="3", data={}),
             ),
             id="3",
             status=Status.QUEUED,
@@ -295,10 +328,16 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 )
             ],
             position=1,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="4", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="4", data={}
+                ),
+                sample=Sample(name="test_8_4", id="4", data={}),
             ),
             id="4",
             status=Status.QUEUED,
@@ -315,6 +354,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 )
             ],
             position=2,
+            kind=TaskKind.EXPERIMENT,
         ),
     ]
 
@@ -326,8 +366,13 @@ async def test_get_history_only_returns_tasks_in_history(
     result = await task_queue_with_history.get_history()
     assert result == [
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="0", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="0", data={}
+                ),
+                sample=Sample(name="test_8_0", id="0", data={}),
             ),
             id="0",
             status=Status.ERROR,
@@ -350,10 +395,16 @@ async def test_get_history_only_returns_tasks_in_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="1", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="1", data={}
+                ),
+                sample=Sample(name="test_8_1", id="1", data={}),
             ),
             id="1",
             status=Status.COMPLETE,
@@ -370,6 +421,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
     ]
 
@@ -382,8 +434,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
     result = await task_queue_with_history.get_tasks()
     assert result == [
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="0", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="0", data={}
+                ),
+                sample=Sample(name="test_8_0", id="0", data={}),
             ),
             id="0",
             status=Status.ERROR,
@@ -406,10 +463,16 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="1", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="1", data={}
+                ),
+                sample=Sample(name="test_8_1", id="1", data={}),
             ),
             id="1",
             status=Status.COMPLETE,
@@ -426,10 +489,16 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=None,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="2", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="2", data={}
+                ),
+                sample=Sample(name="test_8_2", id="2", data={}),
             ),
             id="2",
             status=Status.IN_PROGRESS,
@@ -446,10 +515,16 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=0,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="3", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="3", data={}
+                ),
+                sample=Sample(name="test_8_3", id="3", data={}),
             ),
             id="3",
             status=Status.QUEUED,
@@ -466,10 +541,16 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=1,
+            kind=TaskKind.EXPERIMENT,
         ),
         TaskWithPosition(
-            experiment_definition=ExperimentDefinition(
-                plan_name="test", sample_id="4", instrument_session=""
+            experiment=Experiment(
+                name="test_experiment",
+                instrument_session="",
+                experiment_definition=ExperimentDefinition(
+                    name="test", id="4", data={}
+                ),
+                sample=Sample(name="test_8_4", id="4", data={}),
             ),
             id="4",
             status=Status.QUEUED,
@@ -486,6 +567,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 )
             ],
             position=2,
+            kind=TaskKind.EXPERIMENT,
         ),
     ]
 
