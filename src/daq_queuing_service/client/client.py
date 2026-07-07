@@ -26,7 +26,7 @@ class QueueClient:
         method: str = "GET",
         data: Any = None,
         params: Mapping[str, Any] | None = None,
-    ):
+    ) -> requests.Response:
         url = self._url.unicode_string().removesuffix("/") + suffix
         response = self._pool.request(
             method,
@@ -43,7 +43,7 @@ class QueueClient:
         method: str = "GET",
         data: Any = None,
         params: Mapping[str, Any] | None = None,
-    ):
+    ) -> T | ErrorContent:
         response = self._request(suffix, method, data, params)
         try:
             return TypeAdapter(target_type).validate_python(response.json())
