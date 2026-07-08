@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from blueapi.service.model import TaskRequest
 
-from daq_queuing_service.plugins.i15_1_converter import (
+from daq_queuing_service.plugins.i15_1.i15_1_converter import (
     construct_blueapi_tasks_from_i15_1_experiment,
     construct_i15_1_blueapi_call_list,
 )

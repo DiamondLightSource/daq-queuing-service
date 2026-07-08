@@ -1005,6 +1005,7 @@ dependencies = [
     { name = "blueapi" },
     { name = "fastapi" },
     { name = "pydantic" },
+    { name = "tiled" },
 ]
 
 [package.dev-dependencies]
@@ -1033,6 +1034,7 @@ requires-dist = [
     { name = "blueapi", specifier = ">=1.14.0" },
     { name = "fastapi", specifier = ">=0.136.0" },
     { name = "pydantic", specifier = ">=2.13.2" },
+    { name = "tiled", specifier = ">=0.2.9" },
 ]
 
 [package.metadata.requires-dev]
