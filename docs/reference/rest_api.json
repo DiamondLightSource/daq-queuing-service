@@ -1175,6 +1175,15 @@
         ],
         "title": "OpaConfig"
       },
+      "PauseReason": {
+        "type": "string",
+        "enum": [
+          "Pause requested by user",
+          "Paused as queue completed",
+          "Paused as last task errored"
+        ],
+        "title": "PauseReason"
+      },
       "PlanSource": {
         "properties": {
           "module": {
@@ -1201,29 +1210,29 @@
           "paused": {
             "type": "boolean",
             "title": "Paused"
+          },
+          "last_pause_reason": {
+            "$ref": "#/components/schemas/PauseReason"
           }
         },
         "type": "object",
         "required": [
-          "paused"
+          "paused",
+          "last_pause_reason"
         ],
         "title": "QueueState"
       },
       "QueueStateUpdate": {
         "properties": {
           "paused": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Paused"
           }
         },
         "type": "object",
+        "required": [
+          "paused"
+        ],
         "title": "QueueStateUpdate"
       },
       "RestConfig": {

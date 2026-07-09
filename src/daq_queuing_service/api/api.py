@@ -13,6 +13,7 @@ from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.task import Experiment, Status, Task
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
+    PauseReason,
     QueueState,
     TaskQueue,
     TaskWithPosition,
@@ -22,7 +23,7 @@ from daq_queuing_service.task_queue.queue import (
 
 
 class QueueStateUpdate(BaseModel):
-    paused: bool | None = None
+    paused: bool
 
 
 class TaskCancelRequest(BaseModel):
@@ -61,7 +62,10 @@ def create_api_router(
 
     @router.patch("/queue/state")
     async def update_queue_state(payload: QueueStateUpdate) -> QueueState:
-        return await queue.update_state(**payload.model_dump(exclude_none=True))
+        if payload.paused:
+            return await queue.pause_queue(PauseReason.USER_REQUESTED)
+        else:
+            return await queue.resume_queue()
 
     @router.get("/queue/state")
     def get_queue_state() -> QueueState:

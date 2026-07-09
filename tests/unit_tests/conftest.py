@@ -47,8 +47,8 @@ def tasks() -> list[Task]:
 @pytest.fixture
 async def task_queue(tasks: list[Task]):
     queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
-    await queue.update_state(paused=False)
     await queue.add_tasks(tasks)
+    await queue.resume_queue()
     return queue
 
 
@@ -76,8 +76,8 @@ async def task_queue_one_to_many(tasks: list[Task]):
         return call_list
 
     queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
-    await queue.update_state(paused=False)
     await queue.add_tasks(tasks)
+    await queue.resume_queue()
     return queue
 
 
