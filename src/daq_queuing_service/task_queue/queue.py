@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Callable, Sequence
+from enum import StrEnum
 from types import TracebackType
 from typing import Any, Literal
 
@@ -30,8 +31,15 @@ class TaskRegistry(dict[str, Task]):
         raise TaskNotFoundError(f"No task found matching id: {task_id}")
 
 
+class PauseReason(StrEnum):
+    USER_REQUESTED = "Pause requested by user"
+    EMPTY_QUEUE = "Paused as queue completed"
+    ERROR = "Paused as last task errored"
+
+
 class QueueState(BaseModel):
     paused: bool
+    last_pause_reason: PauseReason
 
 
 class Modifying(asyncio.Condition):
@@ -67,7 +75,9 @@ class TaskQueue:
         self._call_queue: list[BlueapiCall] = []
         self._call_history: list[BlueapiCall] = []
         self._queue_history: list[BlueapiCall] = []
-        self._state: QueueState = QueueState(paused=True)
+        self._state: QueueState = QueueState(
+            paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE
+        )
         self._convert = convert
         self._modifying = Modifying(on_exit=self._sync)
         self._broadcaster = broadcaster
@@ -117,6 +127,9 @@ class TaskQueue:
             # Add children to parent tasks
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
+
+        if not self._call_queue:
+            self._pause_queue(PauseReason.EMPTY_QUEUE)
 
         self._broadcast_changes()
         self._modifying.notify_all()
@@ -360,21 +373,36 @@ class TaskQueue:
             self._history.clear()
         LOGGER.info("Successfully cleared history")
 
-    async def update_state(self, paused: bool | None = None) -> QueueState:
-        """Update the state of the queue.
+    def _pause_queue(self, reason: PauseReason):
+        self._state = QueueState(paused=True, last_pause_reason=reason)
+        self._broadcaster.broadcast(Event(type="state_update", data=self._state))
+
+    async def pause_queue(self, reason: PauseReason) -> QueueState:
+        """Pause the queue if running.
 
         Args:
-            paused (bool | None, optional): Whether or not the queue should be paused.
+            paused (PauseReason): The reason for pausing the queue.
+
+        Returns:
+            QueueState: The new state of the queue.
+        """
+        async with self._modifying:
+            self._pause_queue(reason)
+        LOGGER.info(f"Successfully paused queue due to {reason}")
+        return self._state
+
+    async def resume_queue(self) -> QueueState:
+        """Resume the queue if paused.
 
         Returns:
             QueueState: The new state of the queue.
         """
         async with self._modifying:
             self._state = QueueState(
-                paused=self._state.paused if paused is None else paused
+                paused=False, last_pause_reason=self._state.last_pause_reason
             )
             self._broadcaster.broadcast(Event(type="state_update", data=self._state))
-        LOGGER.info(f"Successfully updated queue state to {self._state}")
+        LOGGER.info("Successfully resumed queue")
         return self._state
 
     @property

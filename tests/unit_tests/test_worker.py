@@ -22,7 +22,12 @@ from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
 )
 from daq_queuing_service.blueapi_interaction.blueapi_call import CallStatus
 from daq_queuing_service.task import Status
-from daq_queuing_service.task_queue.queue import TaskError, TaskQueue, TaskResult
+from daq_queuing_service.task_queue.queue import (
+    PauseReason,
+    TaskError,
+    TaskQueue,
+    TaskResult,
+)
 from daq_queuing_service.worker.worker import LOGGER, QueueWorker
 
 
@@ -251,6 +256,7 @@ async def test_when_plan_error_then_queue_paused_and_task_failed_and_errors_adde
         await worker_with_plan_error.run_loop()
 
     assert worker_with_plan_error._queue.state.paused is True
+    assert worker_with_plan_error._queue.state.last_pause_reason == PauseReason.ERROR
     first_call = first_task.blueapi_calls[0]
     assert first_call.status == CallStatus.ERROR
     assert first_call.errors == [
