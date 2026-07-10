@@ -2,7 +2,7 @@ from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.queries import Eq
 
-from daq_queuing_service.plugins.i15_1.i15_1_converter import BackgroundInfo
+from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 
 
 def get_background_tiled_id(
@@ -13,7 +13,7 @@ def get_background_tiled_id(
     result: Container = (
         client.search(Eq("start.instrument_session", instrument_session))
         .search(Eq("start.instrument", "i15-1"))
-        .search(Eq("start.background", required))
+        .search(Eq("start.background", required.model_dump_json()))
     )
     assert isinstance(result, Container)
 
