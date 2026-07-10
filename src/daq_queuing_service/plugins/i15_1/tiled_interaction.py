@@ -5,11 +5,13 @@ from tiled.queries import Eq
 from daq_queuing_service.plugins.i15_1.i15_1_converter import BackgroundInfo
 
 
-def get_background_tiled_id(required: BackgroundInfo) -> str | None:
+def get_background_tiled_id(
+    required: BackgroundInfo, instrument_session: str
+) -> str | None:
     client = from_uri("https://tiled.diamond.ac.uk/api/v1")
 
     result: Container = (
-        client.search(Eq("start.instrument_session", "cm44163-3"))
+        client.search(Eq("start.instrument_session", instrument_session))
         .search(Eq("start.instrument", "i15-1"))
         .search(Eq("start.background", required))
     )

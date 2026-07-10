@@ -1,50 +1,27 @@
-from collections.abc import Mapping
 from typing import Any, Literal, get_args
 
 from blueapi.service.model import TaskRequest
-from pydantic import BaseModel
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     get_background_tiled_id,
 )
 from daq_queuing_service.task import Experiment, TaskWithPosition
 
-BACKGROUND = Literal["air", "capillary_1", "capillary_2"]
 SCAN_PLANS = Literal["centre_sample", "static_collection"]
 
 
-class BackgroundInfo(BaseModel):
-    bg_type: BACKGROUND
-    cobra: bool
-    blower: bool
-
-    def add_tiled_id(self, tiled_id: str) -> "TiledBackground":
-        return TiledBackground(
-            bg_type=self.bg_type,
-            cobra=self.cobra,
-            blower=self.blower,
-            tiled_id=tiled_id,
-        )
-
-
-class TiledBackground(BackgroundInfo):
-    tiled_id: str
-
-
 def add_tiled_background_to_md(
-    params: Mapping[str, Any], tiled_id: str, background: BackgroundInfo
+    params: dict[str, Any], tiled_id: str, background: BackgroundInfo
 ):
     if metadata := params.get("metadata"):
-        if tiled_backgrounds := params.get("tiled_backgrounds"):
-            tiled_backgrounds.update({tiled_id: background})
+        if tiled_backgrounds := metadata.get("tiled_backgrounds"):
+            tiled_backgrounds[tiled_id] = background
         else:
-            metadata.update({"tiled_backgrounds": {tiled_id: background}})
+            metadata["tiled_backgrounds"] = {tiled_id: background}
     else:
-        params = {
-            **params,
-            "metadata": {"background_tiled_id": tiled_id},
-        }
+        params["metadata"] = {"tiled_backgrounds": {tiled_id: background}}
 
 
 def get_required_backgrounds(experiment: Experiment) -> list[BackgroundInfo]:
@@ -65,7 +42,7 @@ def construct_background_task_request(
 def add_required_background_scans(
     tasks: list[TaskWithPosition], calls: list[BlueapiCall]
 ) -> list[BlueapiCall]:
-    bg_task_requests: dict[str, TaskRequest] = {}
+    bg_task_requests: dict[str, list[TaskRequest]] = {}
 
     for task in tasks:
         instrument_session = task.experiment.instrument_session
@@ -81,6 +58,7 @@ def add_required_background_scans(
                     lambda call: call.task_request.name in get_args(SCAN_PLANS),
                     blueapi_calls,
                 ):
+                    call.task_request.params = dict(call.task_request.params)
                     add_tiled_background_to_md(
                         call.task_request.params, tiled_id, background
                     )
@@ -89,16 +67,24 @@ def add_required_background_scans(
                 task_request = construct_background_task_request(
                     background, instrument_session
                 )
-                if task_request not in bg_task_requests.values():
-                    bg_task_requests[task.id] = task_request
+                if not any(
+                    task_request in task_requests
+                    for task_requests in bg_task_requests.values()
+                ):
+                    bg_task_requests.setdefault(task.id, []).append(task_request)
 
     new_call_list: list[BlueapiCall] = []
 
     for call in calls:
         if call.parent_task_id and (
-            task_request := bg_task_requests.get(call.parent_task_id)
+            task_requests := bg_task_requests.pop(call.parent_task_id, None)
         ):
-            new_call_list.append(BlueapiCall(task_request=task_request))
+            new_call_list.extend(
+                [
+                    BlueapiCall(task_request=task_request)
+                    for task_request in task_requests
+                ]
+            )
         new_call_list.append(call)
 
     return new_call_list
