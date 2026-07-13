@@ -6,22 +6,22 @@ from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 
 
 def get_background_tiled_id(
-    required: BackgroundInfo, instrument_session: str
+    required_background: BackgroundInfo, instrument_session: str
 ) -> str | None:
     client = from_uri("https://tiled.diamond.ac.uk/api/v1")
 
     result: Container = (
         client.search(Eq("start.instrument_session", instrument_session))
         .search(Eq("start.instrument", "i15-1"))
-        .search(Eq("start.background", required.model_dump_json()))
+        .search(Eq("start.background", required_background.model_dump_json()))
     )
-    assert isinstance(result, Container)
 
     if not len(result):
         return
 
-    items = [(key, value) for key, value in result.items()].sort(
-        key=lambda item: item[1].metadata["start"]["time"]
+    items = sorted(
+        ((key, value) for key, value in result.items()),
+        key=lambda item: item[1].metadata["start"]["time"],
     )
 
     # return the tiled ID

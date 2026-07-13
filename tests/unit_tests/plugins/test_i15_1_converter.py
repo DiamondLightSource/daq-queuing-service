@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,6 +9,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.i15_1_converter import (
     add_required_background_scans,
+    add_tiled_background_to_md,
     construct_background_task_request,
     construct_blueapi_tasks_from_i15_1_experiment,
     construct_i15_1_blueapi_call_list,
@@ -297,3 +299,70 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     tasks, calls_before = tasks_and_calls
     calls_after = add_required_background_scans(tasks, calls_before)
     assert calls_after == calls_before
+
+
+@pytest.mark.parametrize(
+    "params, tiled_ids, backgrounds, expected_params",
+    [
+        (
+            {"sample": "my_sample"},
+            ["tiled_id"],
+            [BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True)],
+            {
+                "metadata": {
+                    "tiled_backgrounds": {
+                        "tiled_id": BackgroundInfo(
+                            bg_type="capillary_1", cobra=False, blower=True
+                        )
+                    }
+                },
+                "sample": "my_sample",
+            },
+        ),
+        (
+            {},
+            ["tiled_id"],
+            [BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True)],
+            {
+                "metadata": {
+                    "tiled_backgrounds": {
+                        "tiled_id": BackgroundInfo(
+                            bg_type="capillary_1", cobra=False, blower=True
+                        )
+                    }
+                },
+            },
+        ),
+        (
+            {"sample": "my_sample"},
+            ["tiled_id_1", "tiled_id_2"],
+            [
+                BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True),
+                BackgroundInfo(bg_type="air", cobra=True, blower=False),
+            ],
+            {
+                "metadata": {
+                    "tiled_backgrounds": {
+                        "tiled_id_1": BackgroundInfo(
+                            bg_type="capillary_1", cobra=False, blower=True
+                        ),
+                        "tiled_id_2": BackgroundInfo(
+                            bg_type="air", cobra=True, blower=False
+                        ),
+                    }
+                },
+                "sample": "my_sample",
+            },
+        ),
+    ],
+)
+def test_add_tiled_background_to_md_adds_expected_metadata(
+    params: dict[str, Any],
+    tiled_ids: list[str],
+    backgrounds: list[BackgroundInfo],
+    expected_params: dict[str, Any],
+):
+    for tiled_id, background in zip(tiled_ids, backgrounds, strict=True):
+        add_tiled_background_to_md(params, tiled_id, background)
+
+    assert params == expected_params
