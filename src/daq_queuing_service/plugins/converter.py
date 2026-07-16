@@ -3,7 +3,7 @@ import importlib
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
-from daq_queuing_service.task import Experiment, TaskWithPosition
+from daq_queuing_service.task import Experiment, Task, TaskWithPosition
 
 
 class Converter:
@@ -11,10 +11,10 @@ class Converter:
 
     def pre_process(
         self,
-        queue: list[TaskWithPosition],
+        queue: list[Task],
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
-    ) -> list[TaskWithPosition]:
+    ) -> list[Task]:
         return queue
 
     def construct_blueapi_calls(

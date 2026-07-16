@@ -103,6 +103,37 @@ class TaskQueue:
                 # If task is not in progress calls will be re-calculated
                 task.blueapi_calls = []
 
+        new_tasks = self._converter.pre_process(
+            [
+                self._tasks[task_id]
+                for task_id in self._queue
+                if self._tasks[task_id].status == Status.QUEUED
+            ],
+            self._get_history(),
+            self._queue_history,
+        )
+
+        # Update task_registry to match new tasks
+        # Not needed as long as pre_process modifies in place
+        for task in new_tasks:
+            self._tasks[task.id] = task
+
+        # Update queue to match new tasks
+        self._queue = [
+            task_id
+            for task_id in self._queue
+            if not self._tasks[task_id].status == Status.QUEUED
+        ]
+        self._queue.extend(task.id for task in new_tasks)
+
+        tasks_not_in_queue = [
+            task_id
+            for task_id in self._tasks.keys()
+            if task_id not in self._queue + self._history
+        ]
+        # This is needed because pre_process could remove tasks
+        self._remove_tasks_from_registry(tasks_not_in_queue)
+
         self._call_queue = [
             # Persist calls which aren't complete but who's parent task is in progress
             # Once a task is in progress it is not provided to the converter
