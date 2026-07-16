@@ -835,8 +835,8 @@ def test_get_config_returns_config(test_client: TestClient):
     response = test_client.get("/config")
     assert response.status_code == 200
     assert response.json()["converter"] == {
-        "path": "daq_queuing_service.plugins.construct_task_request",
-        "name": "construct_blueapi_call_list",
+        "path": "daq_queuing_service.plugins.converter",
+        "name": "Converter",
     }
 
 

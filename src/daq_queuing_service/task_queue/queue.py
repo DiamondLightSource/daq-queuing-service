@@ -14,7 +14,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter_utils import Converter
+from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
@@ -68,7 +68,7 @@ QUEUE_EVENTS = Literal[
 
 
 class TaskQueue:
-    def __init__(self, convert: Converter, broadcaster: Broadcaster[QUEUE_EVENTS]):
+    def __init__(self, converter: Converter, broadcaster: Broadcaster[QUEUE_EVENTS]):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -78,7 +78,7 @@ class TaskQueue:
         self._state: QueueState = QueueState(
             paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE
         )
-        self._convert = convert
+        self._converter = converter
         self._modifying = Modifying(on_exit=self._sync)
         self._broadcaster = broadcaster
 
@@ -116,7 +116,7 @@ class TaskQueue:
             and call.status not in (CallStatus.SUCCESS, CallStatus.ERROR)
         ]
 
-        new_calls = self._convert(
+        new_calls = self._converter.construct_blueapi_calls(
             [task for task in self._get_queue() if task.status == Status.QUEUED],
             self._get_history(),
             self._queue_history,

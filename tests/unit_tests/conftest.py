@@ -6,9 +6,7 @@ from pytest import MonkeyPatch
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.construct_task_request import (
-    construct_blueapi_call_list,
-)
+from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task import (
     Experiment,
     ExperimentDefinition,
@@ -46,7 +44,7 @@ def tasks() -> list[Task]:
 
 @pytest.fixture
 async def task_queue(tasks: list[Task]):
-    queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
+    queue = TaskQueue(converter=Converter(), broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
@@ -54,7 +52,7 @@ async def task_queue(tasks: list[Task]):
 
 @pytest.fixture
 async def task_queue_one_to_many(tasks: list[Task]):
-    def construct_blueapi_call_list(
+    def construct_blueapi_calls(
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
@@ -75,7 +73,10 @@ async def task_queue_one_to_many(tasks: list[Task]):
                 )
         return call_list
 
-    queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
+    converter = Converter()
+    converter.construct_blueapi_calls = construct_blueapi_calls
+
+    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue

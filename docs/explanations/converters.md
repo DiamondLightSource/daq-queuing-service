@@ -21,6 +21,6 @@ In config, under the converter section, add the path and name of the converter y
 
 ```yaml
 converter:
-  path: "daq_queuing_service.plugins.construct_task_request"
-  name: "construct_blueapi_call_list"
+  path: "daq_queuing_service.plugins.converter"
+  name: "Converter"
 ```
