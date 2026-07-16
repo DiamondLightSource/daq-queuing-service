@@ -876,6 +876,7 @@ async def test__sync_correctly_moves_tasks_with_all_completed_calls_into_history
     completed_blueapi_call = BlueapiCall(
         task_request=TaskRequest(name="sync_test", instrument_session=""),
         status=CallStatus.SUCCESS,
+        parent_task_id="",
     )
 
     a_task.blueapi_calls = [
@@ -900,6 +901,7 @@ async def test__sync_correctly_moves_tasks_with_any_errored_calls_into_history(
     errored_blueapi_call = BlueapiCall(
         task_request=TaskRequest(name="sync_test", instrument_session=""),
         status=CallStatus.ERROR,
+        parent_task_id="",
     )
 
     a_task.blueapi_calls[0] = errored_blueapi_call
@@ -952,6 +954,7 @@ async def test__sync_skips_subsequent_calls_if_previous_one_failed_within_a_task
     errored_blueapi_call = BlueapiCall(
         task_request=TaskRequest(name="sync_test", instrument_session=""),
         status=CallStatus.ERROR,
+        parent_task_id="",
     )
 
     a_task.blueapi_calls[0] = errored_blueapi_call
