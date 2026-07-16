@@ -49,7 +49,7 @@ class Converter:
 
 
 def get_converter(path: str, name: str) -> Converter:
-    """Gets a converter instance based on its path and class name
+    """Instantiates a converter based on a path and class name
 
     Args:
         path (str): Path to converter class. For example:
@@ -58,7 +58,7 @@ def get_converter(path: str, name: str) -> Converter:
             "Converter"
 
     Returns:
-        Converter: Converter class
+        Converter: Converter instance
     """
     module = importlib.import_module(path)
     converter_cls: type[Converter] = getattr(module, name)
