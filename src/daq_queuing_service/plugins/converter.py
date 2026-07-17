@@ -40,11 +40,10 @@ class Converter:
         match experiment:
             case TaskRequest():
                 return experiment
-            case Experiment():
-                return TaskRequest(
-                    instrument_session=experiment.instrument_session,
-                    name=experiment.experiment_definition.name,
-                    params=experiment.experiment_definition.data,
+            case Experiment() as experiment:
+                raise NotImplementedError(
+                    f"No conversion implemented for {type(experiment)}. "
+                    + "Try using a different converter"
                 )
 
 

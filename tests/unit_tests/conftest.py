@@ -43,8 +43,8 @@ def tasks() -> list[Task]:
 
 
 @pytest.fixture
-async def task_queue(tasks: list[Task]):
-    queue = TaskQueue(converter=Converter(), broadcaster=Broadcaster())
+async def task_queue(tasks: list[Task], converter: Converter):
+    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
@@ -118,3 +118,23 @@ async def task_queue_with_history(task_queue: TaskQueue):
     call.put_in_progress()
     call.time_started = "2026-04-17T15:02:00.000000"
     return task_queue
+
+
+@pytest.fixture()
+def converter():
+    class DNConverter(Converter):
+        def _construct_blueapi_task_request(
+            self,
+            experiment: Experiment | TaskRequest,
+        ) -> TaskRequest:
+            match experiment:
+                case TaskRequest():
+                    return experiment
+                case Experiment():
+                    return TaskRequest(
+                        instrument_session=experiment.instrument_session,
+                        name=experiment.experiment_definition.name,
+                        params=experiment.experiment_definition.data,
+                    )
+
+    return DNConverter()

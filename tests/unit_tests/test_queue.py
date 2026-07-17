@@ -60,8 +60,8 @@ async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueu
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
 
 
-async def test_add_tasks_adds_to_call_queue():
-    task_queue = TaskQueue(converter=Converter(), broadcaster=Broadcaster())
+async def test_add_tasks_adds_to_call_queue(converter: Converter):
+    task_queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await task_queue.add_tasks([make_new_task("new"), make_new_task("new_2")])
     assert task_queue._call_queue == [
         BlueapiCall(
@@ -162,8 +162,9 @@ async def test_move_task_works_as_expected_and_returns_new_position(
     new_position: int,
     expected_order: list[int],
     expected_return_value: int,
+    converter: Converter,
 ):
-    queue = TaskQueue(converter=Converter(), broadcaster=Broadcaster())
+    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     tasks = [make_new_task(str(i)) for i in range(10)]
     await queue.add_tasks(tasks)
     task = str(task_to_move)
