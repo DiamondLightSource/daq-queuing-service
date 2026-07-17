@@ -24,6 +24,7 @@ from daq_queuing_service.api.api import (
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.app._config import TEST_CONFIG_PATH, load_config
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
+    BlueapiCall,
     BlueapiCallResponse,
     CallStatus,
 )
@@ -32,6 +33,7 @@ from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task import (
     Experiment,
     Status,
+    Task,
     TaskKind,
     TaskWithPosition,
 )
@@ -377,6 +379,35 @@ async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_i
         "error": "validation_error",
         "message": "Validation failed because xyz",
     }
+
+
+async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
+    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+):
+    assert task_queue_with_history._queue == ["2", "3", "4"]
+
+    class SomeError(Exception): ...
+
+    def fail_conversion(
+        queue: list[Task],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCall],
+    ):
+        raise SomeError("Conversion failed because xyz")
+
+    converter.pre_process = fail_conversion
+
+    response = test_client.post(
+        "/queue",
+        json=[{"name": "", "params": {}, "instrument_session": ""}],
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": "converter_error",
+        "message": "Conversion failed because xyz",
+    }
+    assert task_queue_with_history._queue == ["2", "3", "4"]
 
 
 @pytest.mark.parametrize(
