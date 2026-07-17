@@ -9,6 +9,9 @@ from daq_queuing_service.task import Experiment, Task, TaskWithPosition
 class ConverterError(Exception): ...
 
 
+class ValidateError(Exception): ...
+
+
 class Converter:
     def __init__(self): ...
 

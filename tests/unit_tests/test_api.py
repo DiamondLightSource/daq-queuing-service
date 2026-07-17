@@ -30,6 +30,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task import (
+    Experiment,
     Status,
     TaskKind,
     TaskWithPosition,
@@ -60,6 +61,7 @@ def app(
     task_queue_with_history: TaskQueue,
     blueapi_client: BlueapiRestClient,
     broadcaster: Broadcaster[QUEUE_EVENTS],
+    converter: Converter,
 ) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
@@ -68,7 +70,7 @@ def app(
             task_queue_with_history,
             broadcaster,
             load_config(Path(TEST_CONFIG_PATH)),
-            Converter(),
+            converter,
         )
     )
     return app
@@ -353,6 +355,28 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         status=Status.QUEUED,
         kind=TaskKind.PLAN,
     )
+
+
+async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_if_fails(
+    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+):
+    class SomeError(Exception): ...
+
+    def fail_validation(experiments: list[TaskRequest | Experiment]):
+        raise SomeError("Validation failed because xyz")
+
+    converter.validate = fail_validation
+
+    response = test_client.post(
+        "/queue",
+        json=[{"name": "", "params": {}, "instrument_session": ""}],
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": "validation_error",
+        "message": "Validation failed because xyz",
+    }
 
 
 @pytest.mark.parametrize(

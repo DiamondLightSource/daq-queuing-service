@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
-from daq_queuing_service.plugins.converter import Converter
+from daq_queuing_service.plugins.converter import Converter, ValidateError
 from daq_queuing_service.task import Experiment, Status, Task
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
@@ -82,7 +82,11 @@ def create_api_router(
         experiments: list[TaskRequest | Experiment],
         position: int | None = None,
     ) -> list[str]:
-        converter.validate(experiments)
+        try:
+            converter.validate(experiments)
+        except Exception as e:
+            raise ValidateError(*e.args) from e
+
         tasks = [Task(experiment=experiment) for experiment in experiments]
         task_ids = [task.id for task in tasks]
         await queue.add_tasks(tasks, position)
