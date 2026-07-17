@@ -28,6 +28,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
     CallStatus,
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
+from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task import (
     Status,
     TaskKind,
@@ -67,6 +68,7 @@ def app(
             task_queue_with_history,
             broadcaster,
             load_config(Path(TEST_CONFIG_PATH)),
+            Converter(),
         )
     )
     return app

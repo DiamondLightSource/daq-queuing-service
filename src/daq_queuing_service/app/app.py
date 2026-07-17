@@ -75,11 +75,7 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(
-        create_api_router(
-            app.state.queue,
-            broadcaster,
-            config,
-        )
+        create_api_router(app.state.queue, broadcaster, config, converter)
     )
 
     return app

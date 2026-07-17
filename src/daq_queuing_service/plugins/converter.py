@@ -6,8 +6,25 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.task import Experiment, Task, TaskWithPosition
 
 
+class ConverterError(Exception): ...
+
+
 class Converter:
     def __init__(self): ...
+
+    def validate(self, experiments: list[TaskRequest | Experiment]) -> None:
+        """This gets run on new experiments added to the queue through the api endpoint.
+        Any error raised will be handled and cause the experiments to not be added to
+        the queue.
+
+        Args:
+            experiments (list[TaskRequest  |  Experiment]): List of experiments or plans
+            added to the queue.
+
+        Raises:
+            Exception: Any exception raised due to experiments failing validation
+        """
+        ...
 
     def pre_process(
         self,
