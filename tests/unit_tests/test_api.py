@@ -97,7 +97,7 @@ def test_get_queue_state_returns_queue_state(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == {
         "paused": False,
-        "last_pause_reason": "Paused as queue completed",
+        "last_pause_reason": "Paused as last task errored",
     }
 
 
@@ -108,7 +108,7 @@ def test_resume_changes_queue_state_and_returns_new_state(
     assert response.status_code == 200
     assert response.json() == {
         "paused": False,
-        "last_pause_reason": PauseReason.EMPTY_QUEUE,
+        "last_pause_reason": PauseReason.ERROR,
     }
 
 

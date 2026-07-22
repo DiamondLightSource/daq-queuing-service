@@ -221,6 +221,7 @@ class TaskQueue:
             occurred when trying to run the task. Defaults to None.
         """
         async with self._modifying:
+            self._pause_queue(PauseReason.ERROR)
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)
             self._call_history.append(call)
@@ -374,6 +375,11 @@ class TaskQueue:
         LOGGER.info("Successfully cleared history")
 
     def _pause_queue(self, reason: PauseReason):
+        reason = (
+            reason
+            if reason == PauseReason.ERROR or not self._state.paused
+            else self._state.last_pause_reason
+        )
         self._state = QueueState(paused=True, last_pause_reason=reason)
         self._broadcaster.broadcast(Event(type="state_update", data=self._state))
 
