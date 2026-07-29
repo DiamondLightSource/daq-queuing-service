@@ -80,5 +80,8 @@ def get_converter(path: str, name: str) -> Converter:
         Converter: Converter instance
     """
     module = importlib.import_module(path)
-    converter_cls: type[Converter] = getattr(module, name)
-    return converter_cls()
+    converter_cls = getattr(module, name)
+    converter = converter_cls()
+    if not isinstance(converter, Converter):
+        raise TypeError(f"Converter is not of type Converter, it is {type(converter)}")
+    return converter

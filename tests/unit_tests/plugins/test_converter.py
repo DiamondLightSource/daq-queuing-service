@@ -8,11 +8,13 @@ from daq_queuing_service.task import Experiment, ExperimentDefinition, Sample
 
 
 def test_get_converter_returns_converter_from_path_and_name():
-    converter = get_converter(
-        "daq_queuing_service.plugins.converter",
-        "Converter",
-    )
+    converter = get_converter("daq_queuing_service.plugins.converter", "Converter")
     assert isinstance(converter, Converter)
+
+
+def test_get_converter_raises_error_if_imported_class_is_not_converter_type():
+    with pytest.raises(TypeError):
+        get_converter("daq_queuing_service.broadcaster", "Broadcaster")
 
 
 def test_default_converter_raises_error_when_converting_ulims_experiment():
