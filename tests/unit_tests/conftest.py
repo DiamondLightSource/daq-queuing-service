@@ -123,6 +123,7 @@ async def task_queue_with_history(task_queue: TaskQueue):
             await task_queue.fail_call(
                 call, [TaskError(type="ValueError", message="Error during plan")]
             )
+            await task_queue.resume_queue()
     # By this point should have 3 tasks in queue and 2 in history
     for i, call in enumerate(task_queue._call_history):
         # Real timestamps will break tests

@@ -24,6 +24,7 @@ from daq_queuing_service.task import (
 from daq_queuing_service.task_queue.queue import (
     PauseReason,
     QueueContents,
+    QueueState,
     TaskQueue,
     TaskRegistry,
     TaskWithPosition,
@@ -645,6 +646,47 @@ async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQue
     await task_queue.get_next_call_once_available()
 
 
+@pytest.mark.parametrize(
+    "initial_state, pause_reason, expected_state",
+    [
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+            PauseReason.ERROR,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+            PauseReason.EMPTY_QUEUE,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+            PauseReason.USER_REQUESTED,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+            PauseReason.EMPTY_QUEUE,
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+        ),
+        (
+            QueueState(paused=False, last_pause_reason=PauseReason.ERROR),
+            PauseReason.USER_REQUESTED,
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+        ),
+    ],
+)
+async def test__pause_queue_if_queue_already_paused_then_last_reason_kept_unless_error(
+    initial_state: QueueState,
+    pause_reason: PauseReason,
+    expected_state: QueueState,
+    task_queue: TaskQueue,
+):
+    task_queue._state = initial_state
+    task_queue._pause_queue(reason=pause_reason)
+    assert task_queue.state == expected_state
+
+
 async def test_claim_next_call_once_available_claims_task_and_returns(
     task_queue: TaskQueue,
 ):
@@ -779,6 +821,18 @@ async def test_fail_call_with_errors_adds_errors_to_call(
     await task_queue.fail_call(call, [str(error)])
     assert call.status == CallStatus.ERROR
     assert call.errors == ["This task failed"]
+
+
+async def test_fail_call_pauses_queue(task_queue: TaskQueue):
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    error = "This task failed"
+    await task_queue.fail_call(call, [str(error)])
+    assert task_queue.state == QueueState(
+        paused=True, last_pause_reason=PauseReason.ERROR
+    )
 
 
 async def test_return_call_to_queue_changes_task_status_to_waiting(
