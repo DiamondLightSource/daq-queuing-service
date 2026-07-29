@@ -43,6 +43,21 @@ def tasks() -> list[Task]:
 
 
 @pytest.fixture
+def bluesky_tasks() -> list[Task]:
+    return [
+        Task(
+            experiment=TaskRequest(
+                name="sleep",
+                instrument_session="cm12345-1",
+                params={"time": i},
+            ),
+            id=str(i),
+        )
+        for i in range(5)
+    ]
+
+
+@pytest.fixture
 async def task_queue(tasks: list[Task], converter: Converter):
     queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
