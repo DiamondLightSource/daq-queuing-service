@@ -478,8 +478,6 @@ class TaskQueue:
         deleted permanently and inaccessible.
         """
         async with self._modifying:
-            for task_id in self._history:
-                self._tasks.pop(task_id)
             self._history.clear()
         LOGGER.info("Successfully cleared history")
 
@@ -575,7 +573,7 @@ class TaskQueue:
         task_ids = list(task_ids)
         self._validate_tasks_for_move_or_deletion(task_ids)
         self._remove_tasks_from_queue(task_ids)
-        tasks = self._remove_tasks_from_registry(task_ids)
+        tasks = [self._tasks[task_id] for task_id in task_ids]
         for task in tasks:
             task.cancel()
         return [TaskWithPosition.from_task(task) for task in tasks]
@@ -593,7 +591,7 @@ class TaskQueue:
 
         return removed_ids
 
-    def _remove_tasks_from_registry(self, task_ids: list[str]) -> list[Task]:
+    def _remove_tasks_from_registry(self, task_ids: list[str]) -> None:
         # Only removes tasks not present in the queue or history
         # So should remove tasks from queue/history before removing from registry
         def should_be_removed(task_id: str) -> bool:
@@ -605,7 +603,6 @@ class TaskQueue:
             )
 
         removed_ids = [task_id for task_id in task_ids if should_be_removed(task_id)]
-        removed = [self._tasks[task_id] for task_id in removed_ids]
         self._tasks = TaskRegistry(
             {
                 task_id: task
@@ -613,7 +610,6 @@ class TaskQueue:
                 if task.id not in removed_ids
             }
         )
-        return removed
 
     def _validate_tasks_for_move_or_deletion(self, task_ids: list[str]):
         for task_id in task_ids:
