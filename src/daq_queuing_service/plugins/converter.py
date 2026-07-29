@@ -35,6 +35,24 @@ class Converter:
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
+        """This gets run whenever something changes in the queue, before
+        `construct_blueapi_calls`. It is an opportunity to automatically modify the
+        queue based on it's current state and history.
+
+        For example, it could be used to add calibration scans before any experiments
+        that require them. It could also be used to query another service such as ulims
+        and add experiments to the queue.
+
+        If not overridden, this method returns the queue as is with no modification.
+
+        Args:
+            queue (list[Task]): List of tasks currently in the queue
+            history (list[TaskWithPosition]): List of completed tasks
+            call_history (list[BlueapiCall]): List of completed blueapi calls
+
+        Returns:
+            list[Task]: The new list of tasks in the queue
+        """
         return queue
 
     def construct_blueapi_calls(
@@ -43,6 +61,20 @@ class Converter:
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[BlueapiCall]:
+        """Converts the list of queued tasks into a list of blueapi calls. This is
+        needed if the queue contains ulims experiments, as these must be mapped onto
+        bluesky plans. If the queue contains TaskRequests, they can just be
+        wrapped into BlueapiCall objects with no conversion, as this default
+        implementation does.
+
+        Args:
+            queue (list[TaskWithPosition]): List of tasks in the queue
+            history (list[TaskWithPosition]): List of completed tasks
+            call_history (list[BlueapiCall]): List of completed blueapi calls
+
+        Returns:
+            list[BlueapiCall]: List of blueapi calls to execute.
+        """
 
         call_list = [
             BlueapiCall(

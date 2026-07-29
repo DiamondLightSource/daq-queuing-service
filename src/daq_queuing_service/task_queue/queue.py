@@ -44,7 +44,23 @@ class QueueState(BaseModel):
 
 
 class QueueContents(TypedDict):
-    tasks: TaskRegistry
+    """A class to represent the contents of the queue
+
+    tasks (dict[str, Task]): A dict containing all the tasks contained in the queue,
+        including history, with the task ID as the key.
+
+    queue (list[str]): A list of the task IDs of the tasks in the queue. The order of
+        the list represents the order of the queue.
+
+    history (list[str]): A list of the task IDs of any completed tasks.
+
+    call_queue: (list[BlueapiCall]): A list of blueapi calls that will be executed in
+        order to complete the queued tasks.
+
+    call_history: (list[BlueapiCall]): A list of completed blueapi calls.
+    """
+
+    tasks: dict[str, Task]
     queue: list[str]
     history: list[str]
     call_queue: list[BlueapiCall]
@@ -224,7 +240,7 @@ class TaskQueue:
         self._last_good_contents = self._copy_contents()
 
     def _restore_from_contents(self, contents: QueueContents) -> None:
-        self._tasks = contents["tasks"]
+        self._tasks = TaskRegistry(contents["tasks"])
         self._queue = contents["queue"]
         self._history = contents["history"]
         self._call_queue = contents["call_queue"]
