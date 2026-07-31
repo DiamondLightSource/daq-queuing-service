@@ -1,8 +1,9 @@
 import asyncio
 from collections.abc import Callable, Sequence
+from copy import deepcopy
 from enum import StrEnum
 from types import TracebackType
-from typing import Any, Literal
+from typing import Literal, TypedDict
 
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter_utils import Converter
+from daq_queuing_service.plugins.converter import Converter, ConverterError
 from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
@@ -42,10 +43,46 @@ class QueueState(BaseModel):
     last_pause_reason: PauseReason
 
 
+class QueueContents(TypedDict):
+    """A class to represent the contents of the queue
+
+    tasks (dict[str, Task]): A dict containing all the tasks contained in the queue,
+        including history, with the task ID as the key.
+
+    queue (list[str]): A list of the task IDs of the tasks in the queue. The order of
+        the list represents the order of the queue.
+
+    history (list[str]): A list of the task IDs of any completed tasks.
+
+    call_queue: (list[BlueapiCall]): A list of blueapi calls that will be executed in
+        order to complete the queued tasks.
+
+    call_history: (list[BlueapiCall]): A list of completed blueapi calls.
+    """
+
+    tasks: dict[str, Task]
+    queue: list[str]
+    history: list[str]
+    call_queue: list[BlueapiCall]
+    call_history: list[BlueapiCall]
+
+
 class Modifying(asyncio.Condition):
-    def __init__(self, on_exit: Callable[[], Any]):
+    def __init__(
+        self,
+        on_enter: Callable[[], None],
+        on_exit: Callable[[], None],
+        on_error: Callable[[], None],
+    ):
         super().__init__()
+        self._on_enter = on_enter
         self._on_exit = on_exit
+        self._on_error = on_error
+
+    async def __aenter__(self):
+        result = await super().__aenter__()
+        self._on_enter()
+        return result
 
     async def __aexit__(
         self,
@@ -53,8 +90,19 @@ class Modifying(asyncio.Condition):
         exc: BaseException | None,
         tb: TracebackType | None,
     ):
-        self._on_exit()
-        return await super().__aexit__(exc_type, exc, tb)
+        try:
+            if exc is not None:
+                self._on_error()
+                return
+
+            self._on_exit()
+
+        except Exception:
+            self._on_error()
+            raise
+
+        finally:
+            await super().__aexit__(exc_type, exc, tb)
 
 
 QUEUE_EVENTS = Literal[
@@ -68,19 +116,24 @@ QUEUE_EVENTS = Literal[
 
 
 class TaskQueue:
-    def __init__(self, convert: Converter, broadcaster: Broadcaster[QUEUE_EVENTS]):
+    def __init__(self, converter: Converter, broadcaster: Broadcaster[QUEUE_EVENTS]):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
         self._call_queue: list[BlueapiCall] = []
         self._call_history: list[BlueapiCall] = []
+        self._save_contents()
         self._queue_history: list[BlueapiCall] = []
         self._state: QueueState = QueueState(
             paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE
         )
-        self._convert = convert
-        self._modifying = Modifying(on_exit=self._sync)
+        self._converter = converter
         self._broadcaster = broadcaster
+        self._modifying = Modifying(
+            on_enter=self._save_contents,
+            on_exit=self._sync,
+            on_error=self._restore_latest_good_contents,
+        )
 
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
@@ -103,6 +156,35 @@ class TaskQueue:
                 # If task is not in progress calls will be re-calculated
                 task.blueapi_calls = []
 
+        try:
+            new_tasks = self._converter.pre_process(
+                [
+                    self._tasks[task_id]
+                    for task_id in self._queue
+                    if self._tasks[task_id].status == Status.QUEUED
+                ],
+                self._get_history(),
+                self._queue_history,
+            )
+        except Exception as e:
+            raise ConverterError(*e.args) from e
+
+        # Update task_registry to match new tasks
+        # Not needed as long as pre_process modifies in place
+        for task in new_tasks:
+            self._tasks[task.id] = task
+
+        # Update queue to match new tasks
+        self._queue = [
+            task_id
+            for task_id in self._queue
+            if not self._tasks[task_id].status == Status.QUEUED
+        ]
+        self._queue.extend(task.id for task in new_tasks)
+
+        # This is needed because pre_process could remove tasks
+        self._remove_tasks_from_registry(list(self._tasks.keys()))
+
         self._call_queue = [
             # Persist calls which aren't complete but who's parent task is in progress
             # Once a task is in progress it is not provided to the converter
@@ -116,11 +198,15 @@ class TaskQueue:
             and call.status not in (CallStatus.SUCCESS, CallStatus.ERROR)
         ]
 
-        new_calls = self._convert(
-            [task for task in self._get_queue() if task.status == Status.QUEUED],
-            self._get_history(),
-            self._queue_history,
-        )
+        try:
+            new_calls = self._converter.construct_blueapi_calls(
+                [task for task in self._get_queue() if task.status == Status.QUEUED],
+                self._get_history(),
+                self._queue_history,
+            )
+        except Exception as e:
+            raise ConverterError(*e.args) from e
+
         self._call_queue.extend(new_calls)
 
         for call in new_calls:
@@ -133,6 +219,30 @@ class TaskQueue:
 
         self._broadcast_changes()
         self._modifying.notify_all()
+
+    def _copy_contents(self) -> QueueContents:
+        return deepcopy(
+            {
+                "tasks": self._tasks,
+                "queue": self._queue,
+                "history": self._history,
+                "call_queue": self._call_queue,
+                "call_history": self._call_history,
+            }
+        )
+
+    def _save_contents(self) -> None:
+        self._last_good_contents = self._copy_contents()
+
+    def _restore_from_contents(self, contents: QueueContents) -> None:
+        self._tasks = TaskRegistry(contents["tasks"])
+        self._queue = contents["queue"]
+        self._history = contents["history"]
+        self._call_queue = contents["call_queue"]
+        self._call_history = contents["call_history"]
+
+    def _restore_latest_good_contents(self) -> None:
+        self._restore_from_contents(self._last_good_contents)
 
     def _broadcast_changes(self):
         queue = self._get_queue()
@@ -369,8 +479,6 @@ class TaskQueue:
         deleted permanently and inaccessible.
         """
         async with self._modifying:
-            for task_id in self._history:
-                self._tasks.pop(task_id)
             self._history.clear()
         LOGGER.info("Successfully cleared history")
 
@@ -471,7 +579,7 @@ class TaskQueue:
         task_ids = list(task_ids)
         self._validate_tasks_for_move_or_deletion(task_ids)
         self._remove_tasks_from_queue(task_ids)
-        tasks = self._remove_tasks_from_registry(task_ids)
+        tasks = [self._tasks[task_id] for task_id in task_ids]
         for task in tasks:
             task.cancel()
         return [TaskWithPosition.from_task(task) for task in tasks]
@@ -489,8 +597,9 @@ class TaskQueue:
 
         return removed_ids
 
-    def _remove_tasks_from_registry(self, task_ids: list[str]) -> list[Task]:
-        # Should remove tasks from queue/history before removing from registry
+    def _remove_tasks_from_registry(self, task_ids: list[str]) -> None:
+        # Only removes tasks not present in the queue or history
+        # So should remove tasks from queue/history before removing from registry
         def should_be_removed(task_id: str) -> bool:
             return (
                 task_id in self._tasks
@@ -500,7 +609,6 @@ class TaskQueue:
             )
 
         removed_ids = [task_id for task_id in task_ids if should_be_removed(task_id)]
-        removed = [self._tasks[task_id] for task_id in removed_ids]
         self._tasks = TaskRegistry(
             {
                 task_id: task
@@ -508,7 +616,6 @@ class TaskQueue:
                 if task.id not in removed_ids
             }
         )
-        return removed
 
     def _validate_tasks_for_move_or_deletion(self, task_ids: list[str]):
         for task_id in task_ids:

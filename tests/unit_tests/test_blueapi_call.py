@@ -35,6 +35,7 @@ def test__update_status_raises_error_when_transitioned_to_wrong_status(
     call = BlueapiCall(
         status=old_status,
         task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
     )
     with pytest.raises(ValueError):
         call._update_status(new_status)
@@ -57,6 +58,7 @@ def test__update_status_changes_status_when_correct_new_status_given(
     call = BlueapiCall(
         status=old_status,
         task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
     )
     call._update_status(new_status)
     assert call.status == new_status
@@ -66,6 +68,7 @@ def test_wait_updates_status_to_waiting():
     call = BlueapiCall(
         status=CallStatus.CLAIMED,
         task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
     )
     call.wait()
     assert call.status == CallStatus.WAITING
@@ -75,6 +78,7 @@ def test_claim_updates_status_to_claimed():
     call = BlueapiCall(
         status=CallStatus.WAITING,
         task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
     )
     call.claim()
     assert call.status == CallStatus.CLAIMED
@@ -84,6 +88,7 @@ def test_put_in_progress_updates_status_to_in_progress_and_adds_fields():
     call = BlueapiCall(
         status=CallStatus.CLAIMED,
         task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
     )
     call.blueapi_id = "blueapi_id"
     call.put_in_progress()
@@ -96,6 +101,7 @@ def test_succeed_updates_status_to_success_and_adds_time_completed():
     call = BlueapiCall(
         status=CallStatus.IN_PROGRESS,
         task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
     )
     call.succeed(TaskResult(result=None, type="NoneType"))
     assert call.status == CallStatus.SUCCESS
@@ -106,6 +112,7 @@ def test_fail_updates_status_to_error_and_adds_time_completed_and_errors():
     call = BlueapiCall(
         status=CallStatus.IN_PROGRESS,
         task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
     )
     call.fail(["errors", "more_errors"])
     assert call.status == CallStatus.ERROR
