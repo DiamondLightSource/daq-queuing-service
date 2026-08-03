@@ -16,7 +16,7 @@ from blueapi.worker.event import TaskError, TaskResult
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
 from daq_queuing_service.log import HANDLER
-from daq_queuing_service.task_queue.queue import PauseReason, TaskQueue
+from daq_queuing_service.task_queue.queue import TaskQueue
 
 LOGGER = logging.getLogger("Queue Worker")
 LOGGER.addHandler(HANDLER)
@@ -80,12 +80,11 @@ class QueueWorker:
         match task_status.result:
             case TaskResult():
                 LOGGER.debug(
-                    f"Call {call} completed succesfully:  {task_status.result}"
+                    f"Call {call} completed successfully:  {task_status.result}"
                 )
                 await self._queue.complete_call(call, task_status.result)
             case TaskError():
                 LOGGER.debug(f"Call {call} failed: {task_status.result}. Pausing queue")
-                await self._queue.pause_queue(PauseReason.ERROR)
                 await self._queue.fail_call(call, [task_status.result])
 
     @staticmethod

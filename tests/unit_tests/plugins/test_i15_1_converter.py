@@ -7,13 +7,7 @@ from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
-from daq_queuing_service.plugins.i15_1.i15_1_converter import (
-    add_required_background_scans,
-    add_tiled_background_to_md,
-    construct_background_task_request,
-    construct_blueapi_tasks_from_i15_1_experiment,
-    construct_i15_1_blueapi_call_list,
-)
+from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
 from daq_queuing_service.task import (
     Experiment,
     ExperimentDefinition,
@@ -57,8 +51,10 @@ def tasks_and_calls(
                     task_request=task_request,
                     parent_task_id=task.id,
                 )
-                for task_request in construct_blueapi_tasks_from_i15_1_experiment(
-                    task.experiment
+                for task_request in (
+                    I151Converter()._construct_blueapi_tasks_from_experiment(
+                        task.experiment
+                    )
                 )
             ]
         )
@@ -72,7 +68,7 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
-    tasks = construct_blueapi_tasks_from_i15_1_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
     assert tasks[0].name == "robot_load"
     assert tasks[0].params["position"] == "8"
     assert tasks[0].params["puck"] == "1"
@@ -85,7 +81,7 @@ def test_sample_centre_uses_expected_params():
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
-    tasks = construct_blueapi_tasks_from_i15_1_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
     assert tasks[1].name == "centre_sample"
     assert tasks[1].params == {
         "start_z": -20,
@@ -106,7 +102,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
-    tasks = construct_blueapi_tasks_from_i15_1_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
     assert len(tasks) == 3
     for task in tasks:
         assert task.instrument_session == "cm12345-1"
@@ -129,7 +125,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         position=None,
         kind=TaskKind.EXPERIMENT,
     )
-    call_list = construct_i15_1_blueapi_call_list([task], [], [])
+    call_list = I151Converter().construct_blueapi_calls([task], [], [])
     assert len(call_list) == 3
 
 
@@ -160,7 +156,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     plan_task.experiment = TaskRequest(name="", instrument_session="")
     plan_task.kind = TaskKind.PLAN
     tasks = [good_task, bad_task, plan_task, good_task]
-    call_list = construct_i15_1_blueapi_call_list(tasks, [], [])
+    call_list = I151Converter().construct_blueapi_calls(tasks, [], [])
     assert len(call_list) == 7
 
 
@@ -183,7 +179,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_call_list
         position=None,
         kind=TaskKind.EXPERIMENT,
     )
-    tasks = construct_i15_1_blueapi_call_list([task], [], [])
+    tasks = I151Converter().construct_blueapi_calls([task], [], [])
     assert len(tasks) == 4
     assert tasks[0] == BlueapiCall(
         task_request=TaskRequest(
@@ -196,7 +192,8 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_call_list
                 }
             },
             instrument_session="cm12345-1",
-        )
+        ),
+        parent_task_id="1",
     )
 
 
@@ -209,7 +206,7 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
     bg_2 = BackgroundInfo(bg_type="capillary_1", cobra=True, blower=False)
     bg_3 = BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True)
 
-    def fake_get_required_background(experiment: Experiment):
+    def fake_get_required_background(self: I151Converter, experiment: Experiment):
         # Get the same background scans every other experiment
         # Only one of each background should be added
         if int(experiment.sample.id) % 2 == 0:
@@ -219,22 +216,31 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
 
     assert len(calls) == 15
     with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_required_backgrounds",
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.I151Converter._get_required_backgrounds",
         fake_get_required_background,
     ):
-        new_calls = add_required_background_scans(tasks, calls)
+        new_calls = I151Converter()._add_required_background_scans(tasks, calls)
 
     assert len(new_calls) == 18
 
     assert new_calls[0] == BlueapiCall(
-        task_request=construct_background_task_request(bg_1, instrument_session="")
+        task_request=I151Converter()._construct_background_task_request(
+            bg_1, instrument_session=""
+        ),
+        parent_task_id="0",
     )
     assert new_calls[1] == BlueapiCall(
-        task_request=construct_background_task_request(bg_2, instrument_session=""),
+        task_request=I151Converter()._construct_background_task_request(
+            bg_2, instrument_session=""
+        ),
+        parent_task_id="0",
     )
     # This one placed before the task that requires it
     assert new_calls[5] == BlueapiCall(
-        task_request=construct_background_task_request(bg_3, instrument_session=""),
+        task_request=I151Converter()._construct_background_task_request(
+            bg_3, instrument_session=""
+        ),
+        parent_task_id="1",
     )
 
 
@@ -253,15 +259,17 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
                     task_request=task_request,
                     parent_task_id=task.id,
                 )
-                for task_request in construct_blueapi_tasks_from_i15_1_experiment(
-                    task.experiment
+                for task_request in (
+                    I151Converter()._construct_blueapi_tasks_from_experiment(
+                        task.experiment
+                    )
                 )
             ]
         )
 
     assert len(calls) == 15
 
-    new_calls = add_required_background_scans(tasks, calls)
+    new_calls = I151Converter()._add_required_background_scans(tasks, calls)
 
     assert len(new_calls) == 17
     assert new_calls[0] == BlueapiCall(
@@ -275,7 +283,8 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
                 }
             },
             instrument_session="",
-        )
+        ),
+        parent_task_id="0",
     )
     assert new_calls[4] == BlueapiCall(
         task_request=TaskRequest(
@@ -288,7 +297,8 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
                 }
             },
             instrument_session="different",
-        )
+        ),
+        parent_task_id="1",
     )
 
 
@@ -297,7 +307,7 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     background_found_in_tiled: None,
 ):
     tasks, calls_before = tasks_and_calls
-    calls_after = add_required_background_scans(tasks, calls_before)
+    calls_after = I151Converter()._add_required_background_scans(tasks, calls_before)
     assert calls_after == calls_before
 
 
@@ -363,6 +373,6 @@ def test_add_tiled_background_to_md_adds_expected_metadata(
     expected_params: dict[str, Any],
 ):
     for tiled_id, background in zip(tiled_ids, backgrounds, strict=True):
-        add_tiled_background_to_md(params, tiled_id, background)
+        I151Converter()._add_tiled_background_to_md(params, tiled_id, background)
 
     assert params == expected_params

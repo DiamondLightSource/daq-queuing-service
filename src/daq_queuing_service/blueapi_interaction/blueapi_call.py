@@ -33,7 +33,7 @@ class CallStatus(StrEnum):
 
 class BlueapiCall(BaseModel):
     task_request: TaskRequest
-    parent_task_id: str | None = None
+    parent_task_id: str
     status: CallStatus = CallStatus.WAITING
     time_started: str | None = None
     time_completed: str | None = None

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from daq_queuing_service.plugins.converter import ConverterError, ValidateError
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     QueueError,
@@ -52,4 +53,18 @@ def register_exception_handlers(app: FastAPI):
         return JSONResponse(
             status_code=409,
             content={"error": "queue_error", "message": str(exception)},
+        )
+
+    @app.exception_handler(ValidateError)
+    async def validation_error_handler(request: Request, exception: ValidateError):
+        return JSONResponse(
+            status_code=422,
+            content={"error": "validation_error", "message": str(exception)},
+        )
+
+    @app.exception_handler(ConverterError)
+    async def converter_error_handler(request: Request, exception: ConverterError):
+        return JSONResponse(
+            status_code=422,
+            content={"error": "converter_error", "message": str(exception)},
         )

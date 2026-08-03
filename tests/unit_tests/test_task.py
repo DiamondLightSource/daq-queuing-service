@@ -32,7 +32,9 @@ def test_task_status_derived_correctly_from_call_statuses(
     task = Task(
         blueapi_calls=[
             BlueapiCall(
-                status=status, task_request=TaskRequest(name="", instrument_session="")
+                status=status,
+                task_request=TaskRequest(name="", instrument_session=""),
+                parent_task_id="",
             )
             for status in blueapi_call_statuses
         ],

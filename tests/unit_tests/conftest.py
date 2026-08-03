@@ -6,9 +6,7 @@ from pytest import MonkeyPatch
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.construct_task_request import (
-    construct_blueapi_call_list,
-)
+from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task import (
     Experiment,
     ExperimentDefinition,
@@ -45,8 +43,23 @@ def tasks() -> list[Task]:
 
 
 @pytest.fixture
-async def task_queue(tasks: list[Task]):
-    queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
+def bluesky_tasks() -> list[Task]:
+    return [
+        Task(
+            experiment=TaskRequest(
+                name="sleep",
+                instrument_session="cm12345-1",
+                params={"time": i},
+            ),
+            id=str(i),
+        )
+        for i in range(5)
+    ]
+
+
+@pytest.fixture
+async def task_queue(tasks: list[Task], converter: Converter):
+    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
@@ -54,7 +67,7 @@ async def task_queue(tasks: list[Task]):
 
 @pytest.fixture
 async def task_queue_one_to_many(tasks: list[Task]):
-    def construct_blueapi_call_list(
+    def construct_blueapi_calls(
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
@@ -75,7 +88,10 @@ async def task_queue_one_to_many(tasks: list[Task]):
                 )
         return call_list
 
-    queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
+    converter = Converter()
+    converter.construct_blueapi_calls = construct_blueapi_calls
+
+    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
@@ -107,6 +123,7 @@ async def task_queue_with_history(task_queue: TaskQueue):
             await task_queue.fail_call(
                 call, [TaskError(type="ValueError", message="Error during plan")]
             )
+            await task_queue.resume_queue()
     # By this point should have 3 tasks in queue and 2 in history
     for i, call in enumerate(task_queue._call_history):
         # Real timestamps will break tests
@@ -117,3 +134,23 @@ async def task_queue_with_history(task_queue: TaskQueue):
     call.put_in_progress()
     call.time_started = "2026-04-17T15:02:00.000000"
     return task_queue
+
+
+@pytest.fixture()
+def converter():
+    class DNConverter(Converter):
+        def _construct_blueapi_task_request(
+            self,
+            experiment: Experiment | TaskRequest,
+        ) -> TaskRequest:
+            match experiment:
+                case TaskRequest():
+                    return experiment
+                case Experiment():
+                    return TaskRequest(
+                        instrument_session=experiment.instrument_session,
+                        name=experiment.experiment_definition.name,
+                        params=experiment.experiment_definition.data,
+                    )
+
+    return DNConverter()

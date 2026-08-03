@@ -24,12 +24,16 @@ from daq_queuing_service.api.api import (
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.app._config import TEST_CONFIG_PATH, load_config
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
+    BlueapiCall,
     BlueapiCallResponse,
     CallStatus,
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
+from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task import (
+    Experiment,
     Status,
+    Task,
     TaskKind,
     TaskWithPosition,
 )
@@ -59,6 +63,7 @@ def app(
     task_queue_with_history: TaskQueue,
     blueapi_client: BlueapiRestClient,
     broadcaster: Broadcaster[QUEUE_EVENTS],
+    converter: Converter,
 ) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
@@ -67,6 +72,7 @@ def app(
             task_queue_with_history,
             broadcaster,
             load_config(Path(TEST_CONFIG_PATH)),
+            converter,
         )
     )
     return app
@@ -97,7 +103,7 @@ def test_get_queue_state_returns_queue_state(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == {
         "paused": False,
-        "last_pause_reason": "Paused as queue completed",
+        "last_pause_reason": "Paused as last task errored",
     }
 
 
@@ -108,7 +114,7 @@ def test_resume_changes_queue_state_and_returns_new_state(
     assert response.status_code == 200
     assert response.json() == {
         "paused": False,
-        "last_pause_reason": PauseReason.EMPTY_QUEUE,
+        "last_pause_reason": PauseReason.ERROR,
     }
 
 
@@ -351,6 +357,57 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         status=Status.QUEUED,
         kind=TaskKind.PLAN,
     )
+
+
+async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_if_fails(
+    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+):
+    class SomeError(Exception): ...
+
+    def fail_validation(experiments: list[TaskRequest | Experiment]):
+        raise SomeError("Validation failed because xyz")
+
+    converter.validate = fail_validation
+
+    response = test_client.post(
+        "/queue",
+        json=[{"name": "", "params": {}, "instrument_session": ""}],
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": "validation_error",
+        "message": "Validation failed because xyz",
+    }
+
+
+async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
+    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+):
+    assert task_queue_with_history._queue == ["2", "3", "4"]
+
+    class SomeError(Exception): ...
+
+    def fail_conversion(
+        queue: list[Task],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCall],
+    ):
+        raise SomeError("Conversion failed because xyz")
+
+    converter.pre_process = fail_conversion
+
+    response = test_client.post(
+        "/queue",
+        json=[{"name": "", "params": {}, "instrument_session": ""}],
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": "converter_error",
+        "message": "Conversion failed because xyz",
+    }
+    assert task_queue_with_history._queue == ["2", "3", "4"]
 
 
 @pytest.mark.parametrize(
@@ -835,8 +892,8 @@ def test_get_config_returns_config(test_client: TestClient):
     response = test_client.get("/config")
     assert response.status_code == 200
     assert response.json()["converter"] == {
-        "path": "daq_queuing_service.plugins.construct_task_request",
-        "name": "construct_blueapi_call_list",
+        "path": "daq_queuing_service.plugins.converter",
+        "name": "Converter",
     }
 
 

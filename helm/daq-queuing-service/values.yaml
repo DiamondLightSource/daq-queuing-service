@@ -57,8 +57,8 @@ config:
         username: guest
         password: guest
   converter:
-    path: "daq_queuing_service.plugins.construct_task_request"
-    name: "construct_blueapi_call_list"
+    path: "daq_queuing_service.plugins.converter"
+    name: "Converter"
   uvicorn:
     workers: 1
   # Send logs to the dodal graylog stream for now until a more suitable stream exists
