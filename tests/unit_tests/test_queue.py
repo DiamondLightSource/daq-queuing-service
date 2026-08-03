@@ -12,9 +12,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
     CallStatus,
 )
 from daq_queuing_service.broadcaster import Broadcaster
-from daq_queuing_service.plugins.construct_task_request import (
-    construct_blueapi_call_list,
-)
+from daq_queuing_service.plugins.converter import Converter, ConverterError
 from daq_queuing_service.task import (
     Experiment,
     ExperimentDefinition,
@@ -24,7 +22,11 @@ from daq_queuing_service.task import (
     TaskKind,
 )
 from daq_queuing_service.task_queue.queue import (
+    PauseReason,
+    QueueContents,
+    QueueState,
     TaskQueue,
+    TaskRegistry,
     TaskWithPosition,
 )
 from daq_queuing_service.task_queue.queue_utils import (
@@ -61,10 +63,8 @@ async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueu
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
 
 
-async def test_add_tasks_adds_to_call_queue():
-    task_queue = TaskQueue(
-        convert=construct_blueapi_call_list, broadcaster=Broadcaster()
-    )
+async def test_add_tasks_adds_to_call_queue(converter: Converter):
+    task_queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await task_queue.add_tasks([make_new_task("new"), make_new_task("new_2")])
     assert task_queue._call_queue == [
         BlueapiCall(
@@ -165,8 +165,9 @@ async def test_move_task_works_as_expected_and_returns_new_position(
     new_position: int,
     expected_order: list[int],
     expected_return_value: int,
+    converter: Converter,
 ):
-    queue = TaskQueue(convert=construct_blueapi_call_list, broadcaster=Broadcaster())
+    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     tasks = [make_new_task(str(i)) for i in range(10)]
     await queue.add_tasks(tasks)
     task = str(task_to_move)
@@ -633,16 +634,57 @@ async def test_clear_history_removes_history_and_removes_completed_tasks_from_re
 
 
 async def test_pausing_queue_prevents_task_from_being_claimed(task_queue: TaskQueue):
-    await task_queue.update_state(paused=True)
+    await task_queue.pause_queue(PauseReason.EMPTY_QUEUE)
     assert task_queue.state.paused
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.get_next_call_once_available(), timeout=0.05)
 
 
 async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQueue):
-    await task_queue.update_state(paused=False)
+    await task_queue.resume_queue()
     assert not task_queue.state.paused
     await task_queue.get_next_call_once_available()
+
+
+@pytest.mark.parametrize(
+    "initial_state, pause_reason, expected_state",
+    [
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+            PauseReason.ERROR,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+            PauseReason.EMPTY_QUEUE,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+            PauseReason.USER_REQUESTED,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+            PauseReason.EMPTY_QUEUE,
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+        ),
+        (
+            QueueState(paused=False, last_pause_reason=PauseReason.ERROR),
+            PauseReason.USER_REQUESTED,
+            QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
+        ),
+    ],
+)
+async def test__pause_queue_if_queue_already_paused_then_last_reason_kept_unless_error(
+    initial_state: QueueState,
+    pause_reason: PauseReason,
+    expected_state: QueueState,
+    task_queue: TaskQueue,
+):
+    task_queue._state = initial_state
+    task_queue._pause_queue(reason=pause_reason)
+    assert task_queue.state == expected_state
 
 
 async def test_claim_next_call_once_available_claims_task_and_returns(
@@ -699,13 +741,13 @@ async def test_wait_until_call_available_waits_if_next_task_is_in_progress(
 async def test_wait_until_call_available_waits_if_queue_paused(
     task_queue: TaskQueue,
 ):
-    await task_queue.update_state(paused=True)
+    await task_queue.pause_queue(PauseReason.EMPTY_QUEUE)
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
 async def test_wait_until_call_available_waits_if_queue_empty():
-    task_queue = TaskQueue(construct_blueapi_call_list, Broadcaster())
+    task_queue = TaskQueue(Converter(), Broadcaster())
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
@@ -779,6 +821,18 @@ async def test_fail_call_with_errors_adds_errors_to_call(
     await task_queue.fail_call(call, [str(error)])
     assert call.status == CallStatus.ERROR
     assert call.errors == ["This task failed"]
+
+
+async def test_fail_call_pauses_queue(task_queue: TaskQueue):
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    error = "This task failed"
+    await task_queue.fail_call(call, [str(error)])
+    assert task_queue.state == QueueState(
+        paused=True, last_pause_reason=PauseReason.ERROR
+    )
 
 
 async def test_return_call_to_queue_changes_task_status_to_waiting(
@@ -879,6 +933,7 @@ async def test__sync_correctly_moves_tasks_with_all_completed_calls_into_history
     completed_blueapi_call = BlueapiCall(
         task_request=TaskRequest(name="sync_test", instrument_session=""),
         status=CallStatus.SUCCESS,
+        parent_task_id="",
     )
 
     a_task.blueapi_calls = [
@@ -903,6 +958,7 @@ async def test__sync_correctly_moves_tasks_with_any_errored_calls_into_history(
     errored_blueapi_call = BlueapiCall(
         task_request=TaskRequest(name="sync_test", instrument_session=""),
         status=CallStatus.ERROR,
+        parent_task_id="",
     )
 
     a_task.blueapi_calls[0] = errored_blueapi_call
@@ -955,6 +1011,7 @@ async def test__sync_skips_subsequent_calls_if_previous_one_failed_within_a_task
     errored_blueapi_call = BlueapiCall(
         task_request=TaskRequest(name="sync_test", instrument_session=""),
         status=CallStatus.ERROR,
+        parent_task_id="",
     )
 
     a_task.blueapi_calls[0] = errored_blueapi_call
@@ -962,3 +1019,136 @@ async def test__sync_skips_subsequent_calls_if_previous_one_failed_within_a_task
     task_queue_one_to_many._sync()
     assert a_task.blueapi_calls[0].status == Status.ERROR
     assert all(call.status == CallStatus.SKIPPED for call in a_task.blueapi_calls[1:])
+
+
+async def test__sync_pauses_queue_if_no_more_items(
+    task_queue: TaskQueue,
+):
+    task_queue._modifying = MagicMock()
+    task_queue.state.paused = False
+    task_queue._queue = []
+    task_queue._call_queue = []
+
+    task_queue._sync()
+
+    assert task_queue.state.paused
+    assert task_queue.state.last_pause_reason == PauseReason.EMPTY_QUEUE
+
+
+def test__copy_contents_creates_copies(task_queue: TaskQueue):
+    contents = task_queue._copy_contents()
+    assert isinstance(contents["tasks"]["4"].experiment, Experiment)
+    a_task = task_queue._tasks["4"]
+    assert isinstance(a_task.experiment, Experiment)
+
+    assert a_task.experiment.sample.name == "test_8_4"
+    a_task.experiment.sample.name = "changed_name"
+
+    assert contents["tasks"]["4"].experiment.sample.name == "test_8_4"
+
+
+def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
+    new_queue = ["10"]
+    new_history = ["9"]
+    new_call_queue = [
+        BlueapiCall(
+            task_request=TaskRequest(
+                name="task_10", params={}, instrument_session="session_10"
+            ),
+            parent_task_id="10",
+        )
+    ]
+    new_call_history = [
+        BlueapiCall(
+            task_request=TaskRequest(
+                name="task_9", params={}, instrument_session="session_9"
+            ),
+            parent_task_id="9",
+        )
+    ]
+    new_tasks = TaskRegistry()
+    new_tasks["9"] = Task(
+        experiment=TaskRequest(
+            name="task_9", params={}, instrument_session="session_9"
+        ),
+        blueapi_calls=new_call_history,
+    )
+    new_tasks["10"] = Task(
+        experiment=TaskRequest(
+            name="task_10",
+            params={},
+            instrument_session="session_10",
+        ),
+        blueapi_calls=new_call_queue,
+    )
+
+    new_contents: QueueContents = {
+        "tasks": new_tasks,
+        "queue": new_queue,
+        "history": new_history,
+        "call_queue": new_call_queue,
+        "call_history": new_call_history,
+    }
+
+    task_queue._restore_from_contents(new_contents)
+
+    assert task_queue._queue == new_queue
+    assert task_queue._history == new_history
+    assert task_queue._tasks == new_tasks
+    assert task_queue._call_queue == new_call_queue
+    assert task_queue._call_history == new_call_history
+
+
+async def test__last_good_contents_updated_when_modifying_lock_entered(
+    task_queue: TaskQueue,
+):
+    task_queue._queue = ["should be copied"]
+
+    async with task_queue._modifying:
+        task_queue._queue = []
+
+    assert task_queue._last_good_contents["queue"] == ["should be copied"]
+    assert task_queue._queue == []
+
+
+async def test_if_error_during_conversion_then_error_handled_and_contents_restored(
+    task_queue: TaskQueue,
+):
+    def convert(
+        queue: list[TaskWithPosition],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCall],
+    ):
+        for task_id in task_queue._queue:
+            del task_queue._tasks[task_id]
+        task_queue._queue = []
+
+        raise ValueError("Conversion failed")
+
+    task_queue._converter.construct_blueapi_calls = convert
+
+    with pytest.raises(ConverterError):
+        await task_queue.get_queue()
+
+    assert task_queue._queue == ["0", "1", "2", "3", "4"]
+    assert list(task_queue._tasks.keys()) == ["0", "1", "2", "3", "4"]
+
+
+async def test_if_error_during_conversion_then__restore_latest_good_contents_called(
+    task_queue: TaskQueue,
+):
+    def convert(
+        queue: list[TaskWithPosition],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCall],
+    ):
+        raise ValueError("Conversion failed")
+
+    task_queue._converter.construct_blueapi_calls = convert
+    task_queue._restore_latest_good_contents = MagicMock()
+    task_queue.__init__(task_queue._converter, task_queue._broadcaster)
+
+    with pytest.raises(ConverterError):
+        await task_queue.get_queue()
+
+    task_queue._restore_latest_good_contents.assert_called_once()
