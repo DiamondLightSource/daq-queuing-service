@@ -1,7 +1,7 @@
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.client.client import QueueClient
-from daq_queuing_service.task_queue.queue import QueueState
+from daq_queuing_service.task_queue.queue import PauseReason, QueueState
 
 # Example of how to add tasks to the queue using the Python client
 # Need a local queue running on port 8001 for this to work
@@ -11,11 +11,12 @@ def main():
     client = QueueClient("http://127.0.0.1:8001")
 
     # Pause the queue
-    client.update_queue_state(QueueState(paused=True))
+    client.update_queue_state(
+        QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED)
+    )
 
     # Clear everything in the queue
     client.cancel_all_tasks()
-
     # Add 10 sleep plans to the queue
     client.add_tasks_to_queue(
         [
