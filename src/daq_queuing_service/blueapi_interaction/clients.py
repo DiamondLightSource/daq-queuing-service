@@ -1,5 +1,3 @@
-from unittest.mock import MagicMock
-
 from blueapi.client import BlueapiClient
 from blueapi.client.event_bus import EventBusClient
 from blueapi.client.rest import BlueapiRestClient
@@ -10,9 +8,6 @@ from daq_queuing_service.blueapi_interaction.token_retriever import UDCTokenRetr
 
 
 def get_blueapi_clients(blueapi_config: ApplicationConfig) -> BlueapiClient:
-    if not blueapi_config.oidc:
-        blueapi_config.oidc = MagicMock()
-
     blueapi_rest_client = BlueapiRestClient(
         config=blueapi_config.api,
         #  Waiting on https://github.com/DiamondLightSource/blueapi/pull/1553

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from daq_queuing_service.plugins.converter import ConverterError, ValidateError
 from daq_queuing_service.task_queue.queue_utils import (
@@ -10,7 +11,11 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotInQueueError,
 )
 
+
 # pyright: reportUnusedFunction=false
+class ErrorContent(BaseModel):
+    error: str
+    message: str
 
 
 def register_exception_handlers(app: FastAPI):
@@ -20,14 +25,18 @@ def register_exception_handlers(app: FastAPI):
     ):
         return JSONResponse(
             status_code=409,
-            content={"error": "task_in_progress", "message": str(exception)},
+            content=ErrorContent(
+                error="task_in_progress", message=str(exception)
+            ).model_dump(),
         )
 
     @app.exception_handler(TaskNotFoundError)
     async def task_not_found_handler(request: Request, exception: TaskNotFoundError):
         return JSONResponse(
             status_code=404,
-            content={"error": "task_not_found", "message": str(exception)},
+            content=ErrorContent(
+                error="task_not_found", message=str(exception)
+            ).model_dump(),
         )
 
     @app.exception_handler(TaskNotInQueueError)
@@ -36,7 +45,9 @@ def register_exception_handlers(app: FastAPI):
     ):
         return JSONResponse(
             status_code=409,
-            content={"error": "task_not_in_queue", "message": str(exception)},
+            content=ErrorContent(
+                error="task_not_in_queue", message=str(exception)
+            ).model_dump(),
         )
 
     @app.exception_handler(NegativePositionError)
@@ -45,14 +56,18 @@ def register_exception_handlers(app: FastAPI):
     ):
         return JSONResponse(
             status_code=400,
-            content={"error": "negative_position", "message": str(exception)},
+            content=ErrorContent(
+                error="negative_position", message=str(exception)
+            ).model_dump(),
         )
 
     @app.exception_handler(QueueError)
     async def queue_error_handler(request: Request, exception: QueueError):
         return JSONResponse(
             status_code=409,
-            content={"error": "queue_error", "message": str(exception)},
+            content=ErrorContent(
+                error="queue_error", message=str(exception)
+            ).model_dump(),
         )
 
     @app.exception_handler(ValidateError)
