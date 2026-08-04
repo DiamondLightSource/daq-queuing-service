@@ -56,7 +56,7 @@ def test_get_background_tiled_id_makes_expected_searches(
     search_2.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_3.search.assert_called_once_with(
         Eq(
-            key="start.background",
+            key="start.experiment_definition.metadata.background",
             value='{"bg_type":"air","cobra":false,"blower":false}',
         )
     )

@@ -188,9 +188,9 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     tasks[0].id = ""
     assert tasks[0].model_dump() == {
         "experiment": {
-            "name": "background",
+            "name": "Background",
             "instrument_session": "cm12345-1",
-            "sample": {"name": "air", "id": "", "data": {}},
+            "sample": {"name": "air_1_1", "id": "", "data": {}},
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
@@ -270,14 +270,18 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
     new_tasks[0].id = ""
     assert new_tasks[0].model_dump() == {
         "experiment": {
-            "name": "background",
+            "name": "Background",
             "instrument_session": "",
-            "sample": {"name": "air", "id": "", "data": {}},
+            "sample": {"name": "air_1_1", "id": "", "data": {}},
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
                 "data": {
-                    "background": {"bg_type": "air", "cobra": False, "blower": False}
+                    "background": {
+                        "bg_type": "air",
+                        "cobra": False,
+                        "blower": False,
+                    }
                 },
             },
         },
@@ -289,9 +293,9 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
     new_tasks[2].id = ""
     assert new_tasks[2].model_dump() == {
         "experiment": {
-            "name": "background",
+            "name": "Background",
             "instrument_session": "different",
-            "sample": {"name": "air", "id": "", "data": {}},
+            "sample": {"name": "air_1_1", "id": "", "data": {}},
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",

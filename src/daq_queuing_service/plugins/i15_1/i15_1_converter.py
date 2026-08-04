@@ -26,8 +26,7 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        queue_with_backgrounds = self._add_required_background_scans(queue)
-        return self._remove_repeated_backgrounds(queue_with_backgrounds)
+        return self._add_required_background_scans(queue)
 
     def construct_blueapi_calls(
         self,
@@ -119,7 +118,7 @@ class I151Converter(Converter):
                         new_tasks.append(Task(experiment=bg_experiment))
 
             new_tasks.append(task)
-        return new_tasks
+        return self._remove_repeated_backgrounds(new_tasks)
 
     def _remove_repeated_backgrounds(self, tasks: list[Task]) -> list[Task]:
         new_tasks: list[Task] = []
