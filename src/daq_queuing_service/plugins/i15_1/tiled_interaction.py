@@ -1,10 +1,14 @@
+from cachetools import TTLCache, cached
 from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.queries import Eq
 
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 
+cache: TTLCache[tuple[BackgroundInfo, str], str | None] = TTLCache(maxsize=100, ttl=1)
 
+
+@cached(cache)
 def get_background_tiled_id(
     required_background: BackgroundInfo, instrument_session: str
 ) -> str | None:
