@@ -26,7 +26,8 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        return self._add_required_background_scans(queue)
+        queue_with_backgrounds = self._add_required_background_scans(queue)
+        return self._remove_repeated_backgrounds(queue_with_backgrounds)
 
     def construct_blueapi_calls(
         self,
@@ -99,7 +100,7 @@ class I151Converter(Converter):
 
         for task in tasks:
             experiment = task.experiment
-            if isinstance(experiment, Experiment):
+            if isinstance(experiment, Experiment) and experiment.name != "Background":
                 instrument_session = experiment.instrument_session
                 backgrounds = self._get_required_backgrounds(experiment)
 
@@ -115,12 +116,22 @@ class I151Converter(Converter):
                         bg_experiment = self._construct_background_experiment(
                             background, instrument_session
                         )
-                        if bg_experiment not in [
-                            t.experiment for t in tasks + new_tasks
-                        ]:
-                            new_tasks.append(Task(experiment=bg_experiment))
+                        new_tasks.append(Task(experiment=bg_experiment))
 
             new_tasks.append(task)
+        return new_tasks
+
+    def _remove_repeated_backgrounds(self, tasks: list[Task]) -> list[Task]:
+        new_tasks: list[Task] = []
+        queued_background_experiments: list[Experiment] = []
+
+        for task in tasks:
+            if task.experiment.name != "Background":
+                new_tasks.append(task)
+            elif task.experiment not in queued_background_experiments:
+                assert isinstance(task.experiment, Experiment)
+                queued_background_experiments.append(task.experiment)
+                new_tasks.append(task)
         return new_tasks
 
     def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
@@ -141,10 +152,10 @@ class I151Converter(Converter):
         self, background: BackgroundInfo, instrument_session: str
     ) -> Experiment:
         return Experiment(
-            name="background",
+            name="Background",
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=Sample(name="air", id="", data={}),
+            sample=Sample(name="air_1_1", id="", data={}),
             experiment_definition=ExperimentDefinition(
                 name="background_scan", id="", data={"background": background}
             ),
