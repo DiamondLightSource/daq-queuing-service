@@ -19,6 +19,14 @@ from daq_queuing_service.task import (
 )
 
 
+def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPosition):
+    # Check two tasks are equal other than the generated UUID
+    copy1 = type(task1).model_validate(task1)
+    copy2 = type(task2).model_validate(task2)
+    copy1.id = copy2.id = ""
+    assert task1 == task2
+
+
 @pytest.fixture(autouse=True)
 def background_found_in_tiled():
     with patch(
@@ -160,7 +168,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     assert len(call_list) == 7
 
 
-def test_if_no_background_found_in_tiled_then_background_scan_added_to_call_list(
+def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     background_not_found_in_tiled: None,
 ):
     experiment = Experiment(
@@ -171,37 +179,36 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_call_list
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
-    task = TaskWithPosition(
+    task = Task(
         experiment=experiment,
         id="1",
-        status=Status.QUEUED,
-        blueapi_calls=[],
-        position=None,
-        kind=TaskKind.EXPERIMENT,
     )
-    tasks = I151Converter().construct_blueapi_calls([task], [], [])
-    assert len(tasks) == 4
-    assert tasks[0] == BlueapiCall(
-        task_request=TaskRequest(
-            name="static_collection",
-            params={
-                "metadata": {
-                    "background": BackgroundInfo(
-                        bg_type="air", cobra=False, blower=False
-                    )
-                }
+    tasks = I151Converter().pre_process([task], [], [])
+    assert len(tasks) == 2
+    tasks[0].id = ""
+    assert tasks[0].model_dump() == {
+        "experiment": {
+            "name": "background",
+            "instrument_session": "cm12345-1",
+            "sample": {"name": "air", "id": "", "data": {}},
+            "experiment_definition": {
+                "name": "background_scan",
+                "id": "",
+                "data": {
+                    "background": {"bg_type": "air", "cobra": False, "blower": False}
+                },
             },
-            instrument_session="cm12345-1",
-        ),
-        parent_task_id="1",
-    )
+        },
+        "id": "",
+        "blueapi_calls": [],
+        "status": Status.QUEUED,
+        "kind": TaskKind.EXPERIMENT,
+    }
 
 
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
-    tasks_and_calls: tuple[list[TaskWithPosition], list[BlueapiCall]],
-    background_not_found_in_tiled: None,
+    tasks: list[Task], background_not_found_in_tiled: None
 ):
-    tasks, calls = tasks_and_calls
     bg_1 = BackgroundInfo(bg_type="air", cobra=False, blower=False)
     bg_2 = BackgroundInfo(bg_type="capillary_1", cobra=True, blower=False)
     bg_3 = BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True)
@@ -214,101 +221,98 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
         else:
             return [bg_3]
 
-    assert len(calls) == 15
+    assert len(tasks) == 5
     with patch(
         "daq_queuing_service.plugins.i15_1.i15_1_converter.I151Converter._get_required_backgrounds",
         fake_get_required_background,
     ):
-        new_calls = I151Converter()._add_required_background_scans(tasks, calls)
+        new_tasks = I151Converter()._add_required_background_scans(tasks)
 
-    assert len(new_calls) == 18
+    assert len(new_tasks) == 8
 
-    assert new_calls[0] == BlueapiCall(
-        task_request=I151Converter()._construct_background_task_request(
-            bg_1, instrument_session=""
+    assert_tasks_equal(
+        new_tasks[0],
+        Task(
+            experiment=I151Converter()._construct_background_experiment(
+                bg_1, instrument_session=""
+            ),
         ),
-        parent_task_id="0",
     )
-    assert new_calls[1] == BlueapiCall(
-        task_request=I151Converter()._construct_background_task_request(
-            bg_2, instrument_session=""
+    assert_tasks_equal(
+        new_tasks[1],
+        Task(
+            experiment=I151Converter()._construct_background_experiment(
+                bg_2, instrument_session=""
+            ),
         ),
-        parent_task_id="0",
     )
     # This one placed before the task that requires it
-    assert new_calls[5] == BlueapiCall(
-        task_request=I151Converter()._construct_background_task_request(
-            bg_3, instrument_session=""
+    assert_tasks_equal(
+        new_tasks[3],
+        Task(
+            experiment=I151Converter()._construct_background_experiment(
+                bg_3, instrument_session=""
+            ),
         ),
-        parent_task_id="1",
     )
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_background_in_each(
-    tasks_and_calls: tuple[list[TaskWithPosition], list[BlueapiCall]],
-    background_not_found_in_tiled: None,
+    tasks: list[Task], background_not_found_in_tiled: None
 ):
-    tasks, _ = tasks_and_calls
     tasks[1].experiment.instrument_session = "different"
-    calls: list[BlueapiCall] = []
-    for task in tasks:
-        assert isinstance(task.experiment, Experiment)
-        calls.extend(
-            [
-                BlueapiCall(
-                    task_request=task_request,
-                    parent_task_id=task.id,
-                )
-                for task_request in (
-                    I151Converter()._construct_blueapi_tasks_from_experiment(
-                        task.experiment
-                    )
-                )
-            ]
-        )
 
-    assert len(calls) == 15
+    assert len(tasks) == 5
 
-    new_calls = I151Converter()._add_required_background_scans(tasks, calls)
+    new_tasks = I151Converter()._add_required_background_scans(tasks)
 
-    assert len(new_calls) == 17
-    assert new_calls[0] == BlueapiCall(
-        task_request=TaskRequest(
-            name="static_collection",
-            params={
-                "metadata": {
-                    "background": BackgroundInfo(
-                        bg_type="air", cobra=False, blower=False
-                    )
-                }
+    assert len(new_tasks) == 7
+    new_tasks[0].id = ""
+    assert new_tasks[0].model_dump() == {
+        "experiment": {
+            "name": "background",
+            "instrument_session": "",
+            "sample": {"name": "air", "id": "", "data": {}},
+            "experiment_definition": {
+                "name": "background_scan",
+                "id": "",
+                "data": {
+                    "background": {"bg_type": "air", "cobra": False, "blower": False}
+                },
             },
-            instrument_session="",
-        ),
-        parent_task_id="0",
-    )
-    assert new_calls[4] == BlueapiCall(
-        task_request=TaskRequest(
-            name="static_collection",
-            params={
-                "metadata": {
-                    "background": BackgroundInfo(
-                        bg_type="air", cobra=False, blower=False
-                    )
-                }
+        },
+        "id": "",
+        "blueapi_calls": [],
+        "status": Status.QUEUED,
+        "kind": TaskKind.EXPERIMENT,
+    }
+    new_tasks[2].id = ""
+    assert new_tasks[2].model_dump() == {
+        "experiment": {
+            "name": "background",
+            "instrument_session": "different",
+            "sample": {"name": "air", "id": "", "data": {}},
+            "experiment_definition": {
+                "name": "background_scan",
+                "id": "",
+                "data": {
+                    "background": {"bg_type": "air", "cobra": False, "blower": False}
+                },
             },
-            instrument_session="different",
-        ),
-        parent_task_id="1",
-    )
+        },
+        "id": "",
+        "blueapi_calls": [],
+        "status": Status.QUEUED,
+        "kind": TaskKind.EXPERIMENT,
+    }
 
 
 def test_add_required_background_scans_if_found_in_tiled_then_no_background_added(
-    tasks_and_calls: tuple[list[TaskWithPosition], list[BlueapiCall]],
+    tasks: list[Task],
     background_found_in_tiled: None,
 ):
-    tasks, calls_before = tasks_and_calls
-    calls_after = I151Converter()._add_required_background_scans(tasks, calls_before)
-    assert calls_after == calls_before
+    tasks_after = I151Converter()._add_required_background_scans(tasks)
+    assert tasks_after == tasks
 
 
 @pytest.mark.parametrize(

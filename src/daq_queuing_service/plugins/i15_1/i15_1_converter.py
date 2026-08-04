@@ -1,4 +1,4 @@
-from typing import Any, Literal, get_args
+from typing import Any, Literal
 
 from blueapi.service.model import TaskRequest
 
@@ -8,125 +8,25 @@ from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     get_background_tiled_id,
 )
-from daq_queuing_service.task import Experiment, TaskWithPosition
+from daq_queuing_service.task import (
+    Experiment,
+    ExperimentDefinition,
+    Sample,
+    Task,
+    TaskWithPosition,
+)
 
 SCAN_PLANS = Literal["centre_sample", "static_collection"]
 
 
 class I151Converter(Converter):
-    def _add_tiled_background_to_md(
-        self, params: dict[str, Any], tiled_id: str, background: BackgroundInfo
-    ):
-        if metadata := params.get("metadata"):
-            if tiled_backgrounds := metadata.get("tiled_backgrounds"):
-                tiled_backgrounds[tiled_id] = background
-            else:
-                metadata["tiled_backgrounds"] = {tiled_id: background}
-        else:
-            params["metadata"] = {"tiled_backgrounds": {tiled_id: background}}
-
-    def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
-        # TODO: Check if this should take a task request instead of experiment
-        return [BackgroundInfo(bg_type="air", cobra=False, blower=False)]
-
-    def _construct_background_task_request(
-        self, background: BackgroundInfo, instrument_session: str
-    ) -> TaskRequest:
-        return TaskRequest(
-            instrument_session=instrument_session,
-            name="static_collection",
-            params={"metadata": {"background": background}},
-        )
-
-    def _add_required_background_scans(
-        self, tasks: list[TaskWithPosition], calls: list[BlueapiCall]
-    ) -> list[BlueapiCall]:
-        bg_task_requests: dict[str, list[TaskRequest]] = {}
-
-        for task in tasks:
-            instrument_session = task.experiment.instrument_session
-            if not isinstance(task.experiment, Experiment) or not (
-                backgrounds := self._get_required_backgrounds(task.experiment)
-            ):
-                break
-
-            for background in backgrounds:
-                blueapi_calls = [
-                    call for call in calls if call.parent_task_id == task.id
-                ]
-                if tiled_id := get_background_tiled_id(background, instrument_session):
-                    for call in filter(
-                        lambda call: call.task_request.name in get_args(SCAN_PLANS),
-                        blueapi_calls,
-                    ):
-                        call.task_request.params = dict(call.task_request.params)
-                        self._add_tiled_background_to_md(
-                            call.task_request.params, tiled_id, background
-                        )
-
-                else:
-                    task_request = self._construct_background_task_request(
-                        background, instrument_session
-                    )
-                    if not any(
-                        task_request in task_requests
-                        for task_requests in bg_task_requests.values()
-                    ):
-                        bg_task_requests.setdefault(task.id, []).append(task_request)
-
-        new_call_list: list[BlueapiCall] = []
-
-        for call in calls:
-            if call.parent_task_id and (
-                task_requests := bg_task_requests.pop(call.parent_task_id, None)
-            ):
-                new_call_list.extend(
-                    [
-                        BlueapiCall(
-                            task_request=task_request,
-                            parent_task_id=call.parent_task_id,
-                        )
-                        for task_request in task_requests
-                    ]
-                )
-            new_call_list.append(call)
-
-        return new_call_list
-
-    def _construct_blueapi_tasks_from_experiment(
+    def pre_process(
         self,
-        experiment: Experiment,
-    ) -> list[TaskRequest]:
-        sample_name = experiment.sample.name
-        # Assume sample name is of form test_8_1 to load from position 8 on puck 1
-        _, position, puck = sample_name.split("_")
-
-        return [
-            TaskRequest(
-                name="robot_load",
-                params={"puck": puck, "position": position},
-                instrument_session=experiment.instrument_session,
-            ),
-            TaskRequest(
-                name="centre_sample",
-                params={
-                    "start_z": -20,
-                    "end_z": 0,
-                    "steps": 20,
-                    "exposure_time": 0.01,
-                    "metadata": {
-                        "sample": experiment.sample,
-                        "experiment_definition": experiment.experiment_definition,
-                    },
-                },
-                instrument_session=experiment.instrument_session,
-            ),
-            TaskRequest(
-                name="robot_unload",
-                params={},
-                instrument_session=experiment.instrument_session,
-            ),
-        ]
+        queue: list[Task],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCall],
+    ) -> list[Task]:
+        return self._add_required_background_scans(queue)
 
     def construct_blueapi_calls(
         self,
@@ -156,5 +56,96 @@ class I151Converter(Converter):
                             )
                         ]
                     )
+        return call_list
 
-        return self._add_required_background_scans(queue, call_list)
+    def _construct_blueapi_tasks_from_experiment(
+        self,
+        experiment: Experiment,
+    ) -> list[TaskRequest]:
+        sample_name = experiment.sample.name
+        # Assume sample name is of form test_8_1 to load from position 8 on puck 1
+        _, position, puck = sample_name.split("_")
+
+        return [
+            TaskRequest(
+                name="robot_load",
+                params={"puck": puck, "position": position},
+                instrument_session=experiment.instrument_session,
+            ),
+            TaskRequest(
+                name="centre_sample",
+                params={
+                    "start_z": -20,
+                    "end_z": 0,
+                    "steps": 20,
+                    "exposure_time": 0.01,
+                    "metadata": {
+                        "sample": experiment.sample,
+                        # This will include tiled background scan info
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            ),
+            TaskRequest(
+                name="robot_unload",
+                params={},
+                instrument_session=experiment.instrument_session,
+            ),
+        ]
+
+    def _add_required_background_scans(self, tasks: list[Task]) -> list[Task]:
+        new_tasks: list[Task] = []
+
+        for task in tasks:
+            experiment = task.experiment
+            if isinstance(experiment, Experiment):
+                instrument_session = experiment.instrument_session
+                backgrounds = self._get_required_backgrounds(experiment)
+
+                for background in backgrounds:
+                    if tiled_id := get_background_tiled_id(
+                        background, instrument_session
+                    ):
+                        self._add_tiled_background_to_md(
+                            experiment.experiment_definition.data, tiled_id, background
+                        )
+
+                    else:
+                        bg_experiment = self._construct_background_experiment(
+                            background, instrument_session
+                        )
+                        if bg_experiment not in [
+                            t.experiment for t in tasks + new_tasks
+                        ]:
+                            new_tasks.append(Task(experiment=bg_experiment))
+
+            new_tasks.append(task)
+        return new_tasks
+
+    def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
+        return [BackgroundInfo(bg_type="air", cobra=False, blower=False)]
+
+    def _add_tiled_background_to_md(
+        self, params: dict[str, Any], tiled_id: str, background: BackgroundInfo
+    ):
+        if metadata := params.get("metadata"):
+            if tiled_backgrounds := metadata.get("tiled_backgrounds"):
+                tiled_backgrounds[tiled_id] = background
+            else:
+                metadata["tiled_backgrounds"] = {tiled_id: background}
+        else:
+            params["metadata"] = {"tiled_backgrounds": {tiled_id: background}}
+
+    def _construct_background_experiment(
+        self, background: BackgroundInfo, instrument_session: str
+    ) -> Experiment:
+        return Experiment(
+            name="background",
+            instrument_session=instrument_session,
+            # Need to get sample info for test samples (air, empty capillary etc)
+            sample=Sample(name="air", id="", data={}),
+            experiment_definition=ExperimentDefinition(
+                name="background_scan", id="", data={"background": background}
+            ),
+        )
