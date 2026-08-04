@@ -13,7 +13,12 @@ def get_background_tiled_id(
     result: Container = (
         client.search(Eq("start.instrument_session", instrument_session))
         .search(Eq("start.instrument", "i15-1"))
-        .search(Eq("start.background", required_background.model_dump_json()))
+        .search(
+            Eq(
+                "start.experiment_definition.metadata.background",
+                required_background.model_dump_json(),
+            )
+        )
     )
 
     if not len(result):
