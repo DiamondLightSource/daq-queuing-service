@@ -1,11 +1,12 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 BACKGROUND = Literal["air", "capillary_1", "capillary_2"]
 
 
 class BackgroundInfo(BaseModel):
+    model_config = ConfigDict(frozen=True)
     bg_type: BACKGROUND
     cobra: bool
     blower: bool
