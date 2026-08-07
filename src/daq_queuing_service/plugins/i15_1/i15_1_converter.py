@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any
 
 from blueapi.service.model import TaskRequest
 
@@ -16,7 +16,7 @@ from daq_queuing_service.task import (
     TaskWithPosition,
 )
 
-SCAN_PLANS = Literal["centre_sample", "static_collection"]
+BACKGROUND_SCAN = "Background"
 
 
 class I151Converter(Converter):
@@ -95,11 +95,23 @@ class I151Converter(Converter):
         ]
 
     def _add_required_background_scans(self, tasks: list[Task]) -> list[Task]:
+        """Adds background scan tasks to the queue. Backgrounds will be added directly
+        in front of the first task in the queue that requires them.
+
+        Args:
+            tasks (list[Task]): Current list of tasks
+
+        Returns:
+            list[Task]: New list of tasks including backgrounds
+        """
         new_tasks: list[Task] = []
 
         for task in tasks:
             experiment = task.experiment
-            if isinstance(experiment, Experiment) and experiment.name != "Background":
+            if (
+                isinstance(experiment, Experiment)
+                and experiment.name != BACKGROUND_SCAN
+            ):
                 instrument_session = experiment.instrument_session
                 backgrounds = self._get_required_backgrounds(experiment)
 
@@ -125,7 +137,7 @@ class I151Converter(Converter):
         queued_background_experiments: list[Experiment] = []
 
         for task in tasks:
-            if task.experiment.name != "Background":
+            if task.experiment.name != BACKGROUND_SCAN:
                 new_tasks.append(task)
             elif task.experiment not in queued_background_experiments:
                 assert isinstance(task.experiment, Experiment)
@@ -134,6 +146,7 @@ class I151Converter(Converter):
         return new_tasks
 
     def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
+        # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         return [BackgroundInfo(bg_type="air", cobra=False, blower=False)]
 
     def _add_tiled_background_to_md(
@@ -151,10 +164,10 @@ class I151Converter(Converter):
         self, background: BackgroundInfo, instrument_session: str
     ) -> Experiment:
         return Experiment(
-            name="Background",
+            name=BACKGROUND_SCAN,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=Sample(name="air_1_1", id="", data={}),
+            sample=Sample(name="fq_1_1", id="", data={}),
             experiment_definition=ExperimentDefinition(
                 name="background_scan", id="", data={"background": background}
             ),
