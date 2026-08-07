@@ -2,12 +2,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-BACKGROUND = Literal["air", "capillary_1", "capillary_2"]
+# This should be generated from the json schema
+# https://github.com/DiamondLightSource/daq-queuing-service/issues/78
+CAPILLARY = Literal["air", "bs", "fq", "pi"]
 
 
 class BackgroundInfo(BaseModel):
     model_config = ConfigDict(frozen=True)
-    bg_type: BACKGROUND
+    bg_type: CAPILLARY
     cobra: bool
     blower: bool
 
