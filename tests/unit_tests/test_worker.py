@@ -21,7 +21,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
     BlueapiResult,
 )
 from daq_queuing_service.blueapi_interaction.blueapi_call import CallStatus
-from daq_queuing_service.task import Status
+from daq_queuing_service.task_queue.task import Status
 from daq_queuing_service.task_queue.queue import (
     PauseReason,
     TaskError,

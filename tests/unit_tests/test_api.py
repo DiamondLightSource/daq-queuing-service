@@ -30,7 +30,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.plugins.converter import Converter
-from daq_queuing_service.task import (
+from daq_queuing_service.task_queue.task import (
     Experiment,
     Status,
     Task,

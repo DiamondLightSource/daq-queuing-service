@@ -2,7 +2,7 @@ from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.plugins.converter import Converter
-from daq_queuing_service.task import Experiment, TaskWithPosition
+from daq_queuing_service.task_queue.task import Experiment, TaskWithPosition
 
 
 class I151Converter(Converter):
