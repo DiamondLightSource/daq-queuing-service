@@ -1,5 +1,5 @@
 include: 
-  - dev-environment/daq-services/compose.yaml
+  - ../../dev-environment/daq-services/compose.yaml
 
 services:
   blueapi:
