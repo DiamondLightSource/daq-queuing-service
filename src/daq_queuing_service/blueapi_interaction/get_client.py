@@ -9,7 +9,7 @@ from bluesky_stomp.messaging import Broker, StompClient
 from daq_queuing_service.blueapi_interaction.token_retriever import UDCTokenRetriever
 
 
-def get_blueapi_clients(blueapi_config: ApplicationConfig) -> BlueapiClient:
+def get_blueapi_client(blueapi_config: ApplicationConfig) -> BlueapiClient:
     if not blueapi_config.oidc:
         blueapi_config.oidc = MagicMock()
 
