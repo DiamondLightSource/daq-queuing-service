@@ -28,7 +28,8 @@ services:
     build:
       context: ../../
       dockerfile: Dockerfile
-    volumes: ./services/daq_queuing_service.yaml:/etc/config/config.yaml
+    volumes: 
+      - ./services/daq_queuing_service.yaml:/etc/config/config.yaml
     security_opt:
       - label=disable
     profiles:
