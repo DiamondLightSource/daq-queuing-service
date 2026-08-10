@@ -56,4 +56,4 @@ jobs:
       contents: write
 
   system-test:
-  uses: ./.github/workflows/_system_test.yml
+    uses: ./.github/workflows/_system_test.yml
