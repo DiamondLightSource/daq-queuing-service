@@ -1,4 +1,3 @@
-[submodule "tests/system_tests/dev-environment"]
-	path = tests/system_tests/dev-environment
+[submodule "dev-environment"]
 	url = https://github.com/zohebshaikh/dev-environment.git
-	branch = add-compose
+	branch = 4ee981e64ee96368186fc187499e366ba6787e35
