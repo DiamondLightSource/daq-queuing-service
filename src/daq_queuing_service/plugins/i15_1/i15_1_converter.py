@@ -2,14 +2,13 @@ from typing import Any
 
 from blueapi.service.model import TaskRequest
 from tiled.client import from_uri  # type: ignore
+from tiled.client.container import Container
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
-from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    get_background_tiled_id,  # type: ignore
-)
+from daq_queuing_service.plugins.i15_1.tiled_interaction import get_background_tiled_id
 from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
@@ -23,7 +22,7 @@ BACKGROUND_SCAN = "Background"
 
 class I151Converter(Converter):
     def __init__(self):
-        self.tiled_client = from_uri("https://tiled.diamond.ac.uk/api/v1")  # type: ignore
+        self.tiled_client: Container = from_uri("https://tiled.diamond.ac.uk/api/v1")
 
     def pre_process(
         self,
@@ -127,7 +126,7 @@ class I151Converter(Converter):
 
                 for background in backgrounds:
                     if tiled_id := get_background_tiled_id(
-                        self.tiled_client,  # type: ignore
+                        self.tiled_client,
                         background,
                         instrument_session,
                     ):
