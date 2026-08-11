@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 
 import yaml
-from blueapi.config import ApplicationConfig
-from pydantic import BaseModel
+from blueapi.config import OIDCConfig, RestConfig, StompConfig
+from pydantic import BaseModel, Field
 
 CONFIG_PATH = "/etc/config/config.yaml"
 TEST_CONFIG_PATH = "tests/test_data/test_config.yaml"
@@ -14,9 +14,15 @@ class ConverterConfig(BaseModel):
     name: str
 
 
+class BlueapiConfig(BaseModel):
+    stomp: StompConfig = Field(default_factory=StompConfig)
+    api: RestConfig = Field(default_factory=RestConfig)
+
+
 class AppConfig(BaseModel):
-    blueapi: ApplicationConfig
+    blueapi: BlueapiConfig
     converter: ConverterConfig
+    oidc: OIDCConfig | None = None
 
 
 def get_default_config() -> str:
