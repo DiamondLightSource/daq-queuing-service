@@ -1,3 +1,7 @@
+from collections.abc import Awaitable, Callable
+from functools import wraps
+from typing import TypeVar
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -13,9 +17,23 @@ from daq_queuing_service.task_queue.queue_utils import (
 
 # pyright: reportUnusedFunction=false
 
+E = TypeVar("E", bound=Exception)
+
+Handler = Callable[[Request, E], Awaitable[JSONResponse]]
+
+
+def log_exception(handler: Handler[E]) -> Handler[E]:
+    @wraps(handler)
+    async def wrapper(request: Request, exception: E) -> JSONResponse:
+        LOGGER.exception("Error while handling request: %s", request)
+        return await handler(request, exception)
+
+    return wrapper
+
 
 def register_exception_handlers(app: FastAPI):
     @app.exception_handler(TaskInProgressError)
+    @log_exception
     async def task_in_progress_handler(
         request: Request, exception: TaskInProgressError
     ):
@@ -25,6 +43,7 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(TaskNotFoundError)
+    @log_exception
     async def task_not_found_handler(request: Request, exception: TaskNotFoundError):
         return JSONResponse(
             status_code=404,
@@ -32,6 +51,7 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(TaskNotInQueueError)
+    @log_exception
     async def task_not_in_queue_handler(
         request: Request, exception: TaskNotInQueueError
     ):
@@ -41,6 +61,7 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(NegativePositionError)
+    @log_exception
     async def negative_position_handler(
         request: Request, exception: NegativePositionError
     ):
@@ -50,6 +71,7 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(QueueError)
+    @log_exception
     async def queue_error_handler(request: Request, exception: QueueError):
         return JSONResponse(
             status_code=409,
@@ -57,6 +79,7 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(ValidateError)
+    @log_exception
     async def validation_error_handler(request: Request, exception: ValidateError):
         return JSONResponse(
             status_code=422,
@@ -64,8 +87,9 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(ConverterError)
+    @log_exception
     async def converter_error_handler(request: Request, exception: ConverterError):
-        LOGGER.exception("Queue error occurred")
+        LOGGER.exception("Converter error")
         return JSONResponse(
             status_code=422,
             content={"error": "converter_error", "message": str(exception)},
