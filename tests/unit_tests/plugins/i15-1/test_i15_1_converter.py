@@ -190,13 +190,11 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         "experiment": {
             "name": "Background",
             "instrument_session": "cm12345-1",
-            "sample": {"name": "air_1_1", "id": "", "data": {}},
+            "sample": {"name": "fq_1_1", "id": "", "data": {}},
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {
-                    "background": {"bg_type": "air", "cobra": False, "blower": False}
-                },
+                "data": {"background": {"bg_type": "fq"}},
             },
         },
         "id": "",
@@ -209,9 +207,9 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
     tasks: list[Task], background_not_found_in_tiled: None
 ):
-    bg_1 = BackgroundInfo(bg_type="air", cobra=False, blower=False)
-    bg_2 = BackgroundInfo(bg_type="capillary_1", cobra=True, blower=False)
-    bg_3 = BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True)
+    bg_1 = BackgroundInfo(bg_type="air")
+    bg_2 = BackgroundInfo(bg_type="bs")
+    bg_3 = BackgroundInfo(bg_type="fq")
 
     def fake_get_required_background(self: I151Converter, experiment: Experiment):
         # Get the same background scans every other experiment
@@ -272,17 +270,11 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
         "experiment": {
             "name": "Background",
             "instrument_session": "",
-            "sample": {"name": "air_1_1", "id": "", "data": {}},
+            "sample": {"name": "fq_1_1", "id": "", "data": {}},
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {
-                    "background": {
-                        "bg_type": "air",
-                        "cobra": False,
-                        "blower": False,
-                    }
-                },
+                "data": {"background": {"bg_type": "fq"}},
             },
         },
         "id": "",
@@ -295,13 +287,11 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
         "experiment": {
             "name": "Background",
             "instrument_session": "different",
-            "sample": {"name": "air_1_1", "id": "", "data": {}},
+            "sample": {"name": "fq_1_1", "id": "", "data": {}},
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {
-                    "background": {"bg_type": "air", "cobra": False, "blower": False}
-                },
+                "data": {"background": {"bg_type": "fq"}},
             },
         },
         "id": "",
@@ -325,14 +315,10 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
         (
             {"sample": "my_sample"},
             ["tiled_id"],
-            [BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True)],
+            [BackgroundInfo(bg_type="bs")],
             {
                 "metadata": {
-                    "tiled_backgrounds": {
-                        "tiled_id": BackgroundInfo(
-                            bg_type="capillary_1", cobra=False, blower=True
-                        )
-                    }
+                    "tiled_backgrounds": {"tiled_id": BackgroundInfo(bg_type="bs")}
                 },
                 "sample": "my_sample",
             },
@@ -340,14 +326,10 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
         (
             {},
             ["tiled_id"],
-            [BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True)],
+            [BackgroundInfo(bg_type="bs")],
             {
                 "metadata": {
-                    "tiled_backgrounds": {
-                        "tiled_id": BackgroundInfo(
-                            bg_type="capillary_1", cobra=False, blower=True
-                        )
-                    }
+                    "tiled_backgrounds": {"tiled_id": BackgroundInfo(bg_type="bs")}
                 },
             },
         ),
@@ -355,18 +337,14 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
             {"sample": "my_sample"},
             ["tiled_id_1", "tiled_id_2"],
             [
-                BackgroundInfo(bg_type="capillary_1", cobra=False, blower=True),
-                BackgroundInfo(bg_type="air", cobra=True, blower=False),
+                BackgroundInfo(bg_type="bs"),
+                BackgroundInfo(bg_type="air"),
             ],
             {
                 "metadata": {
                     "tiled_backgrounds": {
-                        "tiled_id_1": BackgroundInfo(
-                            bg_type="capillary_1", cobra=False, blower=True
-                        ),
-                        "tiled_id_2": BackgroundInfo(
-                            bg_type="air", cobra=True, blower=False
-                        ),
+                        "tiled_id_1": BackgroundInfo(bg_type="bs"),
+                        "tiled_id_2": BackgroundInfo(bg_type="air"),
                     }
                 },
                 "sample": "my_sample",

@@ -1,12 +1,13 @@
 from typing import Any
 
 from blueapi.service.model import TaskRequest
+from tiled.client import from_uri  # type: ignore
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    get_background_tiled_id,
+    get_background_tiled_id,  # type: ignore
 )
 from daq_queuing_service.task import (
     Experiment,
@@ -20,6 +21,9 @@ BACKGROUND_SCAN = "Background"
 
 
 class I151Converter(Converter):
+    def __init__(self):
+        self.tiled_client = from_uri("https://tiled.diamond.ac.uk/api/v1")  # type: ignore
+
     def pre_process(
         self,
         queue: list[Task],
@@ -66,6 +70,8 @@ class I151Converter(Converter):
         # Assume sample name is of form test_8_1 to load from position 8 on puck 1
         _, position, puck = sample_name.split("_")
 
+        # For air calibration scans, we need to not to robot load/unload.
+        # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
         return [
             TaskRequest(
                 name="robot_load",
@@ -104,6 +110,7 @@ class I151Converter(Converter):
         Returns:
             list[Task]: New list of tasks including backgrounds
         """
+        # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
 
         for task in tasks:
@@ -117,7 +124,9 @@ class I151Converter(Converter):
 
                 for background in backgrounds:
                     if tiled_id := get_background_tiled_id(
-                        background, instrument_session
+                        self.tiled_client,  # type: ignore
+                        background,
+                        instrument_session,
                     ):
                         self._add_tiled_background_to_md(
                             experiment.experiment_definition.data, tiled_id, background
@@ -147,7 +156,7 @@ class I151Converter(Converter):
 
     def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
-        return [BackgroundInfo(bg_type="air", cobra=False, blower=False)]
+        return [BackgroundInfo(bg_type="fq")]
 
     def _add_tiled_background_to_md(
         self, params: dict[str, Any], tiled_id: str, background: BackgroundInfo

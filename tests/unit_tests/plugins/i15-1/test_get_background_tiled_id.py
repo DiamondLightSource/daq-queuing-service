@@ -1,6 +1,4 @@
-from collections.abc import Generator
-from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from tiled.queries import Eq
@@ -10,9 +8,9 @@ from daq_queuing_service.plugins.i15_1.tiled_interaction import get_background_t
 
 
 @pytest.fixture()
-def mock_tiled_searches() -> Generator[
-    tuple[MagicMock, MagicMock, MagicMock], Any, None
-]:
+def mock_tiled_searches(
+    tiled_client: MagicMock,
+) -> tuple[MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
     result_1.metadata = {"start": {"time": 1}}
     result_2 = MagicMock()
@@ -32,14 +30,9 @@ def mock_tiled_searches() -> Generator[
     search_result_2 = MagicMock()
     search_result_2.search = MagicMock(return_value=search_result_3)
 
-    client = MagicMock()
-    client.search = MagicMock(return_value=search_result_2)
+    tiled_client.search = MagicMock(return_value=search_result_2)
 
-    with patch(
-        "daq_queuing_service.plugins.i15_1.tiled_interaction.from_uri",
-        MagicMock(return_value=client),
-    ):
-        yield client, search_result_2, search_result_3
+    return tiled_client, search_result_2, search_result_3
 
 
 def test_get_background_tiled_id_makes_expected_searches(
@@ -47,7 +40,8 @@ def test_get_background_tiled_id_makes_expected_searches(
 ):
     client, search_2, search_3 = mock_tiled_searches
     get_background_tiled_id(
-        BackgroundInfo(bg_type="air", cobra=False, blower=False),
+        client,
+        BackgroundInfo(bg_type="air"),
         instrument_session="cm12345-1",
     )
     client.search.assert_called_once_with(
@@ -57,7 +51,7 @@ def test_get_background_tiled_id_makes_expected_searches(
     search_3.search.assert_called_once_with(
         Eq(
             key="start.experiment_definition.metadata.background",
-            value='{"bg_type":"air","cobra":false,"blower":false}',
+            value='{"bg_type":"air"}',
         )
     )
 
@@ -65,9 +59,11 @@ def test_get_background_tiled_id_makes_expected_searches(
 def test_get_background_tiled_returns_most_recent_valid_background(
     mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock],
 ):
+    client, _, _ = mock_tiled_searches
     assert (
         get_background_tiled_id(
-            BackgroundInfo(bg_type="air", cobra=False, blower=False),
+            client,
+            BackgroundInfo(bg_type="air"),
             instrument_session="cm12345-1",
         )
         == "tiled_id_2"
@@ -77,11 +73,12 @@ def test_get_background_tiled_returns_most_recent_valid_background(
 def test_get_background_tiled_id_returns_none_if_no_matching_backgrounds_found(
     mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock],
 ):
-    _, _, final_search = mock_tiled_searches
+    client, _, final_search = mock_tiled_searches
     final_search.search.return_value = {}
     assert (
         get_background_tiled_id(
-            BackgroundInfo(bg_type="air", cobra=False, blower=False),
+            client,
+            BackgroundInfo(bg_type="air"),
             instrument_session="cm12345-1",
         )
         is None
