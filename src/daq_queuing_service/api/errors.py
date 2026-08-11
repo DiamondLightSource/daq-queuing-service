@@ -1,5 +1,4 @@
 from collections.abc import Awaitable, Callable
-from functools import wraps
 from typing import TypeVar
 
 from fastapi import FastAPI, Request
@@ -22,75 +21,51 @@ E = TypeVar("E", bound=Exception)
 Handler = Callable[[Request, E], Awaitable[JSONResponse]]
 
 
-def log_exception(handler: Handler[E]) -> Handler[E]:
-    @wraps(handler)
-    async def wrapper(request: Request, exception: E) -> JSONResponse:
+def make_exception_handler(
+    status_code: int, error_code: str
+) -> Callable[[Request, Exception], Awaitable[JSONResponse]]:
+    async def handler(request: Request, exception: Exception):
         LOGGER.exception("Error while handling request: %s", request)
-        return await handler(request, exception)
+        return JSONResponse(
+            status_code=status_code,
+            content={"error": error_code, "message": str(exception)},
+        )
 
-    return wrapper
+    return handler
 
 
 def register_exception_handlers(app: FastAPI):
-    @app.exception_handler(TaskInProgressError)
-    @log_exception
-    async def task_in_progress_handler(
-        request: Request, exception: TaskInProgressError
-    ):
-        return JSONResponse(
-            status_code=409,
-            content={"error": "task_in_progress", "message": str(exception)},
-        )
+    app.add_exception_handler(
+        TaskInProgressError,
+        make_exception_handler(409, "task_in_progress"),
+    )
 
-    @app.exception_handler(TaskNotFoundError)
-    @log_exception
-    async def task_not_found_handler(request: Request, exception: TaskNotFoundError):
-        return JSONResponse(
-            status_code=404,
-            content={"error": "task_not_found", "message": str(exception)},
-        )
+    app.add_exception_handler(
+        TaskNotFoundError,
+        make_exception_handler(404, "task_not_found"),
+    )
 
-    @app.exception_handler(TaskNotInQueueError)
-    @log_exception
-    async def task_not_in_queue_handler(
-        request: Request, exception: TaskNotInQueueError
-    ):
-        return JSONResponse(
-            status_code=409,
-            content={"error": "task_not_in_queue", "message": str(exception)},
-        )
+    app.add_exception_handler(
+        TaskNotInQueueError,
+        make_exception_handler(409, "task_not_in_queue"),
+    )
 
-    @app.exception_handler(NegativePositionError)
-    @log_exception
-    async def negative_position_handler(
-        request: Request, exception: NegativePositionError
-    ):
-        return JSONResponse(
-            status_code=400,
-            content={"error": "negative_position", "message": str(exception)},
-        )
+    app.add_exception_handler(
+        NegativePositionError,
+        make_exception_handler(400, "negative_position"),
+    )
 
-    @app.exception_handler(QueueError)
-    @log_exception
-    async def queue_error_handler(request: Request, exception: QueueError):
-        return JSONResponse(
-            status_code=409,
-            content={"error": "queue_error", "message": str(exception)},
-        )
+    app.add_exception_handler(
+        QueueError,
+        make_exception_handler(409, "queue_error"),
+    )
 
-    @app.exception_handler(ValidateError)
-    @log_exception
-    async def validation_error_handler(request: Request, exception: ValidateError):
-        return JSONResponse(
-            status_code=422,
-            content={"error": "validation_error", "message": str(exception)},
-        )
+    app.add_exception_handler(
+        ValidateError,
+        make_exception_handler(422, "validation_error"),
+    )
 
-    @app.exception_handler(ConverterError)
-    @log_exception
-    async def converter_error_handler(request: Request, exception: ConverterError):
-        LOGGER.exception("Converter error")
-        return JSONResponse(
-            status_code=422,
-            content={"error": "converter_error", "message": str(exception)},
-        )
+    app.add_exception_handler(
+        ConverterError,
+        make_exception_handler(422, "converter_error"),
+    )
