@@ -4,6 +4,7 @@ from blueapi.service.model import TaskRequest
 from tiled.client import from_uri  # type: ignore
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
@@ -110,6 +111,8 @@ class I151Converter(Converter):
         Returns:
             list[Task]: New list of tasks including backgrounds
         """
+        LOGGER.info("Adding required background scans")
+
         # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
 
@@ -142,6 +145,7 @@ class I151Converter(Converter):
         return self._remove_repeated_backgrounds(new_tasks)
 
     def _remove_repeated_backgrounds(self, tasks: list[Task]) -> list[Task]:
+        LOGGER.info("Removing repeated background scans")
         new_tasks: list[Task] = []
         queued_background_experiments: list[Experiment] = []
 
@@ -152,6 +156,8 @@ class I151Converter(Converter):
                 assert isinstance(task.experiment, Experiment)
                 queued_background_experiments.append(task.experiment)
                 new_tasks.append(task)
+            else:
+                LOGGER.debug(f"Removing repeated background scan: {task.experiment}")
         return new_tasks
 
     def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
@@ -161,6 +167,7 @@ class I151Converter(Converter):
     def _add_tiled_background_to_md(
         self, params: dict[str, Any], tiled_id: str, background: BackgroundInfo
     ):
+        LOGGER.debug("Adding background scan tiled info to metadata")
         if metadata := params.get("metadata"):
             if tiled_backgrounds := metadata.get("tiled_backgrounds"):
                 tiled_backgrounds[tiled_id] = background
@@ -172,6 +179,7 @@ class I151Converter(Converter):
     def _construct_background_experiment(
         self, background: BackgroundInfo, instrument_session: str
     ) -> Experiment:
+        LOGGER.debug(f"Constructing experiment for background: {background}")
         return Experiment(
             name=BACKGROUND_SCAN,
             instrument_session=instrument_session,

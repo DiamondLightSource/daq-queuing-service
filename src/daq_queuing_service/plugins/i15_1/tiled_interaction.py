@@ -2,6 +2,7 @@ from cachetools import TTLCache, cached
 from tiled.client.container import Container
 from tiled.queries import Eq
 
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 
 # pyright: reportUnknownMemberType=false
@@ -35,6 +36,9 @@ def get_background_tiled_id(
         )
 
         if not len(result):
+            LOGGER.debug(
+                f"Found no scans in tiled matching background: {required_background}"
+            )
             return
 
         items = sorted(
@@ -43,6 +47,11 @@ def get_background_tiled_id(
         )
 
         # return the tiled ID
-        return items[-1][0]
+        tiled_id = items[-1][0]
+        LOGGER.debug(
+            f"Found {len(items)} scans in tiled matching background: "
+            + f"{required_background}. Returning the first: {tiled_id}"
+        )
+        return tiled_id
 
     return _get_background_tiled_id(required_background, instrument_session)
