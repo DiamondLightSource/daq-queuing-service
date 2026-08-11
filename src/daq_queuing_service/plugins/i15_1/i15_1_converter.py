@@ -10,7 +10,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     get_background_tiled_id,  # type: ignore
 )
-from daq_queuing_service.task import (
+from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
     Sample,

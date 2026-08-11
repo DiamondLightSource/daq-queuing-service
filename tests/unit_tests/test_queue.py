@@ -13,14 +13,6 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.converter import Converter, ConverterError
-from daq_queuing_service.task import (
-    Experiment,
-    ExperimentDefinition,
-    Sample,
-    Status,
-    Task,
-    TaskKind,
-)
 from daq_queuing_service.task_queue.queue import (
     PauseReason,
     QueueContents,
@@ -35,6 +27,14 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskInProgressError,
     TaskNotClaimedError,
     TaskNotFoundError,
+)
+from daq_queuing_service.task_queue.task import (
+    Experiment,
+    ExperimentDefinition,
+    Sample,
+    Status,
+    Task,
+    TaskKind,
 )
 
 pytest_plugins = ("pytest_asyncio",)

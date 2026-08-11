@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
-from daq_queuing_service.blueapi_interaction.clients import get_blueapi_clients
+from daq_queuing_service.blueapi_interaction.get_client import get_blueapi_client
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.converter import get_converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
@@ -65,7 +65,7 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
 
     app.state.queue = TaskQueue(converter, broadcaster)
 
-    blueapi_client = get_blueapi_clients(config.blueapi)
+    blueapi_client = get_blueapi_client(config.blueapi)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
 
     app.state.worker = QueueWorker(

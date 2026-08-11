@@ -11,7 +11,6 @@ from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.converter import Converter, ValidateError
-from daq_queuing_service.task import Experiment, Status, Task
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
     PauseReason,
@@ -19,6 +18,7 @@ from daq_queuing_service.task_queue.queue import (
     TaskQueue,
     TaskWithPosition,
 )
+from daq_queuing_service.task_queue.task import Experiment, Status, Task
 
 # pyright: reportUnusedFunction=false
 
