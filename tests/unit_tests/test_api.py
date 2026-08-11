@@ -30,15 +30,15 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.plugins.converter import Converter
-from daq_queuing_service.task import (
+from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, PauseReason, TaskQueue
+from daq_queuing_service.task_queue.queue_utils import QueueError
+from daq_queuing_service.task_queue.task import (
     Experiment,
     Status,
     Task,
     TaskKind,
     TaskWithPosition,
 )
-from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, PauseReason, TaskQueue
-from daq_queuing_service.task_queue.queue_utils import QueueError
 
 
 @pytest.fixture

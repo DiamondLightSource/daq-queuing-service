@@ -16,7 +16,6 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter, ConverterError
-from daq_queuing_service.task import Status, Task, TaskWithPosition
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     TaskIdInUseError,
@@ -25,6 +24,7 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotFoundError,
     TaskNotInQueueError,
 )
+from daq_queuing_service.task_queue.task import Status, Task, TaskWithPosition
 
 
 class TaskRegistry(dict[str, Task]):
