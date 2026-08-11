@@ -222,7 +222,7 @@ async def test_when_plan_name_error_then_call_failed_and_error_added_to_call(
 
     first_call = first_task.blueapi_calls[0]
     assert first_call.status == CallStatus.ERROR
-    assert first_call.errors == ["Unknown plan", ""]
+    assert first_call.errors == ["Plan not recognised by blueapi: test"]
     worker_with_unknown_plan_error._client.get_state.assert_called_once()  # type: ignore
     worker_with_unknown_plan_error._client.run_task.assert_called_once()  # type: ignore
 
