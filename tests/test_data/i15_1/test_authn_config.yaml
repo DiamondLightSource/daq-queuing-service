@@ -1,0 +1,17 @@
+converter:
+  path: "daq_queuing_service.plugins.converter"
+  name: "Converter"
+blueapi:
+  api:
+    url: "http://localhost:8000"
+  stomp:
+    enabled: true # All other stomp settings will be ignored if this is false
+    url: tcp://localhost:61613
+    auth:
+      username: guest
+      password: guest
+oidc:
+  issuer: "https://identity.diamond.ac.uk/realms/dls"
+  client_id: "daq-queuing-service"
+  client_audience: "account"
+  logout_redirect_endpoint: "oauth2/sign_out"

@@ -6,9 +6,15 @@ from typing import NoReturn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.param_functions import Depends
+from fastapi.params import Depends as DependsType
 
 from daq_queuing_service.api.api import create_api_router
 from daq_queuing_service.api.errors import register_exception_handlers
+from daq_queuing_service.app.authentication import (
+    build_access_token_check,
+    build_current_user,
+)
 from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
 from daq_queuing_service.blueapi_interaction.get_client import get_blueapi_client
 from daq_queuing_service.broadcaster import Broadcaster
@@ -54,6 +60,17 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
 
     app = FastAPI(lifespan=lifespan)
 
+    dependencies: list[DependsType] = []
+    if config.oidc:
+        validate_token = build_access_token_check(config.oidc)
+        current_user = build_current_user(validate_token)
+
+        app.swagger_ui_init_oauth = {
+            "clientId": "NOT_SUPPORTED",
+        }
+
+        dependencies.append(Depends(current_user))
+
     if dev:  # Allows local client/UI through CORS
         app.add_middleware(
             CORSMiddleware,
@@ -75,7 +92,8 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(
-        create_api_router(app.state.queue, broadcaster, config, converter)
+        create_api_router(app.state.queue, broadcaster, config, converter),
+        dependencies=dependencies,
     )
 
     return app
