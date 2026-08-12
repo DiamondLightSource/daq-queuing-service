@@ -41,7 +41,7 @@ def test_create_app_registers_exception_handlers():
 
 @patch("daq_queuing_service.app.app.public_routes")
 @patch("daq_queuing_service.app.app.protected_routes")
-def test_create_app_adds_router(
+def test_create_app_adds_routers(
     mock_public_routes: MagicMock, mock_protected_routes: MagicMock
 ):
     create_app(Path(TEST_CONFIG_PATH))

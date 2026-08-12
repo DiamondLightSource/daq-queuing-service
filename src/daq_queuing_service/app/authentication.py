@@ -9,6 +9,8 @@ from jwt.exceptions import DecodeError
 from pydantic import BaseModel, ValidationError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
+from daq_queuing_service.worker.worker import LOGGER
+
 
 class User(BaseModel):
     fedid: str
@@ -68,6 +70,7 @@ def build_access_token_check(
             audience=config.client_audience,
             issuer=config.issuer,
         )
+        LOGGER.debug(f"Decoded valid token: {decoded}")
         return decoded
 
     return validate_bearer_token
