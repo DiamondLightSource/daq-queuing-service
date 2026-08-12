@@ -6,7 +6,7 @@ from daq_queuing_service.plugins.converter import (
     Converter,
     get_converter,
 )
-from daq_queuing_service.task import (
+from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
     Sample,

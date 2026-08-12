@@ -3,7 +3,7 @@ import importlib
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
-from daq_queuing_service.task import Experiment, Task, TaskWithPosition
+from daq_queuing_service.task_queue.task import Experiment, Task, TaskWithPosition
 
 
 class ConverterError(Exception): ...

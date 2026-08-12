@@ -123,7 +123,9 @@ class QueueWorker:
                     call, errors=[str(error) for error in error.errors]
                 )
             case UnknownPlanError():
-                await self._queue.fail_call(call, ["Unknown plan", str(error)])
+                await self._queue.fail_call(
+                    call, [f"Plan not recognised by blueapi: {call.task_request.name}"]
+                )
             case BlueskyRemoteControlError() | ServiceUnavailableError():
                 # We get this error if the blueapi worker is busy or unavailable
                 await self._queue.return_call_to_queue(call)

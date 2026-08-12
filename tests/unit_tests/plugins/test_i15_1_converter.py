@@ -3,7 +3,7 @@ from copy import deepcopy
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.plugins.i15_1_converter import I151Converter
-from daq_queuing_service.task import (
+from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
     Sample,

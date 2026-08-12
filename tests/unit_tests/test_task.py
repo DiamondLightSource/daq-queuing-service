@@ -2,7 +2,7 @@ import pytest
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
-from daq_queuing_service.task import Status, Task
+from daq_queuing_service.task_queue.task import Status, Task
 
 
 @pytest.mark.parametrize(

@@ -7,14 +7,14 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
-from daq_queuing_service.task import (
+from daq_queuing_service.task_queue.queue import TaskQueue
+from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
     Sample,
     Task,
     TaskWithPosition,
 )
-from daq_queuing_service.task_queue.queue import TaskQueue
 
 
 @pytest.fixture(autouse=True)
