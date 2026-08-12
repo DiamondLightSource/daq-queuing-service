@@ -2,7 +2,7 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import NoReturn
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -39,13 +39,15 @@ def test_create_app_registers_exception_handlers():
     mock_register_exception_handlers.assert_called_once()
 
 
-def test_create_app_adds_router():
-    with patch(
-        "daq_queuing_service.app.app.create_api_router"
-    ) as mock_create_api_router:
-        create_app(Path(TEST_CONFIG_PATH))
+@patch("daq_queuing_service.app.app.public_routes")
+@patch("daq_queuing_service.app.app.protected_routes")
+def test_create_app_adds_router(
+    mock_public_routes: MagicMock, mock_protected_routes: MagicMock
+):
+    create_app(Path(TEST_CONFIG_PATH))
 
-    mock_create_api_router.assert_called_once()
+    mock_public_routes.assert_called_once()
+    mock_protected_routes.assert_called_once()
 
 
 def test_lifespan_runs_without_error():
@@ -68,11 +70,12 @@ def test_worker_task_cancelled_on_shutdown():
     assert worker_task.cancelled()
 
 
-def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app():
-    with patch(
-        "daq_queuing_service.app.app.create_api_router"
-    ) as mock_create_api_router:
-        app = create_app(Path(TEST_CONFIG_PATH))
+@patch("daq_queuing_service.app.app.protected_routes")
+def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
+    mock_protected_routes: MagicMock,
+):
+
+    app = create_app(Path(TEST_CONFIG_PATH))
 
     app_queue = app.state.queue
     app_worker = app.state.worker
@@ -80,7 +83,7 @@ def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
     assert isinstance(app_queue, TaskQueue)
     assert isinstance(app_worker, QueueWorker)
     assert app_worker._queue is app_queue
-    assert mock_create_api_router.call_args_list[0].args[0] is app_queue
+    assert mock_protected_routes.call_args_list[0].args[0] is app_queue
 
 
 @patch(

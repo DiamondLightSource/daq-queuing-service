@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.param_functions import Depends
 from fastapi.params import Depends as DependsType
 
-from daq_queuing_service.api.api import create_api_router
+from daq_queuing_service.api.api import protected_routes, public_routes
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.app.authentication import (
     build_access_token_check,
@@ -99,8 +99,9 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
     )
 
     register_exception_handlers(app)
+    app.include_router(public_routes())
     app.include_router(
-        create_api_router(
+        protected_routes(
             app.state.queue, broadcaster, config, converter, whitelist_check
         ),
         dependencies=dependencies,

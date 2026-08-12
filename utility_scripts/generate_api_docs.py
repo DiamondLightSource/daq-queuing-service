@@ -4,12 +4,11 @@ from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from daq_queuing_service.api.api import create_api_router
+from daq_queuing_service.api.api import protected_routes, public_routes
 
 app = FastAPI()
-app.include_router(
-    create_api_router(MagicMock(), MagicMock(), MagicMock(), MagicMock())
-)
+app.include_router(public_routes())
+app.include_router(protected_routes(MagicMock(), MagicMock(), MagicMock(), MagicMock()))
 
 openapi = get_openapi(
     title=app.title,

@@ -40,7 +40,17 @@ def _filter_by_status(
     return [task for task in tasks if task.status == status]
 
 
-def create_api_router(
+def public_routes() -> APIRouter:
+    router = APIRouter()
+
+    @router.get("/healthz")
+    async def healthz():
+        return Response()
+
+    return router
+
+
+def protected_routes(
     queue: TaskQueue,
     broadcaster: Broadcaster[QUEUE_EVENTS],
     config: AppConfig,
@@ -49,10 +59,6 @@ def create_api_router(
 ) -> APIRouter:
     authorised = [Depends(whitelist_check)] if whitelist_check else None
     router = APIRouter()
-
-    @router.get("/healthz")
-    async def healthz():
-        return Response()
 
     @router.get("/")
     def read_root(request: Request):

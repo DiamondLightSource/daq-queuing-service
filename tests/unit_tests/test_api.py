@@ -19,7 +19,8 @@ from fastapi.testclient import TestClient
 
 from daq_queuing_service.api.api import (
     TaskCancelRequest,
-    create_api_router,
+    protected_routes,
+    public_routes,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.app._config import TEST_CONFIG_PATH, load_config
@@ -67,8 +68,9 @@ def app(
 ) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
+    app.include_router(public_routes())
     app.include_router(
-        create_api_router(
+        protected_routes(
             task_queue_with_history,
             broadcaster,
             load_config(Path(TEST_CONFIG_PATH)),
