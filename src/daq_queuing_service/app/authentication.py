@@ -44,6 +44,7 @@ def build_access_token_check(
     The returned function should be used via fastAPI's 'Depends' mechanism to
     ensure users are authenticated
     """
+    LOGGER.info(f"JWKS URI: {config.jwks_uri}")
     jwkclient = jwt.PyJWKClient(config.jwks_uri)
 
     def validate_bearer_token(token: UncheckedBearerToken):
