@@ -5,6 +5,7 @@ import jwt
 from blueapi.config import OIDCConfig
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jwt.exceptions import DecodeError
 from pydantic import BaseModel, ValidationError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
@@ -15,7 +16,7 @@ class User(BaseModel):
     username: str | None = None
 
 
-# Some of the following contents of this file were copied from blueapi
+# Some of the following code was copied from blueapi
 # See https://github.com/DiamondLightSource/blueapi/blob/2108ee0c89b4399d961106f7f23082a58d48a564/src/blueapi/service/authentication.py#L281-L340
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -52,7 +53,13 @@ def build_access_token_check(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        signing_key = jwkclient.get_signing_key_from_jwt(token)
+        try:
+            signing_key = jwkclient.get_signing_key_from_jwt(token)
+        except DecodeError as e:
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED,
+                detail="Cannot decode token",
+            ) from e
         decoded: dict[str, Any] = jwt.decode(
             token,
             signing_key.key,
@@ -66,10 +73,10 @@ def build_access_token_check(
     return validate_bearer_token
 
 
-def build_current_user(
+def build_get_current_user(
     validate_token: Callable[..., dict[str, Any]],
 ) -> Callable[[Request, dict[str, Any]], User]:
-    def current_user(
+    def get_current_user(
         request: Request,
         decoded: Annotated[dict[str, Any], Depends(validate_token)],
     ) -> User:
@@ -83,4 +90,4 @@ def build_current_user(
         request.state.user = user
         return user
 
-    return current_user
+    return get_current_user

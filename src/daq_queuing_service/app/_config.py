@@ -23,6 +23,7 @@ class AppConfig(BaseModel):
     blueapi: BlueapiConfig
     converter: ConverterConfig
     oidc: OIDCConfig | None = None
+    authorisation_whitelist: list[str] | None = None
 
 
 def get_default_config() -> str:
