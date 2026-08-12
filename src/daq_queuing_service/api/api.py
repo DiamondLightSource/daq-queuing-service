@@ -47,7 +47,7 @@ def create_api_router(
     converter: Converter,
     whitelist_check: Callable[[User], User] | None = None,
 ) -> APIRouter:
-    authorised = [Depends(whitelist_check)] or None
+    authorised = [Depends(whitelist_check)] if whitelist_check else None
     router = APIRouter()
 
     @router.get("/healthz")
