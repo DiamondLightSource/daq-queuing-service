@@ -23,6 +23,9 @@ def build_ensure_current_user_is_in_whitelist(
                 f"FedID {current_user.fedid} found in whitelist, user authorised."
             )
             return current_user
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Not authorised")
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN,
+            detail="Not authorised. You are not in the whitelist of authorised FedIDs",
+        )
 
     return ensure_current_user_is_in_whitelist
