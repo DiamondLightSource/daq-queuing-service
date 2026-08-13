@@ -54,6 +54,11 @@ FROM ubuntu:resolute AS runtime
 #     some-library \
 #     && apt-get dist-clean
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    update-ca-certificates && \
+    apt-get dist-clean
+
 # Copy the python installation from the build stage
 COPY --from=build /python /python
 

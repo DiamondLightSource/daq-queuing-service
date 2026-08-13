@@ -5,7 +5,7 @@ import jwt
 from blueapi.config import OIDCConfig
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt.exceptions import DecodeError
+from jwt.exceptions import DecodeError, ExpiredSignatureError
 from pydantic import BaseModel, ValidationError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
@@ -63,6 +63,12 @@ def build_access_token_check(
                 status_code=HTTP_401_UNAUTHORIZED,
                 detail="Cannot decode token",
             ) from e
+        except ExpiredSignatureError as e:
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED,
+                detail="Token expired",
+            ) from e
+
         decoded: dict[str, Any] = jwt.decode(
             token,
             signing_key.key,
