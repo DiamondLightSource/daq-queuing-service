@@ -169,7 +169,7 @@ def converter():
 
 
 @pytest.fixture
-def use_config_with_auth():
+def oidc_config():
     class MockOIDCConfig(OIDCConfig):
         @cached_property
         def _config_from_oidc_url(self) -> dict[str, Any]:
@@ -178,7 +178,14 @@ def use_config_with_auth():
 
     config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
     assert config.oidc is not None
-    config.oidc = MockOIDCConfig.model_validate(config.oidc.model_dump())
+    return MockOIDCConfig.model_validate(config.oidc.model_dump())
+
+
+@pytest.fixture
+def use_config_with_auth(oidc_config: OIDCConfig):
+
+    config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
+    config.oidc = oidc_config
     with patch("daq_queuing_service.app.app.load_config", return_value=config):
         yield config
 

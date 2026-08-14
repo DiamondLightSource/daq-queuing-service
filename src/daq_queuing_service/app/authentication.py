@@ -15,7 +15,7 @@ from daq_queuing_service.worker.worker import LOGGER
 class User(BaseModel):
     fedid: str
     email: str | None = None
-    username: str | None = None
+    name: str | None = None
 
 
 # Some of the following code was copied from blueapi
