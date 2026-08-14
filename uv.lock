@@ -354,8 +354,8 @@ wheels = [
 
 [[package]]
 name = "blueapi"
-version = "1.18.0"
-source = { registry = "https://pypi.org/simple" }
+version = "1.18.1.dev3+g308f55f43"
+source = { git = "https://github.com/DiamondLightSource/blueapi.git?rev=308f55f43f0623d36101d124ab9e85b9e7532568#308f55f43f0623d36101d124ab9e85b9e7532568" }
 dependencies = [
     { name = "aioca" },
     { name = "aiohttp" },
@@ -380,10 +380,6 @@ dependencies = [
     { name = "tiled", extra = ["client"] },
     { name = "tomlkit" },
     { name = "uvicorn" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/6c/826f1f3818cf6c28b2ef0cc50769245ff32959e21f9b2323613f0c2d8f5f/blueapi-1.18.0.tar.gz", hash = "sha256:1ff7933b9ee2a2620c7817c6435223493a41317fe203277d1f3368063cca01fa", size = 1881191, upload-time = "2026-08-07T09:48:18.142Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/77/20f7d841722cf820dd863f2a8ec4837bece0e4fcc07804be2f1ee978f308/blueapi-1.18.0-py3-none-any.whl", hash = "sha256:5037f6f27427945577e7a2ba64e10e844b244e1712313d87985b54bc9dba8b43", size = 87982, upload-time = "2026-08-07T09:48:16.716Z" },
 ]
 
 [[package]]
@@ -980,7 +976,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "blueapi", specifier = ">=1.18.0" },
+    { name = "blueapi", git = "https://github.com/DiamondLightSource/blueapi.git?rev=308f55f43f0623d36101d124ab9e85b9e7532568" },
     { name = "fastapi", specifier = ">=0.136.0" },
     { name = "pydantic", specifier = ">=2.13.2" },
 ]

@@ -13,7 +13,8 @@ classifiers = [
 ]
 description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
-    "blueapi>=1.18.0",
+    # Pin needed until https://github.com/DiamondLightSource/blueapi/pull/1625 in a release
+    "blueapi @ git+https://github.com/DiamondLightSource/blueapi.git@308f55f43f0623d36101d124ab9e85b9e7532568",
     "fastapi>=0.136.0",
     "pydantic>=2.13.2",
 ]
