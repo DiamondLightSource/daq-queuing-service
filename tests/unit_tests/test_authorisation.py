@@ -28,7 +28,7 @@ def test_ensure_current_user_is_in_whitelist_raises_error_if_user_not_in_whiteli
         whitelist_check(user)
 
 
-def test_ensure_current_user_is_in_whitelist_returns_user_no_whitelist_provided():
+def test_ensure_current_user_is_in_whitelist_returns_user_if_no_whitelist_provided():
     user = User(fedid="abc12345")
 
     whitelist_check = build_ensure_current_user_is_in_whitelist(None, MagicMock())
