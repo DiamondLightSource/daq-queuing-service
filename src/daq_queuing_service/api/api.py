@@ -1,6 +1,7 @@
 import asyncio
 import json
 from collections.abc import AsyncGenerator, Callable
+from typing import Annotated
 
 from blueapi.service.model import TaskRequest
 from fastapi import APIRouter, Depends, Request, Response
@@ -22,6 +23,14 @@ from daq_queuing_service.task_queue.queue import (
 from daq_queuing_service.task_queue.task import Experiment, Status, Task
 
 # pyright: reportUnusedFunction=false
+
+
+def get_current_user(request: Request) -> User | None:
+    if hasattr(request.state, "user"):
+        return request.state.user
+
+
+CurrentUser = Annotated[User | None, Depends(get_current_user)]
 
 
 class QueueStateUpdate(BaseModel):
@@ -94,6 +103,7 @@ def protected_routes(
     @router.post("/queue", dependencies=authorised)
     async def add_tasks_to_queue(
         experiments: list[TaskRequest | Experiment],
+        user: CurrentUser,
         position: int | None = None,
     ) -> list[str]:
         try:
@@ -101,7 +111,7 @@ def protected_routes(
         except Exception as e:
             raise ValidateError(*e.args) from e
 
-        tasks = [Task(experiment=experiment) for experiment in experiments]
+        tasks = [Task(experiment=experiment, user=user) for experiment in experiments]
         task_ids = [task.id for task in tasks]
         await queue.add_tasks(tasks, position)
         return task_ids

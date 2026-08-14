@@ -132,6 +132,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         blueapi_calls=[],
         position=None,
         kind=TaskKind.EXPERIMENT,
+        user=None,
     )
     call_list = I151Converter().construct_blueapi_calls([task], [], [])
     assert len(call_list) == 3
@@ -153,6 +154,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         blueapi_calls=[],
         position=None,
         kind=TaskKind.EXPERIMENT,
+        user=None,
     )
 
     class BadExperiment:
@@ -201,6 +203,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         "blueapi_calls": [],
         "status": Status.QUEUED,
         "kind": TaskKind.EXPERIMENT,
+        "user": None,
     }
 
 
@@ -281,6 +284,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
         "blueapi_calls": [],
         "status": Status.QUEUED,
         "kind": TaskKind.EXPERIMENT,
+        "user": None,
     }
     new_tasks[2].id = ""
     assert new_tasks[2].model_dump() == {
@@ -298,6 +302,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
         "blueapi_calls": [],
         "status": Status.QUEUED,
         "kind": TaskKind.EXPERIMENT,
+        "user": None,
     }
 
 

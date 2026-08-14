@@ -174,6 +174,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             ],
             "position": 0,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -202,6 +203,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             ],
             "position": 1,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -230,6 +232,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             ],
             "position": 2,
             "kind": "Experiment",
+            "user": None,
         },
     ]
 
@@ -265,6 +268,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
             ],
             "position": 0,
             "kind": "Experiment",
+            "user": None,
         }
     ]
 
@@ -314,6 +318,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         }
     ]
 
@@ -370,6 +375,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         position=3,
         status=Status.QUEUED,
         kind=TaskKind.PLAN,
+        user=None,
     )
 
 
@@ -620,6 +626,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -648,6 +655,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
     ]
 
@@ -748,6 +756,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -776,6 +785,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
     ]
 
@@ -810,6 +820,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
         ],
         "position": 1,
         "kind": "Experiment",
+        "user": None,
     }
 
 
@@ -843,6 +854,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
         ],
         "position": 1,
         "kind": "Experiment",
+        "user": None,
     }
 
 

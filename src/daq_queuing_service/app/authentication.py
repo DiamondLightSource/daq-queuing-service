@@ -9,7 +9,7 @@ from jwt.exceptions import DecodeError, ExpiredSignatureError
 from pydantic import BaseModel, ValidationError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from daq_queuing_service.worker.worker import LOGGER
+from daq_queuing_service.log import LOGGER
 
 
 class User(BaseModel):
