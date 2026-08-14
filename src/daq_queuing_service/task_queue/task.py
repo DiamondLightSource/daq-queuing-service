@@ -1,4 +1,3 @@
-from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any, Self
 from uuid import uuid4
@@ -16,13 +15,13 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 class Sample(BaseModel):
     name: str
     id: str
-    data: Mapping[str, Any]
+    data: dict[str, Any]
 
 
 class ExperimentDefinition(BaseModel):
     name: str
     id: str
-    data: Mapping[str, Any]
+    data: dict[str, Any]
 
 
 class Experiment(BaseModel):
