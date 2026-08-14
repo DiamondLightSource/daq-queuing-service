@@ -17,6 +17,7 @@ dependencies = [
     "blueapi @ git+https://github.com/DiamondLightSource/blueapi.git@308f55f43f0623d36101d124ab9e85b9e7532568",
     "fastapi>=0.136.0",
     "pydantic>=2.13.2",
+    "tiled>=0.2.9",
 ]
 dynamic = ["version"]
 license.file = "LICENSE"
