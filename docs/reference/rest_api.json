@@ -5,22 +5,6 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/healthz": {
-      "get": {
-        "summary": "Healthz",
-        "operationId": "healthz_healthz_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/": {
       "get": {
         "summary": "Read Root",
@@ -37,18 +21,16 @@
         }
       }
     },
-    "/config": {
+    "/healthz": {
       "get": {
-        "summary": "Get Config",
-        "operationId": "get_config_config_get",
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppConfig"
-                }
+                "schema": {}
               }
             }
           }
@@ -102,6 +84,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "summary": "Get Config",
+        "operationId": "get_config_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfig"
                 }
               }
             }
@@ -605,45 +605,10 @@
       "AppConfig": {
         "properties": {
           "blueapi": {
-            "$ref": "#/components/schemas/ApplicationConfig"
+            "$ref": "#/components/schemas/BlueapiConfig"
           },
           "converter": {
             "$ref": "#/components/schemas/ConverterConfig"
-          }
-        },
-        "type": "object",
-        "required": [
-          "blueapi",
-          "converter"
-        ],
-        "title": "AppConfig"
-      },
-      "ApplicationConfig": {
-        "properties": {
-          "stomp": {
-            "$ref": "#/components/schemas/StompConfig"
-          },
-          "tiled": {
-            "$ref": "#/components/schemas/TiledConfig"
-          },
-          "env": {
-            "$ref": "#/components/schemas/EnvironmentConfig"
-          },
-          "logging": {
-            "$ref": "#/components/schemas/LoggingConfig"
-          },
-          "api": {
-            "$ref": "#/components/schemas/RestConfig"
-          },
-          "scratch": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ScratchConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
           },
           "oidc": {
             "anyOf": [
@@ -655,43 +620,27 @@
               }
             ]
           },
-          "auth_token_path": {
+          "authorisation_whitelist": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "path"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Auth Token Path"
-          },
-          "numtracker": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumtrackerConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "opa": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OpaConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "title": "Authorisation Whitelist"
           }
         },
-        "additionalProperties": false,
         "type": "object",
-        "title": "ApplicationConfig",
-        "description": "Config for the worker application as a whole. Root of\nconfig tree."
+        "required": [
+          "blueapi",
+          "converter"
+        ],
+        "title": "AppConfig"
       },
       "BasicAuthentication": {
         "properties": {
@@ -805,6 +754,18 @@
         ],
         "title": "BlueapiCallResponse"
       },
+      "BlueapiConfig": {
+        "properties": {
+          "stomp": {
+            "$ref": "#/components/schemas/StompConfig"
+          },
+          "api": {
+            "$ref": "#/components/schemas/RestConfig"
+          }
+        },
+        "type": "object",
+        "title": "BlueapiConfig"
+      },
       "CORSConfig": {
         "properties": {
           "origins": {
@@ -877,82 +838,6 @@
         ],
         "title": "ConverterConfig"
       },
-      "DeviceManagerSource": {
-        "properties": {
-          "module": {
-            "type": "string",
-            "title": "Module",
-            "description": "Module to be imported"
-          },
-          "kind": {
-            "type": "string",
-            "const": "deviceManager",
-            "title": "Kind",
-            "default": "deviceManager"
-          },
-          "mock": {
-            "type": "boolean",
-            "title": "Mock",
-            "description": "If true, ophyd_async device connections are mocked",
-            "default": false
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Name of the device manager in the module",
-            "default": "devices"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "module"
-        ],
-        "title": "DeviceManagerSource"
-      },
-      "EnvironmentConfig": {
-        "properties": {
-          "sources": {
-            "items": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/PlanSource"
-                },
-                {
-                  "$ref": "#/components/schemas/DeviceManagerSource"
-                }
-              ],
-              "discriminator": {
-                "propertyName": "kind",
-                "mapping": {
-                  "deviceManager": "#/components/schemas/DeviceManagerSource",
-                  "planFunctions": "#/components/schemas/PlanSource"
-                }
-              }
-            },
-            "type": "array",
-            "title": "Sources",
-            "default": []
-          },
-          "events": {
-            "$ref": "#/components/schemas/WorkerEventConfig"
-          },
-          "metadata": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MetadataConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "EnvironmentConfig",
-        "description": "Config for the RunEngine environment"
-      },
       "Experiment": {
         "properties": {
           "name": {
@@ -1003,25 +888,6 @@
         ],
         "title": "ExperimentDefinition"
       },
-      "GraylogConfig": {
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled",
-            "default": false
-          },
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "format": "uri",
-            "title": "Url",
-            "default": "tcp://localhost:5555"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "GraylogConfig"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1034,67 +900,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "LoggingConfig": {
-        "properties": {
-          "level": {
-            "type": "string",
-            "enum": [
-              "NOTSET",
-              "DEBUG",
-              "INFO",
-              "WARNING",
-              "ERROR",
-              "CRITICAL"
-            ],
-            "title": "Level",
-            "default": "INFO"
-          },
-          "graylog": {
-            "$ref": "#/components/schemas/GraylogConfig",
-            "default": {
-              "enabled": false,
-              "url": "tcp://localhost:5555"
-            }
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "LoggingConfig"
-      },
-      "MetadataConfig": {
-        "properties": {
-          "instrument": {
-            "type": "string",
-            "title": "Instrument"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "instrument"
-        ],
-        "title": "MetadataConfig"
-      },
-      "NumtrackerConfig": {
-        "properties": {
-          "url": {
-            "type": "string",
-            "maxLength": 2083,
-            "minLength": 1,
-            "format": "uri",
-            "title": "Url",
-            "default": "http://localhost:8406/graphql"
-          },
-          "detector_file_template": {
-            "type": "string",
-            "title": "Detector File Template",
-            "default": "{instrument}-{scan_id}-{device_name}"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "NumtrackerConfig"
       },
       "OIDCConfig": {
         "properties": {
@@ -1148,33 +953,6 @@
         ],
         "title": "OIDCConfig"
       },
-      "OpaConfig": {
-        "properties": {
-          "root": {
-            "type": "string",
-            "maxLength": 2083,
-            "minLength": 1,
-            "format": "uri",
-            "title": "Root",
-            "default": "http://localhost:8181/"
-          },
-          "audience": {
-            "type": "string",
-            "title": "Audience",
-            "default": "account"
-          },
-          "tiled_service_account_check": {
-            "type": "string",
-            "title": "Tiled Service Account Check"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "tiled_service_account_check"
-        ],
-        "title": "OpaConfig"
-      },
       "PauseReason": {
         "type": "string",
         "enum": [
@@ -1183,27 +961,6 @@
           "Paused as last task errored"
         ],
         "title": "PauseReason"
-      },
-      "PlanSource": {
-        "properties": {
-          "module": {
-            "type": "string",
-            "title": "Module",
-            "description": "Module to be imported"
-          },
-          "kind": {
-            "type": "string",
-            "const": "planFunctions",
-            "title": "Kind",
-            "default": "planFunctions"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "module"
-        ],
-        "title": "PlanSource"
       },
       "QueueState": {
         "properties": {
@@ -1283,85 +1040,6 @@
           "data"
         ],
         "title": "Sample"
-      },
-      "ScratchConfig": {
-        "properties": {
-          "root": {
-            "type": "string",
-            "format": "path",
-            "title": "Root",
-            "description": "The root directory of the scratch area, all repositories will be cloned under this directory.",
-            "default": "/tmp/scratch/blueapi"
-          },
-          "required_gid": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Required Gid",
-            "description": "\nRequired owner GID for the scratch directory. If supplied, the setup-scratch\ncommand will check the scratch area ownership and raise an error if it is\nnot owned by <GID>, or if it does not have SGID permission bit set.\n"
-          },
-          "repositories": {
-            "items": {
-              "$ref": "#/components/schemas/ScratchRepository"
-            },
-            "type": "array",
-            "title": "Repositories",
-            "description": "Details of repositories to be cloned and imported into blueapi"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "ScratchConfig"
-      },
-      "ScratchRepository": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Unique name for this repository in the scratch directory",
-            "default": "example"
-          },
-          "remote_url": {
-            "type": "string",
-            "title": "Remote Url",
-            "description": "URL to clone from",
-            "default": "https://github.com/example/example.git"
-          },
-          "target_revision": {
-            "type": "string",
-            "title": "Target Revision",
-            "description": "Revision (branch or tag) to check out when cloning - defaults to remote's HEAD. If a tag is used, the repo will be left in a 'detached head' state."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "ScratchRepository"
-      },
-      "ServiceAccount": {
-        "properties": {
-          "client_id": {
-            "type": "string",
-            "title": "Client Id",
-            "description": "Service account client ID",
-            "default": ""
-          },
-          "client_secret": {
-            "type": "string",
-            "format": "password",
-            "title": "Client Secret",
-            "description": "Service account client secret",
-            "default": "",
-            "writeOnly": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "ServiceAccount"
       },
       "Status": {
         "type": "string",
@@ -1561,42 +1239,6 @@
         ],
         "title": "TaskWithPosition"
       },
-      "TiledConfig": {
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled",
-            "description": "True if blueapi should forward data to a Tiled instance",
-            "default": false
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2083,
-            "minLength": 1,
-            "format": "uri",
-            "title": "Url",
-            "default": "http://localhost:8407/"
-          },
-          "authentication": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/components/schemas/ServiceAccount"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Authentication",
-            "description": "Tiled Authentication can be API_KEY or OIDC Service account"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "TiledConfig"
-      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -1636,19 +1278,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "WorkerEventConfig": {
-        "properties": {
-          "broadcast_status_events": {
-            "type": "boolean",
-            "title": "Broadcast Status Events",
-            "default": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "WorkerEventConfig",
-        "description": "Config for event broadcasting via the message bus"
       }
     }
   }
