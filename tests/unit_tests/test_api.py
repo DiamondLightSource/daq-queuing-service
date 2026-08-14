@@ -21,11 +21,13 @@ from fastapi.testclient import TestClient
 from constants import TEST_CONFIG_PATH
 from daq_queuing_service.api.api import (
     TaskCancelRequest,
+    get_current_user,
     protected_routes,
     public_routes,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
 from daq_queuing_service.app._config import load_config
+from daq_queuing_service.app.authentication import User
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
@@ -377,6 +379,28 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         kind=TaskKind.PLAN,
         user=None,
     )
+
+
+async def test_add_tasks_to_queue_adds_user_to_task_object(
+    app: FastAPI, task_queue_with_history: TaskQueue
+):
+    user = User(fedid="abc12345", email="joe.blogs@diamond.ac.uk", name="Joe Blogs")
+    app.dependency_overrides[get_current_user] = lambda: user
+    test_client = TestClient(app)
+
+    task_id = test_client.post(
+        "/queue",
+        json=[
+            {
+                "name": "add_tasks",
+                "params": {"time": 10},
+                "instrument_session": "abc",
+            }
+        ],
+    ).json()[0]
+    task = await task_queue_with_history.get_task_by_id(task_id)
+    assert task
+    assert task.user == user
 
 
 async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_if_fails(
