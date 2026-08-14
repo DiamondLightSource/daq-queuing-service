@@ -11,7 +11,8 @@ blueapi:
       username: guest
       password: guest
 oidc:
-  issuer: "https://identity.diamond.ac.uk/realms/dls"
+  issuer: "https://example.com"
   client_id: "daq-queuing-service"
   client_audience: "account"
-  logout_redirect_endpoint: "oauth2/sign_out"
+authorisation_whitelist:
+  - "abc12345"

@@ -1,9 +1,20 @@
+from functools import cached_property
+from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock, patch
+
 import pytest
+from blueapi.config import OIDCConfig
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
+from fastapi import FastAPI
 from fastapi.dependencies.models import Dependant
 from pytest import MonkeyPatch
 
+from constants import TEST_CONFIG_WITH_AUTH_PATH
+from daq_queuing_service.app._config import AppConfig, load_config
+from daq_queuing_service.app.app import create_app
+from daq_queuing_service.app.authentication import User
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.log import LOGGER
@@ -157,7 +168,43 @@ def converter():
     return DNConverter()
 
 
-def has_dependency_name(dep: Dependant, name: str):
+@pytest.fixture
+def use_config_with_auth():
+    class MockOIDCConfig(OIDCConfig):
+        @cached_property
+        def _config_from_oidc_url(self) -> dict[str, Any]:
+            # This would usually make a real request, we don't want this in tests
+            return {}
+
+    config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
+    assert config.oidc is not None
+    config.oidc = MockOIDCConfig.model_validate(config.oidc.model_dump())
+    with patch("daq_queuing_service.app.app.load_config", return_value=config):
+        yield config
+
+
+@pytest.fixture
+def app_with_auth(use_config_with_auth: AppConfig) -> FastAPI:
+    return create_app(Path(""))
+
+
+@pytest.fixture
+def app_with_authz(use_config_with_auth: AppConfig):
+    """Authentication always passes. Only user abc12345 is authorised"""
+
+    def fake_get_current_user():
+        return User(fedid="xyz54321")
+
+    with patch(
+        "daq_queuing_service.app.app.build_get_current_user",
+        MagicMock(return_value=fake_get_current_user),
+    ):
+        app = create_app(Path(""))
+        yield app
+    return app
+
+
+def has_dependency_name(dep: Dependant, name: str) -> bool:
     if getattr(dep.call, "__name__", None) == name:
         return True
 

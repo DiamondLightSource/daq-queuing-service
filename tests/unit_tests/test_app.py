@@ -10,7 +10,7 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
-from constants import TEST_CONFIG_PATH, TEST_CONFIG_WITH_AUTHN_PATH
+from constants import TEST_CONFIG_PATH
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
@@ -107,11 +107,10 @@ def test_if_dev_mode_cors_middlewhere_added_to_app():
     )
 
 
-def test_create_app_adds_auth_dependencies_to_correct_routes():
+def test_create_app_adds_auth_dependencies_to_correct_routes(app_with_auth: FastAPI):
     no_auth_required = ["read_root", "healthz", "get_queue_state"]
-    app = create_app(Path(TEST_CONFIG_WITH_AUTHN_PATH))
 
-    for route in app.routes:
+    for route in app_with_auth.routes:
         if isinstance(route, APIRoute):
             if route.name not in no_auth_required:
                 assert has_dependency_name(route.dependant, "validate_bearer_token"), (

@@ -41,6 +41,7 @@ def _filter_by_status(
 
 
 def public_routes(queue: TaskQueue) -> APIRouter:
+    """No authentication is required to access these endpoints."""
     router = APIRouter()
 
     @router.get("/")
@@ -68,6 +69,10 @@ def protected_routes(
     converter: Converter,
     whitelist_check: Callable[[User], User] | None = None,
 ) -> APIRouter:
+    """Authentication is required to access these endpoints (if turned on in config).
+    Additionally, for endpoints that depend on whitelist_check, you must be in the
+    whitelist of authorised fedIDs to access them.
+    """
     authorised = [Depends(whitelist_check)] if whitelist_check else None
     router = APIRouter()
 
