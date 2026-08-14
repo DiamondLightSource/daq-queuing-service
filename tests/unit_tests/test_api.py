@@ -1052,3 +1052,10 @@ def test_endpoints_that_require_authn_but_not_authz_any_user_allowed(
 ):
     response: httpx.Response = getattr(test_client_with_authz, method)(endpoint)
     assert response.status_code == 200
+
+
+def test_get_current_user_returns_user_from_request_state():
+    request = MagicMock()
+    user = User(fedid="abc12345")
+    request.state.user = user
+    assert get_current_user(request) == user
