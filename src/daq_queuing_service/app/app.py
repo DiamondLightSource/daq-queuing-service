@@ -99,7 +99,7 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
     )
 
     register_exception_handlers(app)
-    app.include_router(public_routes())
+    app.include_router(public_routes(app.state.queue))
     app.include_router(
         protected_routes(
             app.state.queue, broadcaster, config, converter, whitelist_check

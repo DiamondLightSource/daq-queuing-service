@@ -6,7 +6,7 @@ from pathlib import Path
 
 import uvicorn
 
-from daq_queuing_service.app._config import get_default_config
+from daq_queuing_service.app._config import get_default_config_path
 
 from . import __version__
 
@@ -19,7 +19,7 @@ def main(args: Sequence[str] | None = None) -> None:
     parser.add_argument("-v", "--version", action="version", version=__version__)
     parser.add_argument("-p", "--port", type=int, default=8000)
     parser.add_argument("--dev", action="store_true", default=False)
-    parser.add_argument("--config", type=Path, default=get_default_config())
+    parser.add_argument("--config", type=Path, default=get_default_config_path())
 
     parsed_args = parser.parse_args(args)
 

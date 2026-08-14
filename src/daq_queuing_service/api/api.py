@@ -40,12 +40,23 @@ def _filter_by_status(
     return [task for task in tasks if task.status == status]
 
 
-def public_routes() -> APIRouter:
+def public_routes(queue: TaskQueue) -> APIRouter:
     router = APIRouter()
+
+    @router.get("/")
+    def read_root(request: Request):
+        base_url = str(request.base_url)
+        return (
+            f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
+        )
 
     @router.get("/healthz")
     async def healthz():
         return Response()
+
+    @router.get("/queue/state")
+    def get_queue_state() -> QueueState:
+        return queue.state
 
     return router
 
@@ -60,13 +71,6 @@ def protected_routes(
     authorised = [Depends(whitelist_check)] if whitelist_check else None
     router = APIRouter()
 
-    @router.get("/")
-    def read_root(request: Request):
-        base_url = str(request.base_url)
-        return (
-            f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
-        )
-
     @router.get("/config")
     def get_config() -> AppConfig:
         return config
@@ -77,10 +81,6 @@ def protected_routes(
             return await queue.pause_queue(PauseReason.USER_REQUESTED)
         else:
             return await queue.resume_queue()
-
-    @router.get("/queue/state")
-    def get_queue_state() -> QueueState:
-        return queue.state
 
     @router.get("/queue", dependencies=authorised)
     async def get_queued_tasks(status: Status | None = None) -> list[TaskWithPosition]:

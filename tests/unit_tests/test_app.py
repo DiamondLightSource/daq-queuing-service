@@ -4,25 +4,17 @@ from pathlib import Path
 from typing import NoReturn
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
-from daq_queuing_service.app._config import TEST_CONFIG_PATH
+from constants import TEST_CONFIG_PATH, TEST_CONFIG_WITH_AUTHN_PATH
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
-
-
-@pytest.fixture(autouse=True)
-def patch_config_path():
-    with patch(
-        "daq_queuing_service.app._config.CONFIG_PATH",
-        "tests/test_data/test_config.yaml",
-    ):
-        yield
+from unit_tests.conftest import has_dependency_name
 
 
 def test_create_app_returns_fast_api_object():
@@ -113,3 +105,21 @@ def test_if_dev_mode_cors_middlewhere_added_to_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+def test_create_app_adds_auth_dependencies_to_correct_routes():
+    no_auth_required = ["read_root", "healthz", "get_queue_state"]
+    app = create_app(Path(TEST_CONFIG_WITH_AUTHN_PATH))
+
+    for route in app.routes:
+        if isinstance(route, APIRoute):
+            if route.name not in no_auth_required:
+                assert has_dependency_name(route.dependant, "validate_bearer_token"), (
+                    f"No access token check dependency for route {str(route)}"
+                )
+                assert has_dependency_name(route.dependant, "get_current_user"), (
+                    f"No get user dependency for route {str(route)}"
+                )
+            else:
+                assert not has_dependency_name(route.dependant, "validate_bearer_token")
+                assert not has_dependency_name(route.dependant, "get_current_user")

@@ -62,13 +62,12 @@ def broadcaster() -> Broadcaster[QUEUE_EVENTS]:
 @pytest.fixture
 def app(
     task_queue_with_history: TaskQueue,
-    blueapi_client: BlueapiRestClient,
     broadcaster: Broadcaster[QUEUE_EVENTS],
     converter: Converter,
 ) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
-    app.include_router(public_routes())
+    app.include_router(public_routes(task_queue_with_history))
     app.include_router(
         protected_routes(
             task_queue_with_history,

@@ -1,6 +1,7 @@
 import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
+from fastapi.dependencies.models import Dependant
 from pytest import MonkeyPatch
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
@@ -154,3 +155,10 @@ def converter():
                     )
 
     return DNConverter()
+
+
+def has_dependency_name(dep: Dependant, name: str):
+    if getattr(dep.call, "__name__", None) == name:
+        return True
+
+    return any(has_dependency_name(child, name) for child in dep.dependencies)

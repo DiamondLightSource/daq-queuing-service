@@ -26,7 +26,7 @@ class AppConfig(BaseModel):
     authorisation_whitelist: list[str] | None = None
 
 
-def get_default_config() -> str:
+def get_default_config_path() -> str:
     return CONFIG_PATH if os.path.isfile(CONFIG_PATH) else TEST_CONFIG_PATH
 
 
