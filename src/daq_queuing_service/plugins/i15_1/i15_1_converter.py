@@ -2,7 +2,7 @@ from typing import Any
 
 from blueapi.service.model import TaskRequest
 from tiled.client import from_uri  # type: ignore
-from tiled.client.container import Container
+from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
@@ -10,6 +10,8 @@ from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import get_background_tiled_id
 from daq_queuing_service.task_queue.task import (
+    Container,
+    ContainerPosition,
     Experiment,
     ExperimentDefinition,
     Sample,
@@ -22,7 +24,9 @@ BACKGROUND_SCAN = "Background"
 
 class I151Converter(Converter):
     def __init__(self):
-        self.tiled_client: Container = from_uri("https://tiled.diamond.ac.uk/api/v1")
+        self.tiled_client: TiledContainer = from_uri(
+            "https://tiled.diamond.ac.uk/api/v1"
+        )
 
     def pre_process(
         self,
@@ -38,7 +42,6 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[BlueapiCall]:
-
         call_list: list[BlueapiCall] = []
 
         for task in queue:
@@ -66,9 +69,8 @@ class I151Converter(Converter):
         self,
         experiment: Experiment,
     ) -> list[TaskRequest]:
-        sample_name = experiment.sample.name
-        # Assume sample name is of form test_8_1 to load from position 8 on puck 1
-        _, position, puck = sample_name.split("_")
+        position = experiment.sample.positionInContainer.position
+        puck = experiment.sample.container.positionInParent.position
 
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
@@ -179,11 +181,18 @@ class I151Converter(Converter):
         self, background: BackgroundInfo, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for background: {background}")
+        container_position = ContainerPosition(position=1)
         return Experiment(
             name=BACKGROUND_SCAN,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=Sample(name="fq_1_1", id="", data={}),
+            sample=Sample(
+                name="fq_1_1",
+                id="",
+                data={},
+                container=Container(id="", positionInParent=container_position),
+                positionInContainer=container_position,
+            ),
             experiment_definition=ExperimentDefinition(
                 name="background_scan", id="", data={"background": background}
             ),

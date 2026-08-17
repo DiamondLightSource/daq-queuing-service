@@ -859,6 +859,36 @@
         ],
         "title": "CallStatus"
       },
+      "Container": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "positionInParent": {
+            "$ref": "#/components/schemas/ContainerPosition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "positionInParent"
+        ],
+        "title": "Container"
+      },
+      "ContainerPosition": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position"
+        ],
+        "title": "ContainerPosition"
+      },
       "ConverterConfig": {
         "properties": {
           "path": {
@@ -1166,12 +1196,22 @@
           "tiled_service_account_check": {
             "type": "string",
             "title": "Tiled Service Account Check"
+          },
+          "submit_task_check": {
+            "type": "string",
+            "title": "Submit Task Check"
+          },
+          "admin_check": {
+            "type": "string",
+            "title": "Admin Check"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "tiled_service_account_check"
+          "tiled_service_account_check",
+          "submit_task_check",
+          "admin_check"
         ],
         "title": "OpaConfig"
       },
@@ -1274,13 +1314,21 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Data"
+          },
+          "container": {
+            "$ref": "#/components/schemas/Container"
+          },
+          "positionInContainer": {
+            "$ref": "#/components/schemas/ContainerPosition"
           }
         },
         "type": "object",
         "required": [
           "name",
           "id",
-          "data"
+          "data",
+          "container",
+          "positionInContainer"
         ],
         "title": "Sample"
       },
