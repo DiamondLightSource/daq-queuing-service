@@ -70,19 +70,13 @@ class QueueContents(TypedDict):
 class Modifying(asyncio.Condition):
     def __init__(
         self,
-        on_enter: Callable[[], None],
+        lock: asyncio.Lock,
         on_exit: Callable[[], None],
         on_error: Callable[[], None],
     ):
-        super().__init__()
-        self._on_enter = on_enter
+        super().__init__(lock=lock)
         self._on_exit = on_exit
         self._on_error = on_error
-
-    async def __aenter__(self):
-        result = await super().__aenter__()
-        self._on_enter()
-        return result
 
     async def __aexit__(
         self,
@@ -129,8 +123,9 @@ class TaskQueue:
         )
         self._converter = converter
         self._broadcaster = broadcaster
+        self._lock = asyncio.Lock()
         self._modifying = Modifying(
-            on_enter=self._save_contents,
+            lock=self._lock,
             on_exit=self._sync,
             on_error=self._restore_latest_good_contents,
         )
@@ -217,6 +212,7 @@ class TaskQueue:
         if not self._call_queue:
             self._pause_queue(PauseReason.EMPTY_QUEUE)
 
+        self._save_contents()
         self._broadcast_changes()
         self._modifying.notify_all()
 
@@ -231,17 +227,17 @@ class TaskQueue:
             }
         )
 
-    def _save_contents(self) -> None:
+    def _save_contents(self):
         self._last_good_contents = self._copy_contents()
 
-    def _restore_from_contents(self, contents: QueueContents) -> None:
+    def _restore_from_contents(self, contents: QueueContents):
         self._tasks = TaskRegistry(contents["tasks"])
         self._queue = contents["queue"]
         self._history = contents["history"]
         self._call_queue = contents["call_queue"]
         self._call_history = contents["call_history"]
 
-    def _restore_latest_good_contents(self) -> None:
+    def _restore_latest_good_contents(self):
         self._restore_from_contents(self._last_good_contents)
 
     def _broadcast_changes(self):
@@ -350,7 +346,7 @@ class TaskQueue:
             TaskNotFoundError: Raised if the no task exists with the requested task ID.
         """
         # Returns copy so don't have to be worried about caller modifying task.
-        async with self._modifying:
+        async with self._lock:
             return self._get_task_by_id(task_id)
 
     def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
@@ -369,7 +365,7 @@ class TaskQueue:
             if no task exists at the requested position.
         """
         # Returns copy so don't have to be worried about caller modifying task.
-        async with self._modifying:
+        async with self._lock:
             if position < -self.length or position >= self.length:
                 return None
             return self._get_task_by_id(self._queue[position])
@@ -382,7 +378,7 @@ class TaskQueue:
             will be run in.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._modifying:
+        async with self._lock:
             return self._get_queue()
 
     async def get_history(self) -> list[TaskWithPosition]:
@@ -393,7 +389,7 @@ class TaskQueue:
             chronological order.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._modifying:
+        async with self._lock:
             return self._get_history()
 
     async def get_tasks(self) -> list[TaskWithPosition]:
@@ -404,7 +400,7 @@ class TaskQueue:
             with the history.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._modifying:
+        async with self._lock:
             return self._get_history() + self._get_queue()
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
@@ -640,14 +636,14 @@ class TaskQueue:
         ]
 
     async def get_call_queue(self) -> list[BlueapiCallResponse]:
-        async with self._modifying:
+        async with self._lock:
             return self._get_call_queue()
 
     def _get_call_queue(self) -> list[BlueapiCallResponse]:
         return [call.to_response() for call in self._call_queue]
 
     async def get_call_history(self) -> list[BlueapiCallResponse]:
-        async with self._modifying:
+        async with self._lock:
             return self._get_call_history()
 
     def _get_call_history(self) -> list[BlueapiCallResponse]:
