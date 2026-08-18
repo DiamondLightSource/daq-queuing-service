@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>API Reference &#8212; daq-queuing-service 0.1.13a2.dev3+ga500c9b7d documentation</title>
+    <title>API Reference &#8212; daq-queuing-service 0.1.13a2.dev4+gb8229c66e documentation</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
 
-    <script src="../_static/documentation_options.js?v=92a7415d"></script>
+    <script src="../_static/documentation_options.js?v=90e19b72"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -476,19 +476,6 @@
   <section id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">#</a></h1>
 <dl class="http get">
-<dt class="sig sig-object http" id="get--healthz">
-<span class="sig-name descname"><span class="pre">GET</span> </span><span class="sig-name descname"><span class="pre">/healthz</span></span><a class="headerlink" href="#get--healthz" title="Link to this definition">#</a></dt>
-<dd><p><strong>Healthz</strong></p>
-<dl class="field-list simple">
-<dt class="field-odd">Status Codes<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><span><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/200">200 OK</a></span> – Successful Response</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="http get">
 <dt class="sig sig-object http" id="get--">
 <span class="sig-name descname"><span class="pre">GET</span> </span><span class="sig-name descname"><span class="pre">/</span></span><a class="headerlink" href="#get--" title="Link to this definition">#</a></dt>
 <dd><p><strong>Read Root</strong></p>
@@ -502,9 +489,9 @@
 </dd></dl>
 
 <dl class="http get">
-<dt class="sig sig-object http" id="get--config">
-<span class="sig-name descname"><span class="pre">GET</span> </span><span class="sig-name descname"><span class="pre">/config</span></span><a class="headerlink" href="#get--config" title="Link to this definition">#</a></dt>
-<dd><p><strong>Get Config</strong></p>
+<dt class="sig sig-object http" id="get--healthz">
+<span class="sig-name descname"><span class="pre">GET</span> </span><span class="sig-name descname"><span class="pre">/healthz</span></span><a class="headerlink" href="#get--healthz" title="Link to this definition">#</a></dt>
+<dd><p><strong>Healthz</strong></p>
 <dl class="field-list simple">
 <dt class="field-odd">Status Codes<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -536,6 +523,19 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><span><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/200">200 OK</a></span> – Successful Response</p></li>
 <li><p><span><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/422">422 Unprocessable Entity</a></span> – Validation Error</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="http get">
+<dt class="sig sig-object http" id="get--config">
+<span class="sig-name descname"><span class="pre">GET</span> </span><span class="sig-name descname"><span class="pre">/config</span></span><a class="headerlink" href="#get--config" title="Link to this definition">#</a></dt>
+<dd><p><strong>Get Config</strong></p>
+<dl class="field-list simple">
+<dt class="field-odd">Status Codes<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/200">200 OK</a></span> – Successful Response</p></li>
 </ul>
 </dd>
 </dl>
