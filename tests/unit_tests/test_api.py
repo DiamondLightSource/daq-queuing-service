@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from blueapi.client.rest import (
     BlueapiRestClient,
@@ -17,12 +18,16 @@ from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
+from constants import TEST_CONFIG_PATH
 from daq_queuing_service.api.api import (
     TaskCancelRequest,
-    create_api_router,
+    get_current_user,
+    protected_routes,
+    public_routes,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.app._config import TEST_CONFIG_PATH, load_config
+from daq_queuing_service.app._config import load_config
+from daq_queuing_service.app.authentication import User
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
@@ -61,14 +66,14 @@ def broadcaster() -> Broadcaster[QUEUE_EVENTS]:
 @pytest.fixture
 def app(
     task_queue_with_history: TaskQueue,
-    blueapi_client: BlueapiRestClient,
     broadcaster: Broadcaster[QUEUE_EVENTS],
     converter: Converter,
 ) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
+    app.include_router(public_routes(task_queue_with_history))
     app.include_router(
-        create_api_router(
+        protected_routes(
             task_queue_with_history,
             broadcaster,
             load_config(Path(TEST_CONFIG_PATH)),
@@ -81,6 +86,17 @@ def app(
 @pytest.fixture
 def test_client(app: FastAPI) -> TestClient:
     return TestClient(app)
+
+
+@pytest.fixture
+def test_client_with_auth(app_with_auth: FastAPI) -> TestClient:
+    return TestClient(app_with_auth)
+
+
+@pytest.fixture
+def test_client_with_authz(app_with_authz: FastAPI) -> TestClient:
+    """Authentication always passes. Only user abc12345 is authorised"""
+    return TestClient(app_with_authz)
 
 
 def test_read_root_returns_expected_string(test_client: TestClient):
@@ -160,6 +176,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             ],
             "position": 0,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -188,6 +205,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             ],
             "position": 1,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -216,6 +234,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             ],
             "position": 2,
             "kind": "Experiment",
+            "user": None,
         },
     ]
 
@@ -251,6 +270,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
             ],
             "position": 0,
             "kind": "Experiment",
+            "user": None,
         }
     ]
 
@@ -300,6 +320,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         }
     ]
 
@@ -356,7 +377,30 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         position=3,
         status=Status.QUEUED,
         kind=TaskKind.PLAN,
+        user=None,
     )
+
+
+async def test_add_tasks_to_queue_adds_user_to_task_object(
+    app: FastAPI, task_queue_with_history: TaskQueue
+):
+    user = User(fedid="abc12345", email="joe.blogs@diamond.ac.uk", name="Joe Blogs")
+    app.dependency_overrides[get_current_user] = lambda: user
+    test_client = TestClient(app)
+
+    task_id = test_client.post(
+        "/queue",
+        json=[
+            {
+                "name": "add_tasks",
+                "params": {"time": 10},
+                "instrument_session": "abc",
+            }
+        ],
+    ).json()[0]
+    task = await task_queue_with_history.get_task_by_id(task_id)
+    assert task
+    assert task.user == user
 
 
 async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_if_fails(
@@ -606,6 +650,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -634,6 +679,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
     ]
 
@@ -734,6 +780,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
         {
             "experiment": {
@@ -762,6 +809,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             ],
             "position": None,
             "kind": "Experiment",
+            "user": None,
         },
     ]
 
@@ -796,6 +844,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
         ],
         "position": 1,
         "kind": "Experiment",
+        "user": None,
     }
 
 
@@ -829,6 +878,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
         ],
         "position": 1,
         "kind": "Experiment",
+        "user": None,
     }
 
 
@@ -926,3 +976,79 @@ async def test_stream_events_streams_all_events_from_broadcaster(
     time.sleep(0.2)
     assert len(received) == 5
     assert received != []
+
+
+@pytest.mark.parametrize(
+    "endpoint, method",
+    [
+        ("/config", "get"),
+        ("/queue/state", "patch"),
+        ("/queue", "get"),
+        ("/queue", "post"),
+        ("/queue", "delete"),
+        ("/queue/move", "post"),
+        ("/queue/tasks", "delete"),
+        ("/queue/5", "get"),
+        ("/tasks", "get"),
+        ("/tasks/task_id", "get"),
+        ("/history", "get"),
+        ("/history", "delete"),
+        ("/call_queue", "get"),
+        ("/call_history", "get"),
+        ("/events", "get"),
+    ],
+)
+def test_endpoints_blocked_by_authentication_check_if_no_token_provided(
+    endpoint: str, method: str, test_client_with_auth: TestClient
+):
+    response: httpx.Response = getattr(test_client_with_auth, method)(endpoint)
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Not authenticated"}
+
+
+@pytest.mark.parametrize(
+    "endpoint, method",
+    [("/", "get"), ("/healthz", "get"), ("/queue/state", "get")],
+)
+def test_public_endpoints_not_blocked_by_auth(
+    endpoint: str, method: str, test_client_with_auth: TestClient
+):
+    response: httpx.Response = getattr(test_client_with_auth, method)(endpoint)
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "endpoint, method",
+    [
+        ("/config", "get"),
+        ("/queue/state", "patch"),
+        ("/queue", "get"),
+        ("/queue", "post"),
+        ("/queue", "delete"),
+        ("/queue/move", "post"),
+        ("/queue/tasks", "delete"),
+        ("/queue/5", "get"),
+        ("/tasks", "get"),
+        ("/tasks/task_id", "get"),
+        ("/history", "get"),
+        ("/history", "delete"),
+        ("/call_queue", "get"),
+        ("/call_history", "get"),
+        ("/events", "get"),
+    ],
+)
+def test_endpoints_blocked_by_authorisation_check_if_user_not_in_whitelist(
+    endpoint: str, method: str, test_client_with_authz: TestClient
+):
+    response: httpx.Response = getattr(test_client_with_authz, method)(endpoint)
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "Not authorised. You are not in the whitelist of authorised FedIDs"
+    }
+
+
+def test_get_current_user_returns_user_from_request_state():
+    request = MagicMock()
+    user = User(fedid="abc12345")
+    request.state.user = user
+    assert get_current_user(request) == user
