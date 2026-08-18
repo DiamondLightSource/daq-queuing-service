@@ -1,5 +1,6 @@
 import asyncio
 import copy
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -1161,3 +1162,30 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
         await task_queue.add_tasks(MagicMock())
 
     task_queue._restore_latest_good_contents.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "method_name, args",
+    [
+        ("get_queue", []),
+        ("get_tasks", []),
+        ("get_history", []),
+        ("get_task_by_id", ["0"]),
+        ("get_task_by_position", [0]),
+        ("get_call_queue", []),
+        ("get_call_history", []),
+    ],
+)
+async def test__sync_not_called_for_read_only_methods(
+    task_queue: TaskQueue, method_name: str, args: list[Any]
+):
+    task_queue._sync = MagicMock()
+
+    # Need to reinitialise so that mocked _sync is injected into Modifying object
+    contents = copy.copy(task_queue._last_good_contents)
+    task_queue.__init__(task_queue._converter, task_queue._broadcaster)
+    task_queue._restore_from_contents(contents)
+
+    await getattr(task_queue, method_name)(*args)
+
+    task_queue._sync.assert_not_called()
