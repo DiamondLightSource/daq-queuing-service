@@ -38,7 +38,6 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[BlueapiCall]:
-
         call_list: list[BlueapiCall] = []
 
         for task in queue:
@@ -70,6 +69,46 @@ class I151Converter(Converter):
         # Assume sample name is of form test_8_1 to load from position 8 on puck 1
         _, position, puck = sample_name.split("_")
 
+        # Assume colelctions with lists of temperatures are blowers, see
+        # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
+        if "list_of_temperatures" in experiment.experiment_definition.data.keys():
+            data_collection = TaskRequest(
+                name="blower_collection",
+                params={
+                    "time_per_collection": experiment.experiment_definition.data[
+                        "time_per_pdf"
+                    ],
+                    "exposure_time_per_frame": 0.1,
+                    "ramp_rate_c_per_min": experiment.experiment_definition.data[
+                        "ramp_rate"
+                    ],
+                    "settle_time": experiment.experiment_definition.data["settle_time"],
+                    "temperatures_celsius": experiment.experiment_definition.data[
+                        "list_of_temperatures"
+                    ],
+                    "metadata": {
+                        "sample": experiment.sample,
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            )
+        else:
+            data_collection = TaskRequest(
+                name="data_collection",
+                params={
+                    "full_collection_time": experiment.experiment_definition.data[
+                        "time_per_pdf"
+                    ],
+                    "exposure_time_per_frame": 0.1,
+                    "metadata": {
+                        "sample": experiment.sample,
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            )
+
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
         return [
@@ -93,6 +132,7 @@ class I151Converter(Converter):
                 },
                 instrument_session=experiment.instrument_session,
             ),
+            data_collection,
             TaskRequest(
                 name="robot_unload",
                 params={},
