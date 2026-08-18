@@ -29,20 +29,16 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotFoundError,
 )
 from daq_queuing_service.task_queue.task import (
-    Container,
-    ContainerPosition,
     Experiment,
     ExperimentDefinition,
-    Sample,
     Status,
     Task,
     TaskKind,
 )
 
-pytest_plugins = ("pytest_asyncio",)
+from .conftest import make_sample
 
-CONTAINER_POSITION = ContainerPosition(position=2)
-CONTAINER = Container(id="", positionInParent=CONTAINER_POSITION)
+pytest_plugins = ("pytest_asyncio",)
 
 
 def make_new_task(id_str: str):
@@ -56,13 +52,7 @@ def make_new_task(id_str: str):
                 id=id_str,
                 data={},
             ),
-            sample=Sample(
-                name="test_sample",
-                id=id_str,
-                data={},
-                positionInContainer=CONTAINER_POSITION,
-                container=CONTAINER,
-            ),
+            sample=make_sample("test_sample", id_str),
         ),
     )
 
@@ -297,13 +287,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="2", data={}
                 ),
-                sample=Sample(
-                    name="test_8_2",
-                    id="2",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_2", "2"),
             ),
             id="2",
             status=Status.IN_PROGRESS,
@@ -329,13 +313,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="3", data={}
                 ),
-                sample=Sample(
-                    name="test_8_3",
-                    id="3",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_3", "3"),
             ),
             id="3",
             status=Status.QUEUED,
@@ -361,13 +339,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="4", data={}
                 ),
-                sample=Sample(
-                    name="test_8_4",
-                    id="4",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_4", "4"),
             ),
             id="4",
             status=Status.QUEUED,
@@ -402,13 +374,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="0", data={}
                 ),
-                sample=Sample(
-                    name="test_8_0",
-                    id="0",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_0", "0"),
             ),
             id="0",
             status=Status.ERROR,
@@ -440,13 +406,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="1", data={}
                 ),
-                sample=Sample(
-                    name="test_8_1",
-                    id="1",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_1", "1"),
             ),
             id="1",
             status=Status.COMPLETE,
@@ -482,13 +442,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="0", data={}
                 ),
-                sample=Sample(
-                    name="test_8_0",
-                    id="0",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_0", "0"),
             ),
             id="0",
             status=Status.ERROR,
@@ -520,13 +474,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="1", data={}
                 ),
-                sample=Sample(
-                    name="test_8_1",
-                    id="1",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_1", "1"),
             ),
             id="1",
             status=Status.COMPLETE,
@@ -552,13 +500,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="2", data={}
                 ),
-                sample=Sample(
-                    name="test_8_2",
-                    id="2",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_2", "2"),
             ),
             id="2",
             status=Status.IN_PROGRESS,
@@ -584,13 +526,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="3", data={}
                 ),
-                sample=Sample(
-                    name="test_8_3",
-                    id="3",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_3", "3"),
             ),
             id="3",
             status=Status.QUEUED,
@@ -616,13 +552,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="4", data={}
                 ),
-                sample=Sample(
-                    name="test_8_4",
-                    id="4",
-                    data={},
-                    container=CONTAINER,
-                    positionInContainer=CONTAINER_POSITION,
-                ),
+                sample=make_sample("test_8_4", "4"),
             ),
             id="4",
             status=Status.QUEUED,

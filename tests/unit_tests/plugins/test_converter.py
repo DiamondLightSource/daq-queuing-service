@@ -9,10 +9,11 @@ from daq_queuing_service.plugins.converter import (
 from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
-    Sample,
     Task,
     TaskWithPosition,
 )
+
+from ..conftest import make_sample
 
 
 def test_get_converter_returns_converter_from_path_and_name():
@@ -36,7 +37,7 @@ def test_default_converter_raises_error_when_converting_ulims_experiment():
                     id="",
                     data={"time": 10},
                 ),
-                sample=Sample(name="test_sample", id="test_sample", data={}),
+                sample=make_sample("test_sample", "test_sample"),
             )
         )
 

@@ -11,12 +11,13 @@ from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
 from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
-    Sample,
     Status,
     Task,
     TaskKind,
     TaskWithPosition,
 )
+
+from ...conftest import make_sample
 
 
 def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPosition):
@@ -73,20 +74,20 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
-        sample=Sample(name="test_8_1", id="", data={}),
+        sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
     assert tasks[0].name == "robot_load"
-    assert tasks[0].params["position"] == "8"
-    assert tasks[0].params["puck"] == "1"
+    assert tasks[0].params["position"] == 2
+    assert tasks[0].params["puck"] == 2
 
 
 def test_sample_centre_uses_expected_params():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
-        sample=Sample(name="test_8_1", id="", data={}),
+        sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
@@ -98,7 +99,7 @@ def test_sample_centre_uses_expected_params():
         "exposure_time": 0.01,
         "metadata": {
             "experiment_definition": ExperimentDefinition(name=" ", id="", data={}),
-            "sample": Sample(name="test_8_1", id="", data={}),
+            "sample": make_sample("test_8_1", ""),
         },
     }
 
@@ -107,7 +108,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
-        sample=Sample(name="test_8_1", id="", data={}),
+        sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
@@ -122,7 +123,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
         ),
-        sample=Sample(name="test_8_1", id="", data={}),
+        sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
     task = TaskWithPosition(
@@ -143,7 +144,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
         ),
-        sample=Sample(name="test_8_1", id="", data={}),
+        sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
     good_task = TaskWithPosition(
@@ -176,7 +177,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={}
         ),
-        sample=Sample(name="test_8_1", id="", data={}),
+        sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
     task = Task(
@@ -190,7 +191,20 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         "experiment": {
             "name": "Background",
             "instrument_session": "cm12345-1",
-            "sample": {"name": "fq_1_1", "id": "", "data": {}},
+            "sample": {
+                "name": "fq_1_1",
+                "id": "",
+                "data": {},
+                "container": {
+                    "id": "",
+                    "positionInParent": {
+                        "position": 1,
+                    },
+                },
+                "positionInContainer": {
+                    "position": 1,
+                },
+            },
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
@@ -270,7 +284,20 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
         "experiment": {
             "name": "Background",
             "instrument_session": "",
-            "sample": {"name": "fq_1_1", "id": "", "data": {}},
+            "sample": {
+                "name": "fq_1_1",
+                "id": "",
+                "data": {},
+                "container": {
+                    "id": "",
+                    "positionInParent": {
+                        "position": 1,
+                    },
+                },
+                "positionInContainer": {
+                    "position": 1,
+                },
+            },
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
@@ -287,7 +314,20 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
         "experiment": {
             "name": "Background",
             "instrument_session": "different",
-            "sample": {"name": "fq_1_1", "id": "", "data": {}},
+            "sample": {
+                "name": "fq_1_1",
+                "id": "",
+                "data": {},
+                "container": {
+                    "id": "",
+                    "positionInParent": {
+                        "position": 1,
+                    },
+                },
+                "positionInContainer": {
+                    "position": 1,
+                },
+            },
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
