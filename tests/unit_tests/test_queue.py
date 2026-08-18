@@ -1137,7 +1137,7 @@ async def test_if_error_during_conversion_then_error_handled_and_contents_restor
     task_queue._converter.construct_blueapi_calls = convert
 
     with pytest.raises(ConverterError):
-        await task_queue.get_queue()
+        await task_queue.move_task("0", 0)
 
     assert task_queue._queue == ["0", "1", "2", "3", "4"]
     assert list(task_queue._tasks.keys()) == ["0", "1", "2", "3", "4"]
@@ -1158,6 +1158,6 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
     task_queue.__init__(task_queue._converter, task_queue._broadcaster)
 
     with pytest.raises(ConverterError):
-        await task_queue.get_queue()
+        await task_queue.add_tasks(MagicMock())
 
     task_queue._restore_latest_good_contents.assert_called_once()

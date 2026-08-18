@@ -70,10 +70,11 @@ class QueueContents(TypedDict):
 class Modifying(asyncio.Condition):
     def __init__(
         self,
+        lock: asyncio.Lock,
         on_exit: Callable[[], None],
         on_error: Callable[[], None],
     ):
-        super().__init__()
+        super().__init__(lock=lock)
         self._on_exit = on_exit
         self._on_error = on_error
 
@@ -122,7 +123,9 @@ class TaskQueue:
         )
         self._converter = converter
         self._broadcaster = broadcaster
+        self._lock = asyncio.Lock()
         self._modifying = Modifying(
+            lock=self._lock,
             on_exit=self._sync,
             on_error=self._restore_latest_good_contents,
         )
@@ -343,7 +346,7 @@ class TaskQueue:
             TaskNotFoundError: Raised if the no task exists with the requested task ID.
         """
         # Returns copy so don't have to be worried about caller modifying task.
-        async with self._modifying:
+        async with self._lock:
             return self._get_task_by_id(task_id)
 
     def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
@@ -362,7 +365,7 @@ class TaskQueue:
             if no task exists at the requested position.
         """
         # Returns copy so don't have to be worried about caller modifying task.
-        async with self._modifying:
+        async with self._lock:
             if position < -self.length or position >= self.length:
                 return None
             return self._get_task_by_id(self._queue[position])
@@ -375,7 +378,7 @@ class TaskQueue:
             will be run in.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._modifying:
+        async with self._lock:
             return self._get_queue()
 
     async def get_history(self) -> list[TaskWithPosition]:
@@ -386,7 +389,7 @@ class TaskQueue:
             chronological order.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._modifying:
+        async with self._lock:
             return self._get_history()
 
     async def get_tasks(self) -> list[TaskWithPosition]:
@@ -397,7 +400,7 @@ class TaskQueue:
             with the history.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
-        async with self._modifying:
+        async with self._lock:
             return self._get_history() + self._get_queue()
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
@@ -633,14 +636,14 @@ class TaskQueue:
         ]
 
     async def get_call_queue(self) -> list[BlueapiCallResponse]:
-        async with self._modifying:
+        async with self._lock:
             return self._get_call_queue()
 
     def _get_call_queue(self) -> list[BlueapiCallResponse]:
         return [call.to_response() for call in self._call_queue]
 
     async def get_call_history(self) -> list[BlueapiCallResponse]:
-        async with self._modifying:
+        async with self._lock:
             return self._get_call_history()
 
     def _get_call_history(self) -> list[BlueapiCallResponse]:
