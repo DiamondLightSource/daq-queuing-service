@@ -1099,14 +1099,23 @@ def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
     assert task_queue._call_history == new_call_history
 
 
-async def test__last_good_contents_updated_when_modifying_lock_entered(
+async def test__last_good_contents_updated_when_modifying_lock_exited(
     task_queue: TaskQueue,
 ):
-    task_queue._queue = ["should be copied"]
+    task_queue._queue = []
 
     async with task_queue._modifying:
-        task_queue._queue = []
+        task_queue._add_tasks(
+            [
+                Task(
+                    id="should be copied",
+                    experiment=TaskRequest(name="", instrument_session=""),
+                )
+            ],
+            position=0,
+        )
 
+    task_queue._queue = []
     assert task_queue._last_good_contents["queue"] == ["should be copied"]
     assert task_queue._queue == []
 

@@ -70,19 +70,12 @@ class QueueContents(TypedDict):
 class Modifying(asyncio.Condition):
     def __init__(
         self,
-        on_enter: Callable[[], None],
         on_exit: Callable[[], None],
         on_error: Callable[[], None],
     ):
         super().__init__()
-        self._on_enter = on_enter
         self._on_exit = on_exit
         self._on_error = on_error
-
-    async def __aenter__(self):
-        result = await super().__aenter__()
-        self._on_enter()
-        return result
 
     async def __aexit__(
         self,
@@ -130,7 +123,6 @@ class TaskQueue:
         self._converter = converter
         self._broadcaster = broadcaster
         self._modifying = Modifying(
-            on_enter=self._save_contents,
             on_exit=self._sync,
             on_error=self._restore_latest_good_contents,
         )
@@ -217,6 +209,7 @@ class TaskQueue:
         if not self._call_queue:
             self._pause_queue(PauseReason.EMPTY_QUEUE)
 
+        self._save_contents()
         self._broadcast_changes()
         self._modifying.notify_all()
 
@@ -231,17 +224,17 @@ class TaskQueue:
             }
         )
 
-    def _save_contents(self) -> None:
+    def _save_contents(self):
         self._last_good_contents = self._copy_contents()
 
-    def _restore_from_contents(self, contents: QueueContents) -> None:
+    def _restore_from_contents(self, contents: QueueContents):
         self._tasks = TaskRegistry(contents["tasks"])
         self._queue = contents["queue"]
         self._history = contents["history"]
         self._call_queue = contents["call_queue"]
         self._call_history = contents["call_history"]
 
-    def _restore_latest_good_contents(self) -> None:
+    def _restore_latest_good_contents(self):
         self._restore_from_contents(self._last_good_contents)
 
     def _broadcast_changes(self):
