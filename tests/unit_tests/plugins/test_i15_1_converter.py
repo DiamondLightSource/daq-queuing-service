@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import pytest
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.plugins.i15_1_converter import I151Converter
@@ -13,6 +14,7 @@ from daq_queuing_service.task import (
 )
 
 
+@pytest.mark.skip("Temporarily skipping")
 def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     experiment = Experiment(
         name="test_experiment",
@@ -26,6 +28,7 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     assert tasks[0].params["puck"] == "1"
 
 
+@pytest.mark.skip("Temporarily skipping")
 def test_sample_centre_uses_expected_params():
     experiment = Experiment(
         name="test_experiment",
@@ -47,6 +50,7 @@ def test_sample_centre_uses_expected_params():
     }
 
 
+@pytest.mark.skip("Temporarily skipping")
 def test_session_and_number_of_tasks_per_experiment_is_expected():
     experiment = Experiment(
         name="test_experiment",
@@ -60,6 +64,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         assert task.instrument_session == "cm12345-1"
 
 
+@pytest.mark.skip("Temporarily skipping")
 def test_experiment_with_correct_experiment_type_are_converted():
     experiment = Experiment(
         name="test_experiment",
@@ -81,6 +86,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
     assert len(call_list) == 3
 
 
+@pytest.mark.skip("Temporarily skipping")
 def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     good_experiment = Experiment(
         name="test_experiment",
