@@ -35,6 +35,20 @@ class I151Converter(Converter):
                 instrument_session=experiment.instrument_session,
             ),
             TaskRequest(
+                name="data_collection",
+                params={
+                    "full_collection_time": experiment.experiment_definition.data[
+                        "time_per_pdf"
+                    ],
+                    "exposure_time_per_frame": 0.01,
+                    "metadata": {
+                        "sample": experiment.sample,
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            ),
+            TaskRequest(
                 name="robot_unload",
                 params={},
                 instrument_session=experiment.instrument_session,
