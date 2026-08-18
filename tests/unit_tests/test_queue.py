@@ -1,5 +1,6 @@
 import asyncio
 import copy
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -1099,14 +1100,23 @@ def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
     assert task_queue._call_history == new_call_history
 
 
-async def test__last_good_contents_updated_when_modifying_lock_entered(
+async def test__last_good_contents_updated_when_modifying_lock_exited(
     task_queue: TaskQueue,
 ):
-    task_queue._queue = ["should be copied"]
+    task_queue._queue = []
 
     async with task_queue._modifying:
-        task_queue._queue = []
+        task_queue._add_tasks(
+            [
+                Task(
+                    id="should be copied",
+                    experiment=TaskRequest(name="", instrument_session=""),
+                )
+            ],
+            position=0,
+        )
 
+    task_queue._queue = []
     assert task_queue._last_good_contents["queue"] == ["should be copied"]
     assert task_queue._queue == []
 
@@ -1128,7 +1138,7 @@ async def test_if_error_during_conversion_then_error_handled_and_contents_restor
     task_queue._converter.construct_blueapi_calls = convert
 
     with pytest.raises(ConverterError):
-        await task_queue.get_queue()
+        await task_queue.move_task("0", 0)
 
     assert task_queue._queue == ["0", "1", "2", "3", "4"]
     assert list(task_queue._tasks.keys()) == ["0", "1", "2", "3", "4"]
@@ -1149,6 +1159,33 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
     task_queue.__init__(task_queue._converter, task_queue._broadcaster)
 
     with pytest.raises(ConverterError):
-        await task_queue.get_queue()
+        await task_queue.add_tasks(MagicMock())
 
     task_queue._restore_latest_good_contents.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "method_name, args",
+    [
+        ("get_queue", []),
+        ("get_tasks", []),
+        ("get_history", []),
+        ("get_task_by_id", ["0"]),
+        ("get_task_by_position", [0]),
+        ("get_call_queue", []),
+        ("get_call_history", []),
+    ],
+)
+async def test__sync_not_called_for_read_only_methods(
+    task_queue: TaskQueue, method_name: str, args: list[Any]
+):
+    task_queue._sync = MagicMock()
+
+    # Need to reinitialise so that mocked _sync is injected into Modifying object
+    contents = copy.copy(task_queue._last_good_contents)
+    task_queue.__init__(task_queue._converter, task_queue._broadcaster)
+    task_queue._restore_from_contents(contents)
+
+    await getattr(task_queue, method_name)(*args)
+
+    task_queue._sync.assert_not_called()
