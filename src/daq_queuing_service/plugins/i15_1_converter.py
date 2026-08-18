@@ -40,7 +40,28 @@ class I151Converter(Converter):
                     "full_collection_time": experiment.experiment_definition.data[
                         "time_per_pdf"
                     ],
-                    "exposure_time_per_frame": 0.01,
+                    "exposure_time_per_frame": 0.1,
+                    "metadata": {
+                        "sample": experiment.sample,
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            )
+            if "list_of_temperatures"
+            not in experiment.experiment_definition.data.keys()
+            else TaskRequest(
+                name="blower_collection",
+                params={
+                    "time_per_collection": experiment.experiment_definition.data[
+                        "time_per_pdf"
+                    ],
+                    "exposure_time_per_frame": 0.1,
+                    "ramp_rate": experiment.experiment_definition.data["ramp_rate"],
+                    "settle_time": experiment.experiment_definition.data["settle_time"],
+                    "temperatures_celsius": experiment.experiment_definition.data[
+                        "list_of_temperatures"
+                    ],
                     "metadata": {
                         "sample": experiment.sample,
                         "experiment_definition": experiment.experiment_definition,
