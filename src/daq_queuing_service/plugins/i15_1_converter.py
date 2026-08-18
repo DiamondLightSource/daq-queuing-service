@@ -57,7 +57,9 @@ class I151Converter(Converter):
                         "time_per_pdf"
                     ],
                     "exposure_time_per_frame": 0.1,
-                    "ramp_rate": experiment.experiment_definition.data["ramp_rate"],
+                    "ramp_rate_c_per_min": experiment.experiment_definition.data[
+                        "ramp_rate"
+                    ],
                     "settle_time": experiment.experiment_definition.data["settle_time"],
                     "temperatures_celsius": experiment.experiment_definition.data[
                         "list_of_temperatures"
