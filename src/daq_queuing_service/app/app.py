@@ -73,11 +73,12 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
             "clientId": "NOT_SUPPORTED",
         }
 
-        dependencies.append(Depends(get_current_user))
-
         whitelist_check = build_ensure_current_user_is_in_whitelist(
             config.authorisation_whitelist, get_current_user
         )
+
+        dependencies.append(Depends(get_current_user))
+        dependencies.append(Depends(whitelist_check))
 
     if dev:  # Allows local client/UI through CORS
         app.add_middleware(
@@ -101,9 +102,7 @@ def create_app(config_path: Path, dev: bool = False) -> FastAPI:
     register_exception_handlers(app)
     app.include_router(public_routes(app.state.queue))
     app.include_router(
-        protected_routes(
-            app.state.queue, broadcaster, config, converter, whitelist_check
-        ),
+        protected_routes(app.state.queue, broadcaster, config, converter),
         dependencies=dependencies,
     )
 

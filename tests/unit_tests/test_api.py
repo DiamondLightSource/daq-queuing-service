@@ -1020,6 +1020,7 @@ def test_public_endpoints_not_blocked_by_auth(
 @pytest.mark.parametrize(
     "endpoint, method",
     [
+        ("/config", "get"),
         ("/queue/state", "patch"),
         ("/queue", "get"),
         ("/queue", "post"),
@@ -1044,14 +1045,6 @@ def test_endpoints_blocked_by_authorisation_check_if_user_not_in_whitelist(
     assert response.json() == {
         "detail": "Not authorised. You are not in the whitelist of authorised FedIDs"
     }
-
-
-@pytest.mark.parametrize("endpoint, method", [("/config", "get")])
-def test_endpoints_that_require_authn_but_not_authz_any_user_allowed(
-    endpoint: str, method: str, test_client_with_authz: TestClient
-):
-    response: httpx.Response = getattr(test_client_with_authz, method)(endpoint)
-    assert response.status_code == 200
 
 
 def test_get_current_user_returns_user_from_request_state():

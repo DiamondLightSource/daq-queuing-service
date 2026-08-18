@@ -1,6 +1,6 @@
 import asyncio
 import json
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from blueapi.service.model import TaskRequest
@@ -76,31 +76,29 @@ def protected_routes(
     broadcaster: Broadcaster[QUEUE_EVENTS],
     config: AppConfig,
     converter: Converter,
-    whitelist_check: Callable[[User], User] | None = None,
 ) -> APIRouter:
     """Authentication is required to access these endpoints (if turned on in config).
     Additionally, for endpoints that depend on whitelist_check, you must be in the
     whitelist of authorised fedIDs to access them.
     """
-    authorised = [Depends(whitelist_check)] if whitelist_check else None
     router = APIRouter()
 
     @router.get("/config")
     def get_config() -> AppConfig:
         return config
 
-    @router.patch("/queue/state", dependencies=authorised)
+    @router.patch("/queue/state")
     async def update_queue_state(payload: QueueStateUpdate) -> QueueState:
         if payload.paused:
             return await queue.pause_queue(PauseReason.USER_REQUESTED)
         else:
             return await queue.resume_queue()
 
-    @router.get("/queue", dependencies=authorised)
+    @router.get("/queue")
     async def get_queued_tasks(status: Status | None = None) -> list[TaskWithPosition]:
         return _filter_by_status(await queue.get_queue(), status)
 
-    @router.post("/queue", dependencies=authorised)
+    @router.post("/queue")
     async def add_tasks_to_queue(
         experiments: list[TaskRequest | Experiment],
         user: CurrentUser,
@@ -116,49 +114,49 @@ def protected_routes(
         await queue.add_tasks(tasks, position)
         return task_ids
 
-    @router.delete("/queue", dependencies=authorised)
+    @router.delete("/queue")
     async def cancel_all_tasks() -> list[TaskWithPosition]:
         return await queue.cancel_all_tasks()
 
-    @router.post("/queue/move", dependencies=authorised)
+    @router.post("/queue/move")
     async def move_task(task_id: str, new_position: int) -> int:
         return await queue.move_task(task_id, new_position)
 
-    @router.delete("/queue/tasks", dependencies=authorised)
+    @router.delete("/queue/tasks")
     async def cancel_tasks(payload: TaskCancelRequest) -> list[TaskWithPosition]:
         return await queue.cancel_tasks(payload.task_ids)
 
-    @router.get("/queue/{position}", dependencies=authorised)
+    @router.get("/queue/{position}")
     async def get_task_by_position(position: int) -> TaskWithPosition | None:
         return await queue.get_task_by_position(position)
 
-    @router.get("/tasks", dependencies=authorised)
+    @router.get("/tasks")
     async def get_all_tasks(status: Status | None = None) -> list[TaskWithPosition]:
         return _filter_by_status(await queue.get_tasks(), status)
 
-    @router.get("/tasks/{task_id}", dependencies=authorised)
+    @router.get("/tasks/{task_id}")
     async def get_task_by_id(task_id: str) -> TaskWithPosition:
         return await queue.get_task_by_id(task_id)
 
-    @router.get("/history", dependencies=authorised)
+    @router.get("/history")
     async def get_completed_tasks(
         status: Status | None = None,
     ) -> list[TaskWithPosition]:
         return _filter_by_status(await queue.get_history(), status)
 
-    @router.delete("/history", dependencies=authorised)
+    @router.delete("/history")
     async def clear_history():
         return await queue.clear_history()
 
-    @router.get("/call_queue", dependencies=authorised)
+    @router.get("/call_queue")
     async def get_call_queue() -> list[BlueapiCallResponse]:
         return await queue.get_call_queue()
 
-    @router.get("/call_history", dependencies=authorised)
+    @router.get("/call_history")
     async def get_call_history() -> list[BlueapiCallResponse]:
         return await queue.get_call_history()
 
-    @router.get("/events", dependencies=authorised)
+    @router.get("/events")
     async def stream_events() -> EventSourceResponse:
         subscriber = broadcaster.subscribe()
 
