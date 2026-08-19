@@ -6,8 +6,10 @@ import pytest
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
@@ -25,6 +27,34 @@ def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPos
     copy2 = type(task2).model_validate(task2)
     copy1.id = copy2.id = ""
     assert task1 == task2
+
+
+@pytest.fixture
+async def queue_with_i15_1_plugin(background_not_found_in_tiled: None):
+    queue = TaskQueue(converter=I151Converter(), broadcaster=Broadcaster())
+    tasks = [
+        Task(
+            experiment=Experiment(
+                name=f"task_{i}",
+                instrument_session="cm12345-1",
+                experiment_definition=ExperimentDefinition(
+                    name="",
+                    id="",
+                    data={
+                        "list_of_temperatures": [100 * i, 100 * i + 20],
+                        "time_per_pdf": i,
+                        "settle_time": 5,
+                        "ramp_rate": 10,
+                    },
+                ),
+                sample=Sample(name=f"sample_{i}_2", id=str(i), data={}),
+            )
+        )
+        for i in range(5)
+    ]
+    await queue.add_tasks(tasks)
+    await queue.resume_queue()
+    return queue
 
 
 @pytest.fixture(autouse=True)
@@ -256,7 +286,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {"background": {"bg_type": "fq"}},
+                "data": {"background": {"bg_type": "fq"}, "time_per_pdf": 10},
             },
         },
         "id": "",
@@ -337,7 +367,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {"background": {"bg_type": "fq"}},
+                "data": {"background": {"bg_type": "fq"}, "time_per_pdf": 10},
             },
         },
         "id": "",
@@ -355,7 +385,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {"background": {"bg_type": "fq"}},
+                "data": {"background": {"bg_type": "fq"}, "time_per_pdf": 10},
             },
         },
         "id": "",
@@ -427,3 +457,9 @@ def test_add_tiled_background_to_md_adds_expected_metadata(
         I151Converter()._add_tiled_background_to_md(params, tiled_id, background)
 
     assert params == expected_params
+
+
+async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: TaskQueue):
+    first_task = await queue_with_i15_1_plugin.get_task_by_position(0)
+    assert first_task
+    await queue_with_i15_1_plugin.move_task(first_task.id, 2)

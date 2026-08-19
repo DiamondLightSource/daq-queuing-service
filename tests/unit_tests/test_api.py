@@ -449,7 +449,7 @@ async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
     assert response.status_code == 422
     assert response.json() == {
         "error": "converter_error",
-        "message": "Conversion failed because xyz",
+        "message": "SomeError: Conversion failed because xyz",
     }
     assert task_queue_with_history._queue == ["2", "3", "4"]
 

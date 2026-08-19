@@ -136,6 +136,7 @@ class TaskQueue:
         modified, and also right before a call is popped off the front of the queue.
         """
         LOGGER.debug("Syncing")
+        LOGGER.debug(f"Queue before sync: {self._queue}")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
             if task.status in (Status.COMPLETE, Status.ERROR):
@@ -162,7 +163,7 @@ class TaskQueue:
                 self._queue_history,
             )
         except Exception as e:
-            raise ConverterError(*e.args) from e
+            raise ConverterError(e) from e
 
         # Update task_registry to match new tasks
         # Not needed as long as pre_process modifies in place
@@ -200,7 +201,7 @@ class TaskQueue:
                 self._queue_history,
             )
         except Exception as e:
-            raise ConverterError(*e.args) from e
+            raise ConverterError(e) from e
 
         self._call_queue.extend(new_calls)
 
@@ -215,6 +216,7 @@ class TaskQueue:
         self._save_contents()
         self._broadcast_changes()
         self._modifying.notify_all()
+        LOGGER.debug(f"Queue after sync: {self._queue}")
 
     def _copy_contents(self) -> QueueContents:
         return deepcopy(
@@ -231,13 +233,18 @@ class TaskQueue:
         self._last_good_contents = self._copy_contents()
 
     def _restore_from_contents(self, contents: QueueContents):
-        self._tasks = TaskRegistry(contents["tasks"])
-        self._queue = contents["queue"]
-        self._history = contents["history"]
-        self._call_queue = contents["call_queue"]
-        self._call_history = contents["call_history"]
+        LOGGER.info(f"Restoring to contents: {contents}")
+
+        restored = deepcopy(contents)
+
+        self._tasks = TaskRegistry(restored["tasks"])
+        self._queue = restored["queue"]
+        self._history = restored["history"]
+        self._call_queue = restored["call_queue"]
+        self._call_history = restored["call_history"]
 
     def _restore_latest_good_contents(self):
+        LOGGER.info("Restoring to last good contents")
         self._restore_from_contents(self._last_good_contents)
 
     def _broadcast_changes(self):

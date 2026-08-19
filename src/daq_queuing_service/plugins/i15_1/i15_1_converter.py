@@ -65,6 +65,7 @@ class I151Converter(Converter):
         self,
         experiment: Experiment,
     ) -> list[TaskRequest]:
+        LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
         sample_name = experiment.sample.name
         # Assume sample name is of form test_8_1 to load from position 8 on puck 1
         _, position, puck = sample_name.split("_")
@@ -225,6 +226,8 @@ class I151Converter(Converter):
             # Need to get sample info for test samples (air, empty capillary etc)
             sample=Sample(name="fq_1_1", id="", data={}),
             experiment_definition=ExperimentDefinition(
-                name="background_scan", id="", data={"background": background}
+                name="background_scan",
+                id="",
+                data={"background": background, "time_per_pdf": 10},
             ),
         )
