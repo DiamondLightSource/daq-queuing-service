@@ -72,7 +72,9 @@ def tasks_and_calls(
 def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     experiment = Experiment(
         name="test_experiment",
-        experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
+        experiment_definition=ExperimentDefinition(
+            name=" ", id="", data={"time_per_pdf": 100}
+        ),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
@@ -85,7 +87,9 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
 def test_sample_centre_uses_expected_params():
     experiment = Experiment(
         name="test_experiment",
-        experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
+        experiment_definition=ExperimentDefinition(
+            name=" ", id="", data={"time_per_pdf": 100}
+        ),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
@@ -97,7 +101,9 @@ def test_sample_centre_uses_expected_params():
         "steps": 20,
         "exposure_time": 0.01,
         "metadata": {
-            "experiment_definition": ExperimentDefinition(name=" ", id="", data={}),
+            "experiment_definition": ExperimentDefinition(
+                name=" ", id="", data={"time_per_pdf": 100}
+            ),
             "sample": Sample(name="test_8_1", id="", data={}),
         },
     }
@@ -106,12 +112,14 @@ def test_sample_centre_uses_expected_params():
 def test_session_and_number_of_tasks_per_experiment_is_expected():
     experiment = Experiment(
         name="test_experiment",
-        experiment_definition=ExperimentDefinition(name=" ", id="", data={}),
+        experiment_definition=ExperimentDefinition(
+            name=" ", id="", data={"time_per_pdf": 100}
+        ),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
-    assert len(tasks) == 3
+    assert len(tasks) == 4
     for task in tasks:
         assert task.instrument_session == "cm12345-1"
 
@@ -120,7 +128,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
-            name="run_full_collection", id="", data={}
+            name="run_full_collection", id="", data={"time_per_pdf": 100}
         ),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
@@ -135,14 +143,66 @@ def test_experiment_with_correct_experiment_type_are_converted():
         user=None,
     )
     call_list = I151Converter().construct_blueapi_calls([task], [], [])
-    assert len(call_list) == 3
+    assert len(call_list) == 4
+
+
+def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=ExperimentDefinition(
+            name="", id="", data={"time_per_pdf": 100}
+        ),
+        sample=Sample(name="test_8_1", id="", data={}),
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
+    assert tasks[2].name == "data_collection"
+    assert tasks[2].params["full_collection_time"] == 100
+    assert tasks[2].params["exposure_time_per_frame"] == 0.1
+    assert tasks[2].params["metadata"] == {
+        "experiment_definition": ExperimentDefinition(
+            name="", id="", data={"time_per_pdf": 100}
+        ),
+        "sample": Sample(name="test_8_1", id="", data={}),
+    }
+
+
+def test_experiment_with_temperatures_runs_a_blower_collection():
+    experiment_definition = ExperimentDefinition(
+        name="",
+        id="",
+        data={
+            "list_of_temperatures": [100, 120],
+            "time_per_pdf": 100,
+            "settle_time": 5,
+            "ramp_rate": 10,
+        },
+    )
+
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=experiment_definition,
+        sample=Sample(name="test_8_1", id="", data={}),
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
+    assert tasks[2].name == "blower_collection"
+    assert tasks[2].params["time_per_collection"] == 100
+    assert tasks[2].params["exposure_time_per_frame"] == 0.1
+    assert tasks[2].params["ramp_rate_c_per_min"] == 10
+    assert tasks[2].params["settle_time"] == 5
+    assert tasks[2].params["temperatures_celsius"] == [100, 120]
+    assert tasks[2].params["metadata"] == {
+        "experiment_definition": experiment_definition,
+        "sample": Sample(name="test_8_1", id="", data={}),
+    }
 
 
 def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     good_experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
-            name="run_full_collection", id="", data={}
+            name="run_full_collection", id="", data={"time_per_pdf": 100}
         ),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
@@ -167,7 +227,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     plan_task.kind = TaskKind.PLAN
     tasks = [good_task, bad_task, plan_task, good_task]
     call_list = I151Converter().construct_blueapi_calls(tasks, [], [])
-    assert len(call_list) == 7
+    assert len(call_list) == 9
 
 
 def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
@@ -176,7 +236,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
-            name="run_full_collection", id="", data={}
+            name="run_full_collection", id="", data={"time_per_pdf": 100}
         ),
         sample=Sample(name="test_8_1", id="", data={}),
         instrument_session="cm12345-1",
