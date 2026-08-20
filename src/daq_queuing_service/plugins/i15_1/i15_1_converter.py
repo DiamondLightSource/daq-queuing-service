@@ -160,8 +160,8 @@ class I151Converter(Converter):
             task.experiment.experiment_definition.data["time_per_pdf"]
             for task in tasks
             if isinstance(task.experiment, Experiment)
-            and "time_per_pdf" in task.experiment.experiment_definition.data
         ]
+
         max_time_per_pdf = max(pdf_times) if pdf_times else 10
 
         for task in tasks:
@@ -214,6 +214,8 @@ class I151Converter(Converter):
         self, experiment: Experiment, time_per_pdf: int
     ) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
+        # And we should instead do the following to work out pdf_times for backgrounds
+        # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         return [BackgroundInfo(bg_type="fq", time_per_pdf=time_per_pdf)]
 
     def _add_tiled_background_to_md(
@@ -240,6 +242,9 @@ class I151Converter(Converter):
             experiment_definition=ExperimentDefinition(
                 name="background_scan",
                 id="",
-                data={"background": background, "time_per_pdf": 10},
+                data={
+                    "background": background,
+                    "time_per_pdf": background.time_per_pdf,
+                },
             ),
         )
