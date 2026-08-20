@@ -243,7 +243,7 @@ class I151Converter(Converter):
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
             sample=Sample(
-                name="fq_1_1",
+                name="fq Background Sample",
                 id="",
                 data={},
                 container=Container(id="", positionInParent=container_position),

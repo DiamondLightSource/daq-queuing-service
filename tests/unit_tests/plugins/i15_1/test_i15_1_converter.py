@@ -292,7 +292,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
             "name": "Background",
             "instrument_session": "cm12345-1",
             "sample": {
-                "name": "fq_1_1",
+                "name": "fq Background Sample",
                 "id": "",
                 "data": {},
                 "container": {
@@ -391,7 +391,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "name": "Background",
             "instrument_session": "cm12345-1",
             "sample": {
-                "name": "fq_1_1",
+                "name": "fq Background Sample",
                 "id": "",
                 "data": {},
                 "container": {
@@ -425,7 +425,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "name": "Background",
             "instrument_session": "different",
             "sample": {
-                "name": "fq_1_1",
+                "name": "fq Background Sample",
                 "id": "",
                 "data": {},
                 "container": {
