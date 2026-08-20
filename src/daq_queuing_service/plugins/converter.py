@@ -6,7 +6,10 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.task_queue.task import Experiment, Task, TaskWithPosition
 
 
-class ConverterError(Exception): ...
+class ConverterError(Exception):
+    def __init__(self, original: Exception):
+        super().__init__(f"{type(original).__name__}: {original}")
+        self.original = original
 
 
 class ValidateError(Exception): ...

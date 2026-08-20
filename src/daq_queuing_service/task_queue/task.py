@@ -5,6 +5,7 @@ from uuid import uuid4
 from blueapi.service.model import TaskRequest
 from pydantic import BaseModel, Field, computed_field
 
+from daq_queuing_service.app.authentication import User
 from daq_queuing_service.blueapi_interaction.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
@@ -63,6 +64,7 @@ class Task(BaseModel):
     experiment: Experiment | TaskRequest
     id: str = Field(default_factory=create_uuid_str)
     blueapi_calls: list[BlueapiCall] = Field(default_factory=lambda: [])
+    user: User | None = None
     _cancelled: bool = False
 
     def cancel(self):
@@ -108,6 +110,7 @@ class TaskWithPosition(BaseModel):
     blueapi_calls: list[BlueapiCallResponse]
     position: int | None
     kind: TaskKind
+    user: User | None
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:

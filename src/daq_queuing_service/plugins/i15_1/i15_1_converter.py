@@ -69,8 +69,49 @@ class I151Converter(Converter):
         self,
         experiment: Experiment,
     ) -> list[TaskRequest]:
+        LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
+
+        # Assume collections with lists of temperatures are blowers, see
+        # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
+        if "list_of_temperatures" in experiment.experiment_definition.data.keys():
+            data_collection = TaskRequest(
+                name="blower_collection",
+                params={
+                    "time_per_collection": experiment.experiment_definition.data[
+                        "time_per_pdf"
+                    ],
+                    "exposure_time_per_frame": 0.1,
+                    "ramp_rate_c_per_min": experiment.experiment_definition.data[
+                        "ramp_rate"
+                    ],
+                    "settle_time": experiment.experiment_definition.data["settle_time"],
+                    "temperatures_celsius": experiment.experiment_definition.data[
+                        "list_of_temperatures"
+                    ],
+                    "metadata": {
+                        "sample": experiment.sample,
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            )
+        else:
+            data_collection = TaskRequest(
+                name="data_collection",
+                params={
+                    "full_collection_time": experiment.experiment_definition.data[
+                        "time_per_pdf"
+                    ],
+                    "exposure_time_per_frame": 0.1,
+                    "metadata": {
+                        "sample": experiment.sample,
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            )
 
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
@@ -95,6 +136,7 @@ class I151Converter(Converter):
                 },
                 instrument_session=experiment.instrument_session,
             ),
+            data_collection,
             TaskRequest(
                 name="robot_unload",
                 params={},
@@ -117,6 +159,14 @@ class I151Converter(Converter):
         # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
 
+        pdf_times = [
+            task.experiment.experiment_definition.data["time_per_pdf"]
+            for task in tasks
+            if isinstance(task.experiment, Experiment)
+        ]
+
+        max_time_per_pdf = max(pdf_times) if pdf_times else 10
+
         for task in tasks:
             experiment = task.experiment
             if (
@@ -124,7 +174,9 @@ class I151Converter(Converter):
                 and experiment.name != BACKGROUND_SCAN
             ):
                 instrument_session = experiment.instrument_session
-                backgrounds = self._get_required_backgrounds(experiment)
+                backgrounds = self._get_required_backgrounds(
+                    experiment, max_time_per_pdf
+                )
 
                 for background in backgrounds:
                     if tiled_id := get_background_tiled_id(
@@ -161,9 +213,13 @@ class I151Converter(Converter):
                 LOGGER.debug(f"Removing repeated background scan: {task.experiment}")
         return new_tasks
 
-    def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
+    def _get_required_backgrounds(
+        self, experiment: Experiment, time_per_pdf: int
+    ) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
-        return [BackgroundInfo(bg_type="fq")]
+        # And we should instead do the following to work out pdf_times for backgrounds
+        # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
+        return [BackgroundInfo(bg_type="fq", time_per_pdf=time_per_pdf)]
 
     def _add_tiled_background_to_md(
         self, params: dict[str, Any], tiled_id: str, background: BackgroundInfo
@@ -194,6 +250,11 @@ class I151Converter(Converter):
                 positionInContainer=container_position,
             ),
             experiment_definition=ExperimentDefinition(
-                name="background_scan", id="", data={"background": background}
+                name="background_scan",
+                id="",
+                data={
+                    "background": background,
+                    "time_per_pdf": background.time_per_pdf,
+                },
             ),
         )

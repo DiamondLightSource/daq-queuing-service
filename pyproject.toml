@@ -13,10 +13,10 @@ classifiers = [
 ]
 description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
-    "blueapi>=1.18.0",
+    "blueapi>=1.18.1",
     "fastapi>=0.136.0",
     "pydantic>=2.13.2",
-    "tiled>=0.2.9",
+    "tiled[client]>=0.2.9",
 ]
 dynamic = ["version"]
 license.file = "LICENSE"
