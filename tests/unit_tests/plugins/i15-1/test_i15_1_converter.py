@@ -286,7 +286,10 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {"background": {"bg_type": "fq"}, "time_per_pdf": 10},
+                "data": {
+                    "background": {"bg_type": "fq", "time_per_pdf": 100},
+                    "time_per_pdf": 10,
+                },
             },
         },
         "id": "",
@@ -300,11 +303,13 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
     tasks: list[Task], background_not_found_in_tiled: None
 ):
-    bg_1 = BackgroundInfo(bg_type="air")
-    bg_2 = BackgroundInfo(bg_type="bs")
-    bg_3 = BackgroundInfo(bg_type="fq")
+    bg_1 = BackgroundInfo(bg_type="air", time_per_pdf=5)
+    bg_2 = BackgroundInfo(bg_type="bs", time_per_pdf=10)
+    bg_3 = BackgroundInfo(bg_type="fq", time_per_pdf=15)
 
-    def fake_get_required_background(self: I151Converter, experiment: Experiment):
+    def fake_get_required_background(
+        self: I151Converter, experiment: Experiment, max_time_per_pdf: int
+    ):
         # Get the same background scans every other experiment
         # Only one of each background should be added
         if int(experiment.sample.id) % 2 == 0:
@@ -367,7 +372,10 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {"background": {"bg_type": "fq"}, "time_per_pdf": 10},
+                "data": {
+                    "background": {"bg_type": "fq", "time_per_pdf": 10},
+                    "time_per_pdf": 10,
+                },
             },
         },
         "id": "",
@@ -385,7 +393,10 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "experiment_definition": {
                 "name": "background_scan",
                 "id": "",
-                "data": {"background": {"bg_type": "fq"}, "time_per_pdf": 10},
+                "data": {
+                    "background": {"bg_type": "fq", "time_per_pdf": 10},
+                    "time_per_pdf": 10,
+                },
             },
         },
         "id": "",
@@ -410,10 +421,12 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
         (
             {"sample": "my_sample"},
             ["tiled_id"],
-            [BackgroundInfo(bg_type="bs")],
+            [BackgroundInfo(bg_type="bs", time_per_pdf=5)],
             {
                 "metadata": {
-                    "tiled_backgrounds": {"tiled_id": BackgroundInfo(bg_type="bs")}
+                    "tiled_backgrounds": {
+                        "tiled_id": BackgroundInfo(bg_type="bs", time_per_pdf=5)
+                    }
                 },
                 "sample": "my_sample",
             },
@@ -421,10 +434,12 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
         (
             {},
             ["tiled_id"],
-            [BackgroundInfo(bg_type="bs")],
+            [BackgroundInfo(bg_type="bs", time_per_pdf=5)],
             {
                 "metadata": {
-                    "tiled_backgrounds": {"tiled_id": BackgroundInfo(bg_type="bs")}
+                    "tiled_backgrounds": {
+                        "tiled_id": BackgroundInfo(bg_type="bs", time_per_pdf=5)
+                    }
                 },
             },
         ),
@@ -432,14 +447,14 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
             {"sample": "my_sample"},
             ["tiled_id_1", "tiled_id_2"],
             [
-                BackgroundInfo(bg_type="bs"),
-                BackgroundInfo(bg_type="air"),
+                BackgroundInfo(bg_type="bs", time_per_pdf=5),
+                BackgroundInfo(bg_type="air", time_per_pdf=5),
             ],
             {
                 "metadata": {
                     "tiled_backgrounds": {
-                        "tiled_id_1": BackgroundInfo(bg_type="bs"),
-                        "tiled_id_2": BackgroundInfo(bg_type="air"),
+                        "tiled_id_1": BackgroundInfo(bg_type="bs", time_per_pdf=5),
+                        "tiled_id_2": BackgroundInfo(bg_type="air", time_per_pdf=5),
                     }
                 },
                 "sample": "my_sample",
