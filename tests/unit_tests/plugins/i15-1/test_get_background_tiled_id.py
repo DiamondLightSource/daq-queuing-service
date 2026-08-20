@@ -41,7 +41,7 @@ def test_get_background_tiled_id_makes_expected_searches(
     client, search_2, search_3 = mock_tiled_searches
     get_background_tiled_id(
         client,
-        BackgroundInfo(bg_type="air"),
+        BackgroundInfo(bg_type="air", time_per_pdf=10),
         instrument_session="cm12345-1",
     )
     client.search.assert_called_once_with(
@@ -51,7 +51,7 @@ def test_get_background_tiled_id_makes_expected_searches(
     search_3.search.assert_called_once_with(
         Eq(
             key="start.experiment_definition.metadata.background",
-            value='{"bg_type":"air"}',
+            value='{"bg_type":"air","time_per_pdf":10}',
         )
     )
 
@@ -63,7 +63,7 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     assert (
         get_background_tiled_id(
             client,
-            BackgroundInfo(bg_type="air"),
+            BackgroundInfo(bg_type="air", time_per_pdf=10),
             instrument_session="cm12345-1",
         )
         == "tiled_id_2"
@@ -78,7 +78,7 @@ def test_get_background_tiled_id_returns_none_if_no_matching_backgrounds_found(
     assert (
         get_background_tiled_id(
             client,
-            BackgroundInfo(bg_type="air"),
+            BackgroundInfo(bg_type="air", time_per_pdf=10),
             instrument_session="cm12345-1",
         )
         is None

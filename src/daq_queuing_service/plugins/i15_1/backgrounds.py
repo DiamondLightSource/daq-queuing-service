@@ -12,11 +12,11 @@ class BackgroundInfo(BaseModel):
     # https://github.com/DiamondLightSource/daq-queuing-service/issues/84
     model_config = ConfigDict(frozen=True)
     bg_type: BACKGROUND_TYPES
+    time_per_pdf: int
 
     def add_tiled_id(self, tiled_id: str) -> "TiledBackground":
         return TiledBackground(
-            bg_type=self.bg_type,
-            tiled_id=tiled_id,
+            bg_type=self.bg_type, tiled_id=tiled_id, time_per_pdf=self.time_per_pdf
         )
 
 

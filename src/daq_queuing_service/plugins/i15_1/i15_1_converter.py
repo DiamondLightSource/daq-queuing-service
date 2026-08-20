@@ -65,6 +65,7 @@ class I151Converter(Converter):
         self,
         experiment: Experiment,
     ) -> list[TaskRequest]:
+        LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
         sample_name = experiment.sample.name
         # Assume sample name is of form test_8_1 to load from position 8 on puck 1
         _, position, puck = sample_name.split("_")
@@ -155,6 +156,14 @@ class I151Converter(Converter):
         # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
 
+        pdf_times = [
+            task.experiment.experiment_definition.data["time_per_pdf"]
+            for task in tasks
+            if isinstance(task.experiment, Experiment)
+        ]
+
+        max_time_per_pdf = max(pdf_times) if pdf_times else 10
+
         for task in tasks:
             experiment = task.experiment
             if (
@@ -162,7 +171,9 @@ class I151Converter(Converter):
                 and experiment.name != BACKGROUND_SCAN
             ):
                 instrument_session = experiment.instrument_session
-                backgrounds = self._get_required_backgrounds(experiment)
+                backgrounds = self._get_required_backgrounds(
+                    experiment, max_time_per_pdf
+                )
 
                 for background in backgrounds:
                     if tiled_id := get_background_tiled_id(
@@ -199,9 +210,13 @@ class I151Converter(Converter):
                 LOGGER.debug(f"Removing repeated background scan: {task.experiment}")
         return new_tasks
 
-    def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
+    def _get_required_backgrounds(
+        self, experiment: Experiment, time_per_pdf: int
+    ) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
-        return [BackgroundInfo(bg_type="fq")]
+        # And we should instead do the following to work out pdf_times for backgrounds
+        # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
+        return [BackgroundInfo(bg_type="fq", time_per_pdf=time_per_pdf)]
 
     def _add_tiled_background_to_md(
         self, params: dict[str, Any], tiled_id: str, background: BackgroundInfo
@@ -225,6 +240,11 @@ class I151Converter(Converter):
             # Need to get sample info for test samples (air, empty capillary etc)
             sample=Sample(name="fq_1_1", id="", data={}),
             experiment_definition=ExperimentDefinition(
-                name="background_scan", id="", data={"background": background}
+                name="background_scan",
+                id="",
+                data={
+                    "background": background,
+                    "time_per_pdf": background.time_per_pdf,
+                },
             ),
         )
