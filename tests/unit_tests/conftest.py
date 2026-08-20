@@ -21,6 +21,8 @@ from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
+    Container,
+    ContainerPosition,
     Experiment,
     ExperimentDefinition,
     Sample,
@@ -36,6 +38,20 @@ def propagate_logs(monkeypatch: MonkeyPatch):
     monkeypatch.setattr(LOGGER, "propagate", True)
 
 
+CONTAINER_POSITION = ContainerPosition(position=2)
+CONTAINER = Container(id="", positionInParent=CONTAINER_POSITION)
+
+
+def make_sample(name: str, id: str):
+    return Sample(
+        name=name,
+        id=id,
+        data={},
+        positionInContainer=CONTAINER_POSITION,
+        container=CONTAINER,
+    )
+
+
 @pytest.fixture
 def tasks() -> list[Task]:
     return [
@@ -46,7 +62,7 @@ def tasks() -> list[Task]:
                 experiment_definition=ExperimentDefinition(
                     name="test", id=str(i), data={}
                 ),
-                sample=Sample(name=f"test_8_{i}", id=str(i), data={}),
+                sample=make_sample(f"test_8_{i}", str(i)),
             ),
             id=str(i),
         )

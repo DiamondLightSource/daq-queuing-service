@@ -153,7 +153,13 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_2", "id": "2", "data": {}},
+                "sample": {
+                    "name": "test_8_2",
+                    "id": "2",
+                    "data": {},
+                    "container": {"id": "", "positionInParent": {"position": 2}},
+                    "positionInContainer": {"position": 2},
+                },
                 "experiment_definition": {"name": "test", "id": "2", "data": {}},
             },
             "id": "2",
@@ -182,7 +188,13 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_3", "id": "3", "data": {}},
+                "sample": {
+                    "name": "test_8_3",
+                    "id": "3",
+                    "data": {},
+                    "container": {"id": "", "positionInParent": {"position": 2}},
+                    "positionInContainer": {"position": 2},
+                },
                 "experiment_definition": {"name": "test", "id": "3", "data": {}},
             },
             "id": "3",
@@ -211,7 +223,13 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_4", "id": "4", "data": {}},
+                "sample": {
+                    "name": "test_8_4",
+                    "id": "4",
+                    "data": {},
+                    "container": {"id": "", "positionInParent": {"position": 2}},
+                    "positionInContainer": {"position": 2},
+                },
                 "experiment_definition": {"name": "test", "id": "4", "data": {}},
             },
             "id": "4",
@@ -247,7 +265,13 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_2", "id": "2", "data": {}},
+                "sample": {
+                    "name": "test_8_2",
+                    "id": "2",
+                    "data": {},
+                    "container": {"id": "", "positionInParent": {"position": 2}},
+                    "positionInContainer": {"position": 2},
+                },
                 "experiment_definition": {"name": "test", "id": "2", "data": {}},
             },
             "id": "2",
@@ -293,7 +317,13 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_1", "id": "1", "data": {}},
+                "sample": {
+                    "name": "test_8_1",
+                    "id": "1",
+                    "data": {},
+                    "container": {"id": "", "positionInParent": {"position": 2}},
+                    "positionInContainer": {"position": 2},
+                },
                 "experiment_definition": {"name": "test", "id": "1", "data": {}},
             },
             "id": "1",
@@ -627,7 +657,13 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_3", "id": "3", "data": {}},
+                "sample": {
+                    "name": "test_8_3",
+                    "id": "3",
+                    "data": {},
+                    "container": {"id": "", "positionInParent": {"position": 2}},
+                    "positionInContainer": {"position": 2},
+                },
                 "experiment_definition": {"name": "test", "id": "3", "data": {}},
             },
             "id": "3",
@@ -656,7 +692,13 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_4", "id": "4", "data": {}},
+                "sample": {
+                    "name": "test_8_4",
+                    "id": "4",
+                    "data": {},
+                    "container": {"id": "", "positionInParent": {"position": 2}},
+                    "positionInContainer": {"position": 2},
+                },
                 "experiment_definition": {"name": "test", "id": "4", "data": {}},
             },
             "id": "4",
@@ -757,7 +799,20 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_3", "id": "3", "data": {}},
+                "sample": {
+                    "name": "test_8_3",
+                    "id": "3",
+                    "data": {},
+                    "container": {
+                        "id": "",
+                        "positionInParent": {
+                            "position": 2,
+                        },
+                    },
+                    "positionInContainer": {
+                        "position": 2,
+                    },
+                },
                 "experiment_definition": {"name": "test", "id": "3", "data": {}},
             },
             "id": "3",
@@ -786,7 +841,20 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "experiment": {
                 "name": "test_experiment",
                 "instrument_session": "",
-                "sample": {"name": "test_8_4", "id": "4", "data": {}},
+                "sample": {
+                    "name": "test_8_4",
+                    "id": "4",
+                    "data": {},
+                    "container": {
+                        "id": "",
+                        "positionInParent": {
+                            "position": 2,
+                        },
+                    },
+                    "positionInContainer": {
+                        "position": 2,
+                    },
+                },
                 "experiment_definition": {"name": "test", "id": "4", "data": {}},
             },
             "id": "4",
@@ -821,7 +889,20 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
         "experiment": {
             "name": "test_experiment",
             "instrument_session": "",
-            "sample": {"name": "test_8_3", "id": "3", "data": {}},
+            "sample": {
+                "name": "test_8_3",
+                "id": "3",
+                "data": {},
+                "container": {
+                    "id": "",
+                    "positionInParent": {
+                        "position": 2,
+                    },
+                },
+                "positionInContainer": {
+                    "position": 2,
+                },
+            },
             "experiment_definition": {"name": "test", "id": "3", "data": {}},
         },
         "id": "3",
@@ -855,7 +936,20 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
         "experiment": {
             "name": "test_experiment",
             "instrument_session": "",
-            "sample": {"name": "test_8_3", "id": "3", "data": {}},
+            "sample": {
+                "name": "test_8_3",
+                "id": "3",
+                "data": {},
+                "container": {
+                    "id": "",
+                    "positionInParent": {
+                        "position": 2,
+                    },
+                },
+                "positionInContainer": {
+                    "position": 2,
+                },
+            },
             "experiment_definition": {"name": "test", "id": "3", "data": {}},
         },
         "id": "3",

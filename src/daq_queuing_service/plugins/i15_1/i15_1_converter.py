@@ -2,7 +2,7 @@ from typing import Any
 
 from blueapi.service.model import TaskRequest
 from tiled.client import from_uri  # type: ignore
-from tiled.client.container import Container
+from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
@@ -10,6 +10,8 @@ from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import get_background_tiled_id
 from daq_queuing_service.task_queue.task import (
+    Container,
+    ContainerPosition,
     Experiment,
     ExperimentDefinition,
     Sample,
@@ -22,7 +24,9 @@ BACKGROUND_SCAN = "Background"
 
 class I151Converter(Converter):
     def __init__(self):
-        self.tiled_client: Container = from_uri("https://tiled.diamond.ac.uk/api/v1")
+        self.tiled_client: TiledContainer = from_uri(
+            "https://tiled.diamond.ac.uk/api/v1"
+        )
 
     def pre_process(
         self,
@@ -66,11 +70,10 @@ class I151Converter(Converter):
         experiment: Experiment,
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
-        sample_name = experiment.sample.name
-        # Assume sample name is of form test_8_1 to load from position 8 on puck 1
-        _, position, puck = sample_name.split("_")
+        position = experiment.sample.positionInContainer.position
+        puck = experiment.sample.container.positionInParent.position
 
-        # Assume colelctions with lists of temperatures are blowers, see
+        # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
         if "list_of_temperatures" in experiment.experiment_definition.data.keys():
             data_collection = TaskRequest(
@@ -234,11 +237,18 @@ class I151Converter(Converter):
         self, background: BackgroundInfo, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for background: {background}")
+        container_position = ContainerPosition(position=1)
         return Experiment(
             name=BACKGROUND_SCAN,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=Sample(name="fq_1_1", id="", data={}),
+            sample=Sample(
+                name="fq Background Sample",
+                id="",
+                data={},
+                container=Container(id="", positionInParent=container_position),
+                positionInContainer=container_position,
+            ),
             experiment_definition=ExperimentDefinition(
                 name="background_scan",
                 id="",

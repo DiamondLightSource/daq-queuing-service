@@ -13,10 +13,21 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import (
 )
 
 
+class ContainerPosition(BaseModel):
+    position: int
+
+
+class Container(BaseModel):
+    id: str
+    positionInParent: ContainerPosition  # noqa: N815
+
+
 class Sample(BaseModel):
     name: str
     id: str
     data: dict[str, Any]
+    container: Container
+    positionInContainer: ContainerPosition  # noqa: N815
 
 
 class ExperimentDefinition(BaseModel):

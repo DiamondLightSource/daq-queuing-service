@@ -820,6 +820,36 @@
         ],
         "title": "CallStatus"
       },
+      "Container": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "positionInParent": {
+            "$ref": "#/components/schemas/ContainerPosition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "positionInParent"
+        ],
+        "title": "Container"
+      },
+      "ContainerPosition": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position"
+        ],
+        "title": "ContainerPosition"
+      },
       "ConverterConfig": {
         "properties": {
           "path": {
@@ -904,9 +934,29 @@
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider"
+            "description": "URL to fetch OIDC config from the provider",
+            "deprecated": true
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer",
+            "description": "URL of OIDC provider"
           },
           "client_id": {
             "type": "string",
@@ -929,7 +979,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
@@ -1012,13 +1061,21 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Data"
+          },
+          "container": {
+            "$ref": "#/components/schemas/Container"
+          },
+          "positionInContainer": {
+            "$ref": "#/components/schemas/ContainerPosition"
           }
         },
         "type": "object",
         "required": [
           "name",
           "id",
-          "data"
+          "data",
+          "container",
+          "positionInContainer"
         ],
         "title": "Sample"
       },
