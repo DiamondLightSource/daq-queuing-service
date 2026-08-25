@@ -31,7 +31,6 @@ def get_tiled_client(
     client_id = os.environ.get(client_id_variable_name, "")
     client_secret = SecretStr(os.environ.get(secret_variable_name, ""))
 
-    LOGGER.debug("")
     if not client_id:
         LOGGER.warning("No UDC client ID found.")
 
