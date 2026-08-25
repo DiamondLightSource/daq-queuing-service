@@ -162,6 +162,7 @@ class I151Converter(Converter):
             task.experiment.experiment_definition.data["time_per_pdf"]
             for task in tasks
             if isinstance(task.experiment, Experiment)
+            and not task.experiment.name == BACKGROUND_SCAN
         ]
 
         max_time_per_pdf = max(pdf_times) if pdf_times else 10
