@@ -953,6 +953,7 @@ name = "daq-queuing-service"
 source = { editable = "." }
 dependencies = [
     { name = "blueapi" },
+    { name = "cachetools" },
     { name = "fastapi" },
     { name = "pydantic" },
     { name = "tiled", extra = ["client"] },
@@ -982,6 +983,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "blueapi", specifier = ">=1.18.1" },
+    { name = "cachetools", specifier = ">=7.0.5" },
     { name = "fastapi", specifier = ">=0.136.0" },
     { name = "pydantic", specifier = ">=2.13.2" },
     { name = "tiled", extras = ["client"], specifier = ">=0.2.9" },
