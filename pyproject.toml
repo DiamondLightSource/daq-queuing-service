@@ -14,6 +14,7 @@ classifiers = [
 description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
     "blueapi>=1.18.1",
+    "cachetools>=7.0.5",
     "fastapi>=0.136.0",
     "pydantic>=2.13.2",
     "tiled[client]>=0.2.9",

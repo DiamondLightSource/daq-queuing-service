@@ -1,14 +1,15 @@
 from typing import Any
 
 from blueapi.service.model import TaskRequest
-from tiled.client import from_uri  # type: ignore
-from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
-from daq_queuing_service.plugins.i15_1.tiled_interaction import get_background_tiled_id
+from daq_queuing_service.plugins.i15_1.tiled_interaction import (
+    get_background_tiled_id,
+    get_tiled_client,
+)
 from daq_queuing_service.task_queue.task import (
     Container,
     ContainerPosition,
@@ -24,9 +25,7 @@ BACKGROUND_SCAN = "Background"
 
 class I151Converter(Converter):
     def __init__(self):
-        self.tiled_client: TiledContainer = from_uri(
-            "https://tiled.diamond.ac.uk/api/v1"
-        )
+        self.tiled_client = get_tiled_client()
 
     def pre_process(
         self,
@@ -163,6 +162,7 @@ class I151Converter(Converter):
             task.experiment.experiment_definition.data["time_per_pdf"]
             for task in tasks
             if isinstance(task.experiment, Experiment)
+            and not task.experiment.name == BACKGROUND_SCAN
         ]
 
         max_time_per_pdf = max(pdf_times) if pdf_times else 10

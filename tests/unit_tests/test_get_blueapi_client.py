@@ -7,7 +7,7 @@ from daq_queuing_service.app._config import BlueapiConfig
 from daq_queuing_service.blueapi_interaction.get_client import get_blueapi_client
 
 
-@patch("daq_queuing_service.blueapi_interaction.get_client.UDCTokenRetriever")
+@patch("daq_queuing_service.blueapi_interaction.get_client.UDCTokenSource")
 @patch("daq_queuing_service.blueapi_interaction.get_client.BlueapiClient")
 @patch("daq_queuing_service.blueapi_interaction.get_client.BlueapiRestClient")
 def test_get_blueapi_clients_constructs_clients_with_expected_args_and_returns_clients(
