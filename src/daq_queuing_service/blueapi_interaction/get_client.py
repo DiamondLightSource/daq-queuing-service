@@ -4,14 +4,14 @@ from blueapi.client.rest import BlueapiRestClient
 from bluesky_stomp.messaging import Broker, StompClient
 
 from daq_queuing_service.app._config import BlueapiConfig
-from daq_queuing_service.blueapi_interaction.token_retriever import UDCTokenRetriever
+from daq_queuing_service.blueapi_interaction.token_source import UDCTokenSource
 
 
 def get_blueapi_client(blueapi_config: BlueapiConfig) -> BlueapiClient:
     blueapi_rest_client = BlueapiRestClient(
         config=blueapi_config.api,
         #  Waiting on https://github.com/DiamondLightSource/blueapi/pull/1553
-        session_manager=UDCTokenRetriever(),  # type: ignore
+        session_manager=UDCTokenSource(),  # type: ignore
     )
 
     if blueapi_config.stomp.enabled:
