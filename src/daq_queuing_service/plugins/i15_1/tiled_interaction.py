@@ -28,9 +28,10 @@ def get_tiled_client(
     client_id_variable_name: str = "UDC_CLIENT_ID",
 ) -> TiledContainer:
 
-    client_id = os.environ.get(secret_variable_name, "")
-    client_secret = os.environ.get(client_id_variable_name, "")
+    client_id = os.environ.get(client_id_variable_name, "")
+    client_secret = SecretStr(os.environ.get(secret_variable_name, ""))
 
+    LOGGER.debug("")
     if not client_id:
         LOGGER.warning("No UDC client ID found.")
 
@@ -41,7 +42,7 @@ def get_tiled_client(
         tiled_auth = TiledAuth(
             tiled_auth=ServiceAccount(
                 client_id=client_id,
-                client_secret=SecretStr(client_secret),
+                client_secret=client_secret,
                 token_url="https://identity.diamond.ac.uk/realms/dls/protocol/openid-connect/token",
             )
         )
