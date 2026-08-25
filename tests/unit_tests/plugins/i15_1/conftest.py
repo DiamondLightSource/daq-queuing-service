@@ -14,6 +14,6 @@ def clear_cache():
 @pytest.fixture(autouse=True)
 def tiled_client():
     with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.from_uri"
-    ) as mock_from_uri:
-        yield mock_from_uri.return_value
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_client"
+    ) as mock_get_tiled_client:
+        yield mock_get_tiled_client.return_value
