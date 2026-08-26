@@ -69,78 +69,84 @@ class I151Converter(Converter):
         experiment: Experiment,
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
-        position = experiment.sample.positionInContainer.position
-        puck = experiment.sample.container.positionInParent.position
+        # position = experiment.sample.positionInContainer.position
+        # puck = experiment.sample.container.positionInParent.position
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
-        if "list_of_temperatures" in experiment.experiment_definition.data.keys():
-            data_collection = TaskRequest(
-                name="blower_collection",
-                params={
-                    "time_per_collection": experiment.experiment_definition.data[
-                        "time_per_pdf"
-                    ],
-                    "exposure_time_per_frame": 0.1,
-                    "ramp_rate_c_per_min": experiment.experiment_definition.data[
-                        "ramp_rate"
-                    ],
-                    "settle_time": experiment.experiment_definition.data["settle_time"],
-                    "temperatures_celsius": experiment.experiment_definition.data[
-                        "list_of_temperatures"
-                    ],
-                    "metadata": {
-                        "sample": experiment.sample,
-                        "experiment_definition": experiment.experiment_definition,
-                    },
-                },
-                instrument_session=experiment.instrument_session,
-            )
-        else:
-            data_collection = TaskRequest(
-                name="data_collection",
-                params={
-                    "full_collection_time": experiment.experiment_definition.data[
-                        "time_per_pdf"
-                    ],
-                    "exposure_time_per_frame": 0.1,
-                    "metadata": {
-                        "sample": experiment.sample,
-                        "experiment_definition": experiment.experiment_definition,
-                    },
-                },
-                instrument_session=experiment.instrument_session,
-            )
+        # if "list_of_temperatures" in experiment.experiment_definition.data.keys():
+        #     data_collection = TaskRequest(
+        #         name="blower_collection",
+        #         params={
+        #             "time_per_collection": experiment.experiment_definition.data[
+        #                 "time_per_pdf"
+        #             ],
+        #             "exposure_time_per_frame": 0.1,
+        #             "ramp_rate_c_per_min": experiment.experiment_definition.data[
+        #                 "ramp_rate"
+        #             ],
+        #           "settle_time": experiment.experiment_definition.data["settle_time"],
+        #             "temperatures_celsius": experiment.experiment_definition.data[
+        #                 "list_of_temperatures"
+        #             ],
+        #             "metadata": {
+        #                 "sample": experiment.sample,
+        #                 "experiment_definition": experiment.experiment_definition,
+        #             },
+        #         },
+        #         instrument_session=experiment.instrument_session,
+        #     )
+        # else:
+        #     data_collection = TaskRequest(
+        #         name="data_collection",
+        #         params={
+        #             "full_collection_time": experiment.experiment_definition.data[
+        #                 "time_per_pdf"
+        #             ],
+        #             "exposure_time_per_frame": 0.1,
+        #             "metadata": {
+        #                 "sample": experiment.sample,
+        #                 "experiment_definition": experiment.experiment_definition,
+        #             },
+        #         },
+        #         instrument_session=experiment.instrument_session,
+        #     )
+
+        data_collection = TaskRequest(
+            name="static_collection",
+            instrument_session=experiment.instrument_session,
+            params={"frames": 10, "exposure_time": 0.01, "time_between_frames": 0.1},
+        )
 
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
         return [
-            TaskRequest(
-                name="robot_load",
-                params={"puck": puck, "position": position},
-                instrument_session=experiment.instrument_session,
-            ),
-            TaskRequest(
-                name="centre_sample",
-                params={
-                    "start_z": -20,
-                    "end_z": 0,
-                    "steps": 20,
-                    "exposure_time": 0.01,
-                    "metadata": {
-                        "sample": experiment.sample,
-                        # This will include tiled background scan info
-                        "experiment_definition": experiment.experiment_definition,
-                    },
-                },
-                instrument_session=experiment.instrument_session,
-            ),
+            # TaskRequest(
+            #     name="robot_load",
+            #     params={"puck": puck, "position": position},
+            #     instrument_session=experiment.instrument_session,
+            # ),
+            # TaskRequest(
+            #     name="centre_sample",
+            #     params={
+            #         "start_z": -20,
+            #         "end_z": 0,
+            #         "steps": 20,
+            #         "exposure_time": 0.01,
+            #         "metadata": {
+            #             "sample": experiment.sample,
+            #             # This will include tiled background scan info
+            #             "experiment_definition": experiment.experiment_definition,
+            #         },
+            #     },
+            #     instrument_session=experiment.instrument_session,
+            # ),
             data_collection,
-            TaskRequest(
-                name="robot_unload",
-                params={},
-                instrument_session=experiment.instrument_session,
-            ),
+            # TaskRequest(
+            #     name="robot_unload",
+            #     params={},
+            #     instrument_session=experiment.instrument_session,
+            # ),
         ]
 
     def _add_required_background_scans(self, tasks: list[Task]) -> list[Task]:

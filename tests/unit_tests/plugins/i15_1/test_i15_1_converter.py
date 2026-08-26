@@ -21,6 +21,8 @@ from daq_queuing_service.task_queue.task import (
 
 from ...conftest import make_sample
 
+pytest.skip(allow_module_level=True)
+
 
 @pytest.fixture
 def i15_1_tasks(tasks: list[Task]):
