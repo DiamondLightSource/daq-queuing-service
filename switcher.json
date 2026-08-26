@@ -168,6 +168,10 @@
     "url": "https://DiamondLightSource.github.io/daq-queuing-service/v0.1.0/"
   },
   {
+    "version": "calibrations-test",
+    "url": "https://DiamondLightSource.github.io/daq-queuing-service/calibrations-test/"
+  },
+  {
     "version": "v0.17a",
     "url": "https://DiamondLightSource.github.io/daq-queuing-service/v0.17a/"
   }
