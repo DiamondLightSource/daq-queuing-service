@@ -7,6 +7,7 @@ from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
+    BACKGROUND_SCAN,
     get_background_tiled_id,
     get_tiled_client,
 )
@@ -19,8 +20,6 @@ from daq_queuing_service.task_queue.task import (
     Task,
     TaskWithPosition,
 )
-
-BACKGROUND_SCAN = "Background"
 
 
 class I151Converter(Converter):
@@ -264,7 +263,7 @@ class I151Converter(Converter):
                 positionInContainer=container_position,
             ),
             experiment_definition=ExperimentDefinition(
-                name="background_scan",
+                name=BACKGROUND_SCAN,
                 id="",
                 data={
                     "background": background,

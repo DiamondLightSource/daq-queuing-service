@@ -7,7 +7,7 @@ from pydantic import SecretStr
 from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.client.container import Container as TiledContainer
-from tiled.queries import Eq
+from tiled.queries import Comparison, Eq
 
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
@@ -21,6 +21,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 cache: TTLCache[tuple[BackgroundInfo, str], str | None] = TTLCache(maxsize=100, ttl=1)
 
 TILED_URL = "https://tiled.diamond.ac.uk"
+BACKGROUND_SCAN = "Background"
 
 
 def get_tiled_client(
@@ -66,10 +67,18 @@ def get_background_tiled_id(
         result: Container = (
             tiled_client.search(Eq("start.instrument_session", instrument_session))
             .search(Eq("start.instrument", "i15-1"))
+            .search(Eq("start.experiment_definition.name", BACKGROUND_SCAN))
             .search(
                 Eq(
-                    "start.experiment_definition.metadata.background",
-                    required_background.model_dump_json(),
+                    "start.experiment_definition.data.background.bg_type",
+                    required_background.bg_type,
+                )
+            )
+            .search(
+                Comparison(
+                    "ge",
+                    "start.experiment_definition.data.background.time_per_pdf",
+                    required_background.time_per_pdf,
                 )
             )
         )
