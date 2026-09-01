@@ -12,7 +12,7 @@ from tiled.queries import Comparison, Eq
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 
-# Ignoring the following rules as the tiled client is poorly typed as scares the linter
+# Ignoring the following rules as the tiled client is poorly typed and scares the linter
 # pyright: reportUnknownMemberType=false
 # pyright: reportUnknownVariableType=false
 # pyright: reportUnknownArgumentType=false
