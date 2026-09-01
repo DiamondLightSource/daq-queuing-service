@@ -115,7 +115,15 @@ class I151Converter(Converter):
         data_collection = TaskRequest(
             name="static_collection",
             instrument_session=experiment.instrument_session,
-            params={"frames": 10, "exposure_time": 0.01, "time_between_frames": 0.1},
+            params={
+                "frames": 10,
+                "exposure_time": 0.01,
+                "time_between_frames": 0.1,
+                "metadata": {
+                    "sample": experiment.sample,
+                    "experiment_definition": experiment.experiment_definition,
+                },
+            },
         )
 
         # For air calibration scans, we need to not to robot load/unload.
