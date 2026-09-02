@@ -7,7 +7,10 @@ from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
-from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
+from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BackgroundInfo,
+    TiledBackground,
+)
 from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
@@ -20,8 +23,6 @@ from daq_queuing_service.task_queue.task import (
 )
 
 from ...conftest import make_sample
-
-pytest.skip(allow_module_level=True)
 
 
 @pytest.fixture
@@ -71,19 +72,23 @@ async def queue_with_i15_1_plugin(
 @pytest.fixture(autouse=True)
 def background_found_in_tiled():
     with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_background_tiled_id",
-        MagicMock(return_value="fake_tiled_id"),
-    ) as mock_get_background_tiled_id:
-        yield mock_get_background_tiled_id
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_background",
+        MagicMock(
+            return_value=TiledBackground(
+                tiled_id="fake_tiled_id", bg_type="fq", time_per_pdf=5
+            )
+        ),
+    ) as mock_get_tiled_background:
+        yield mock_get_tiled_background
 
 
 @pytest.fixture()
 def background_not_found_in_tiled():
     with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_background_tiled_id",
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_background",
         MagicMock(return_value=None),
-    ) as mock_get_background_tiled_id:
-        yield mock_get_background_tiled_id
+    ) as mock_get_tiled_background:
+        yield mock_get_tiled_background
 
 
 @pytest.fixture()
@@ -308,7 +313,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
                 },
             },
             "experiment_definition": {
-                "name": "background_scan",
+                "name": "Background",
                 "id": "",
                 "data": {
                     "background": {"bg_type": "fq", "time_per_pdf": 100},
@@ -407,7 +412,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
                 },
             },
             "experiment_definition": {
-                "name": "background_scan",
+                "name": "Background",
                 "id": "",
                 "data": {
                     "background": {"bg_type": "fq", "time_per_pdf": 25},
@@ -441,7 +446,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
                 },
             },
             "experiment_definition": {
-                "name": "background_scan",
+                "name": "Background",
                 "id": "",
                 "data": {
                     "background": {"bg_type": "fq", "time_per_pdf": 25},
@@ -466,60 +471,58 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
 
 
 @pytest.mark.parametrize(
-    "params, tiled_ids, backgrounds, expected_params",
+    "params, tiled_backgrounds, expected_params",
     [
         (
             {"sample": "my_sample"},
-            ["tiled_id"],
-            [BackgroundInfo(bg_type="bs", time_per_pdf=5)],
+            [TiledBackground(tiled_id="tiled_id", bg_type="bs", time_per_pdf=5)],
             {
-                "metadata": {
-                    "tiled_backgrounds": {
-                        "tiled_id": BackgroundInfo(bg_type="bs", time_per_pdf=5)
-                    }
+                "tiled_backgrounds": {
+                    "tiled_id": TiledBackground(
+                        tiled_id="tiled_id", bg_type="bs", time_per_pdf=5
+                    )
                 },
                 "sample": "my_sample",
             },
         ),
         (
             {},
-            ["tiled_id"],
-            [BackgroundInfo(bg_type="bs", time_per_pdf=5)],
+            [TiledBackground(tiled_id="tiled_id", bg_type="bs", time_per_pdf=5)],
             {
-                "metadata": {
-                    "tiled_backgrounds": {
-                        "tiled_id": BackgroundInfo(bg_type="bs", time_per_pdf=5)
-                    }
+                "tiled_backgrounds": {
+                    "tiled_id": TiledBackground(
+                        tiled_id="tiled_id", bg_type="bs", time_per_pdf=5
+                    )
                 },
             },
         ),
         (
             {"sample": "my_sample"},
-            ["tiled_id_1", "tiled_id_2"],
             [
-                BackgroundInfo(bg_type="bs", time_per_pdf=5),
-                BackgroundInfo(bg_type="air", time_per_pdf=5),
+                TiledBackground(tiled_id="tiled_id_1", bg_type="bs", time_per_pdf=5),
+                TiledBackground(tiled_id="tiled_id_2", bg_type="air", time_per_pdf=5),
             ],
             {
-                "metadata": {
-                    "tiled_backgrounds": {
-                        "tiled_id_1": BackgroundInfo(bg_type="bs", time_per_pdf=5),
-                        "tiled_id_2": BackgroundInfo(bg_type="air", time_per_pdf=5),
-                    }
+                "tiled_backgrounds": {
+                    "tiled_id_1": TiledBackground(
+                        tiled_id="tiled_id_1", bg_type="bs", time_per_pdf=5
+                    ),
+                    "tiled_id_2": TiledBackground(
+                        tiled_id="tiled_id_2", bg_type="air", time_per_pdf=5
+                    ),
                 },
                 "sample": "my_sample",
             },
         ),
     ],
 )
-def test_add_tiled_background_to_md_adds_expected_metadata(
+def test_add_tiled_background_to_dict_adds_expected_metadata(
     params: dict[str, Any],
-    tiled_ids: list[str],
-    backgrounds: list[BackgroundInfo],
+    tiled_backgrounds: list[TiledBackground],
     expected_params: dict[str, Any],
 ):
-    for tiled_id, background in zip(tiled_ids, backgrounds, strict=True):
-        I151Converter()._add_tiled_background_to_md(params, tiled_id, background)
+    for background in tiled_backgrounds:
+        I151Converter()._add_tiled_background_to_dict(params, background)
 
     assert params == expected_params
 

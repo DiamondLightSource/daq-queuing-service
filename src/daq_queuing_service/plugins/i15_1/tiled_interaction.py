@@ -56,14 +56,14 @@ def get_tiled_client(
     return from_uri(TILED_URL, auth=tiled_auth)
 
 
-def get_background_tiled_id(
+def get_tiled_background(
     tiled_client: Container,
     required_background: BackgroundInfo,
     instrument_session: str,
 ) -> TiledBackground | None:
 
     @cached(cache)
-    def _get_background_tiled_id(
+    def _get_tiled_background(
         required_background: BackgroundInfo, instrument_session: str
     ) -> TiledBackground | None:
 
@@ -108,4 +108,4 @@ def get_background_tiled_id(
         )
         return TiledBackground.model_validate({"tiled_id": tiled_id} | background)
 
-    return _get_background_tiled_id(required_background, instrument_session)
+    return _get_tiled_background(required_background, instrument_session)

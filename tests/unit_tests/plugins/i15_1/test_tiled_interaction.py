@@ -4,12 +4,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import SecretStr
 from pytest import LogCaptureFixture
-from tiled.queries import Eq
+from tiled.queries import Comparison, Eq
 
-from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
+from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BackgroundInfo,
+)
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
+    BACKGROUND_SCAN,
     TILED_URL,
-    get_background_tiled_id,
+    get_tiled_background,
     get_tiled_client,
 )
 
@@ -17,16 +20,38 @@ from daq_queuing_service.plugins.i15_1.tiled_interaction import (
 @pytest.fixture()
 def mock_tiled_searches(
     tiled_client: MagicMock,
-) -> tuple[MagicMock, MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
-    result_1.metadata = {"start": {"time": 1}}
-    result_2 = MagicMock()
-    result_2.metadata = {"start": {"time": 10}}
-    result_3 = MagicMock()
-    result_3.metadata = {"start": {"time": 2}}
 
-    search_result_3 = MagicMock()
-    search_result_3.search = MagicMock(
+    result_1.metadata = {
+        "start": {
+            "time": 1,
+            "experiment_definition": {
+                "data": {"background": {"bg_type": "air", "time_per_pdf": 10}}
+            },
+        }
+    }
+    result_2 = MagicMock()
+    result_2.metadata = {
+        "start": {
+            "time": 10,
+            "experiment_definition": {
+                "data": {"background": {"bg_type": "fq", "time_per_pdf": 11}}
+            },
+        }
+    }
+    result_3 = MagicMock()
+    result_3.metadata = {
+        "start": {
+            "time": 2,
+            "experiment_definition": {
+                "data": {"background": {"bg_type": "bs", "time_per_pdf": 12}}
+            },
+        }
+    }
+
+    search_result_5 = MagicMock()
+    search_result_5.search = MagicMock(
         return_value={
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
@@ -34,20 +59,29 @@ def mock_tiled_searches(
         }
     )
 
+    search_result_4 = MagicMock()
+    search_result_4.search = MagicMock(return_value=search_result_5)
+    search_result_3 = MagicMock()
+    search_result_3.search = MagicMock(return_value=search_result_4)
     search_result_2 = MagicMock()
     search_result_2.search = MagicMock(return_value=search_result_3)
 
     tiled_client.search = MagicMock(return_value=search_result_2)
 
-    return tiled_client, search_result_2, search_result_3
+    return (
+        tiled_client,
+        search_result_2,
+        search_result_3,
+        search_result_4,
+        search_result_5,
+    )
 
 
-@pytest.mark.skip("Temp")
-def test_get_background_tiled_id_makes_expected_searches(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock],
+def test_get_tiled_background_makes_expected_searches(
+    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
 ):
-    client, search_2, search_3 = mock_tiled_searches
-    get_background_tiled_id(
+    client, search_2, search_3, search_4, search_5 = mock_tiled_searches
+    get_tiled_background(
         client,
         BackgroundInfo(bg_type="air", time_per_pdf=10),
         instrument_session="cm12345-1",
@@ -57,36 +91,35 @@ def test_get_background_tiled_id_makes_expected_searches(
     )
     search_2.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_3.search.assert_called_once_with(
-        Eq(
-            key="start.experiment_definition.metadata.background",
-            value='{"bg_type":"air","time_per_pdf":10}',
-        )
+        Eq("start.experiment_definition.name", BACKGROUND_SCAN)
+    )
+    search_4.search.assert_called_once_with(
+        Eq("start.experiment_definition.data.background.bg_type", "air")
+    )
+    search_5.search.assert_called_once_with(
+        Comparison("ge", "start.experiment_definition.data.background.time_per_pdf", 10)
     )
 
 
-@pytest.mark.skip("Temp")
 def test_get_background_tiled_returns_most_recent_valid_background(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock],
+    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
 ):
-    client, _, _ = mock_tiled_searches
-    assert (
-        get_background_tiled_id(
-            client,
-            BackgroundInfo(bg_type="air", time_per_pdf=10),
-            instrument_session="cm12345-1",
-        )
-        == "tiled_id_2"
+    client, _, _, _, _ = mock_tiled_searches
+    result = get_tiled_background(
+        client,
+        BackgroundInfo(bg_type="air", time_per_pdf=10),
+        instrument_session="cm12345-1",
     )
+    assert result and result.tiled_id == "tiled_id_2"
 
 
-@pytest.mark.skip("Temp")
-def test_get_background_tiled_id_returns_none_if_no_matching_backgrounds_found(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock],
+def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
+    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
 ):
-    client, _, final_search = mock_tiled_searches
+    client, _, _, _, final_search = mock_tiled_searches
     final_search.search.return_value = {}
     assert (
-        get_background_tiled_id(
+        get_tiled_background(
             client,
             BackgroundInfo(bg_type="air", time_per_pdf=10),
             instrument_session="cm12345-1",
@@ -95,7 +128,6 @@ def test_get_background_tiled_id_returns_none_if_no_matching_backgrounds_found(
     )
 
 
-@pytest.mark.skip("Temp")
 def test_get_tiled_client_instantiates_client_from_uri():
     with patch(
         "daq_queuing_service.plugins.i15_1.tiled_interaction.from_uri"
@@ -106,7 +138,6 @@ def test_get_tiled_client_instantiates_client_from_uri():
     assert tiled_client is mock_from_uri.return_value
 
 
-@pytest.mark.skip("Temp")
 @patch("daq_queuing_service.plugins.i15_1.tiled_interaction.from_uri")
 def test_get_tiled_client_warns_if_no_client_id_or_secret_found(
     mock_from_uri: MagicMock, caplog: LogCaptureFixture
@@ -119,7 +150,6 @@ def test_get_tiled_client_warns_if_no_client_id_or_secret_found(
     assert "Tiled auth will not be used."
 
 
-@pytest.mark.skip("Temp")
 @patch("daq_queuing_service.plugins.i15_1.tiled_interaction.TiledAuth")
 @patch("daq_queuing_service.plugins.i15_1.tiled_interaction.ServiceAccount")
 @patch("daq_queuing_service.plugins.i15_1.tiled_interaction.from_uri")

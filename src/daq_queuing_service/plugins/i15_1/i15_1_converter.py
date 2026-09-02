@@ -11,7 +11,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     BACKGROUND_SCAN,
-    get_background_tiled_id,
+    get_tiled_background,
     get_tiled_client,
 )
 from daq_queuing_service.task_queue.task import (
@@ -183,7 +183,7 @@ class I151Converter(Converter):
                 )
 
                 for background in backgrounds:
-                    if tiled_background := get_background_tiled_id(
+                    if tiled_background := get_tiled_background(
                         self.tiled_client,
                         background,
                         instrument_session,
