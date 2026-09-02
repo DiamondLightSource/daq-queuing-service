@@ -226,12 +226,7 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
     experiment_definition = ExperimentDefinition(
         name="",
         id="",
-        data={
-            "list_of_temperatures": [100, 120],
-            "time_per_pdf": 100,
-            "settle_time": 5,
-            "ramp_rate": 10,
-        },
+        data={"time_per_pdf": 100},
     )
 
     experiment = Experiment(
