@@ -10,7 +10,10 @@ from tiled.client.container import Container as TiledContainer
 from tiled.queries import Comparison, Eq
 
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
+from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BackgroundInfo,
+    TiledBackground,
+)
 
 # Ignoring the following rules as the tiled client is poorly typed and scares the linter
 # pyright: reportUnknownMemberType=false
@@ -57,12 +60,12 @@ def get_background_tiled_id(
     tiled_client: Container,
     required_background: BackgroundInfo,
     instrument_session: str,
-) -> str | None:
+) -> TiledBackground | None:
 
     @cached(cache)
     def _get_background_tiled_id(
         required_background: BackgroundInfo, instrument_session: str
-    ) -> str | None:
+    ) -> TiledBackground | None:
 
         result: Container = (
             tiled_client.search(Eq("start.instrument_session", instrument_session))
@@ -96,10 +99,13 @@ def get_background_tiled_id(
 
         # return the tiled ID
         tiled_id = items[-1][0]
+        background = items[-1][1].metadata["start"]["experiment_definition"]["data"][
+            "background"
+        ]
         LOGGER.debug(
             f"Found {len(items)} scans in tiled matching background: "
             + f"{required_background}. Returning the first: {tiled_id}"
         )
-        return tiled_id
+        return TiledBackground.model_validate({"tiled_id": tiled_id} | background)
 
     return _get_background_tiled_id(required_background, instrument_session)
