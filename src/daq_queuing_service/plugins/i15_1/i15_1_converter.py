@@ -28,6 +28,7 @@ from daq_queuing_service.task_queue.task import (
 class I151Converter(Converter):
     def __init__(self):
         self.tiled_client = get_tiled_client()
+        self._tiled_backgrounds: dict[str, list[TiledBackground]] = {}
 
     def pre_process(
         self,
@@ -59,7 +60,7 @@ class I151Converter(Converter):
                             BlueapiCall(task_request=b_api_task, parent_task_id=task.id)
                             for b_api_task in (
                                 self._construct_blueapi_tasks_from_experiment(
-                                    task.experiment
+                                    task.experiment, task.id
                                 )
                             )
                         ]
@@ -67,12 +68,18 @@ class I151Converter(Converter):
         return call_list
 
     def _construct_blueapi_tasks_from_experiment(
-        self,
-        experiment: Experiment,
+        self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
+
+        metadata: dict[str, Any] = {
+            "sample": experiment.sample,
+            "experiment_definition": experiment.experiment_definition,
+        }
+        if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
+            metadata["tiled_backgrounds"] = tiled_backgrounds
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
@@ -91,11 +98,7 @@ class I151Converter(Converter):
                     "temperatures_celsius": experiment.experiment_definition.data[
                         "list_of_temperatures"
                     ],
-                    "metadata": {
-                        "sample": experiment.sample,
-                        # This will include tiled background scan info
-                        "experiment_definition": experiment.experiment_definition,
-                    },
+                    "metadata": metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
@@ -107,11 +110,7 @@ class I151Converter(Converter):
                         "time_per_pdf"
                     ],
                     "exposure_time_per_frame": 0.1,
-                    "metadata": {
-                        "sample": experiment.sample,
-                        # This will include tiled background scan info
-                        "experiment_definition": experiment.experiment_definition,
-                    },
+                    "metadata": metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
@@ -158,6 +157,7 @@ class I151Converter(Converter):
             list[Task]: New list of tasks including backgrounds
         """
         LOGGER.info("Adding required background scans")
+        self._tiled_backgrounds = {task.id: [] for task in tasks}
 
         # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
@@ -188,9 +188,7 @@ class I151Converter(Converter):
                         background,
                         instrument_session,
                     ):
-                        self._add_tiled_background_to_dict(
-                            experiment.experiment_definition.data, tiled_background
-                        )
+                        self._tiled_backgrounds[task.id].append(tiled_background)
 
                     else:
                         bg_experiment = self._construct_background_experiment(
@@ -224,16 +222,6 @@ class I151Converter(Converter):
         # And we should instead do the following to work out pdf_times for backgrounds
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         return [BackgroundInfo(bg_type="fq", time_per_pdf=time_per_pdf)]
-
-    def _add_tiled_background_to_dict(
-        self, params: dict[str, Any], tiled_background: TiledBackground
-    ):
-        LOGGER.debug("Adding background scan tiled info to metadata")
-
-        if tiled_backgrounds := params.get("tiled_backgrounds"):
-            tiled_backgrounds[tiled_background.tiled_id] = tiled_background
-        else:
-            params["tiled_backgrounds"] = {tiled_background.tiled_id: tiled_background}
 
     def _construct_background_experiment(
         self, background: BackgroundInfo, instrument_session: str

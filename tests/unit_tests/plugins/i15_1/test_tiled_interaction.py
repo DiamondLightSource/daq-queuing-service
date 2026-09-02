@@ -8,6 +8,7 @@ from tiled.queries import Comparison, Eq
 
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BackgroundInfo,
+    TiledBackground,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     BACKGROUND_SCAN,
@@ -110,7 +111,9 @@ def test_get_background_tiled_returns_most_recent_valid_background(
         BackgroundInfo(bg_type="air", time_per_pdf=10),
         instrument_session="cm12345-1",
     )
-    assert result and result.tiled_id == "tiled_id_2"
+    assert result == TiledBackground(
+        tiled_id="tiled_id_2", bg_type="fq", time_per_pdf=11
+    )
 
 
 def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(

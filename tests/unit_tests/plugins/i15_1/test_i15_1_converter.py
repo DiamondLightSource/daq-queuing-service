@@ -1,11 +1,9 @@
 from copy import deepcopy
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BackgroundInfo,
@@ -91,30 +89,6 @@ def background_not_found_in_tiled():
         yield mock_get_tiled_background
 
 
-@pytest.fixture()
-def tasks_and_calls(
-    i15_1_tasks: list[Task],
-) -> tuple[list[TaskWithPosition], list[BlueapiCall]]:
-    tasks_with_positions = [TaskWithPosition.from_task(task) for task in i15_1_tasks]
-    calls: list[BlueapiCall] = []
-    for task in tasks_with_positions:
-        assert isinstance(task.experiment, Experiment)
-        calls.extend(
-            [
-                BlueapiCall(
-                    task_request=task_request,
-                    parent_task_id=task.id,
-                )
-                for task_request in (
-                    I151Converter()._construct_blueapi_tasks_from_experiment(
-                        task.experiment
-                    )
-                )
-            ]
-        )
-    return tasks_with_positions, calls
-
-
 def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     experiment = Experiment(
         name="test_experiment",
@@ -124,13 +98,13 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[0].name == "robot_load"
     assert tasks[0].params["position"] == 2
     assert tasks[0].params["puck"] == 2
 
 
-def test_sample_centre_uses_expected_params():
+def test_centre_sample_uses_expected_params():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
@@ -139,7 +113,7 @@ def test_sample_centre_uses_expected_params():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[1].name == "centre_sample"
     assert tasks[1].params == {
         "start_z": -20,
@@ -164,7 +138,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert len(tasks) == 4
     for task in tasks:
         assert task.instrument_session == "cm12345-1"
@@ -201,7 +175,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "data_collection"
     assert tasks[2].params["full_collection_time"] == 100
     assert tasks[2].params["exposure_time_per_frame"] == 0.1
@@ -231,7 +205,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment)
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "blower_collection"
     assert tasks[2].params["time_per_collection"] == 100
     assert tasks[2].params["exposure_time_per_frame"] == 0.1
@@ -241,6 +215,38 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     assert tasks[2].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
+    }
+
+
+def test_tiled_backgrounds_added_to_metadata_if_present():
+    converter = I151Converter()
+    converter._tiled_backgrounds["id"] = [
+        TiledBackground(tiled_id="tiled_id", bg_type="pi", time_per_pdf=1)
+    ]
+    experiment_definition = ExperimentDefinition(
+        name="",
+        id="",
+        data={
+            "list_of_temperatures": [100, 120],
+            "time_per_pdf": 100,
+            "settle_time": 5,
+            "ramp_rate": 10,
+        },
+    )
+
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=experiment_definition,
+        sample=make_sample("test_8_1", ""),
+        instrument_session="cm12345-1",
+    )
+    tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
+    assert tasks[2].params["metadata"] == {
+        "experiment_definition": experiment_definition,
+        "sample": make_sample("test_8_1", ""),
+        "tiled_backgrounds": [
+            TiledBackground(bg_type="pi", time_per_pdf=1, tiled_id="tiled_id"),
+        ],
     }
 
 
@@ -279,6 +285,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
 def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     background_not_found_in_tiled: None,
 ):
+    converter = I151Converter()
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
@@ -291,7 +298,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         experiment=experiment,
         id="1",
     )
-    tasks = I151Converter().pre_process([task], [], [])
+    tasks = converter.pre_process([task], [], [])
     assert len(tasks) == 2
     tasks[0].id = ""
     assert tasks[0].model_dump() == {
@@ -327,6 +334,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         "kind": TaskKind.EXPERIMENT,
         "user": None,
     }
+    assert converter._tiled_backgrounds == {"1": []}
 
 
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
@@ -466,65 +474,20 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     i15_1_tasks: list[Task],
     background_found_in_tiled: None,
 ):
-    tasks_after = I151Converter()._add_required_background_scans(i15_1_tasks)
+    converter = I151Converter()
+    assert converter._tiled_backgrounds == {}
+
+    tasks_after = converter._add_required_background_scans(i15_1_tasks)
+
     assert tasks_after == i15_1_tasks
-
-
-@pytest.mark.parametrize(
-    "params, tiled_backgrounds, expected_params",
-    [
-        (
-            {"sample": "my_sample"},
-            [TiledBackground(tiled_id="tiled_id", bg_type="bs", time_per_pdf=5)],
-            {
-                "tiled_backgrounds": {
-                    "tiled_id": TiledBackground(
-                        tiled_id="tiled_id", bg_type="bs", time_per_pdf=5
-                    )
-                },
-                "sample": "my_sample",
-            },
-        ),
-        (
-            {},
-            [TiledBackground(tiled_id="tiled_id", bg_type="bs", time_per_pdf=5)],
-            {
-                "tiled_backgrounds": {
-                    "tiled_id": TiledBackground(
-                        tiled_id="tiled_id", bg_type="bs", time_per_pdf=5
-                    )
-                },
-            },
-        ),
-        (
-            {"sample": "my_sample"},
-            [
-                TiledBackground(tiled_id="tiled_id_1", bg_type="bs", time_per_pdf=5),
-                TiledBackground(tiled_id="tiled_id_2", bg_type="air", time_per_pdf=5),
-            ],
-            {
-                "tiled_backgrounds": {
-                    "tiled_id_1": TiledBackground(
-                        tiled_id="tiled_id_1", bg_type="bs", time_per_pdf=5
-                    ),
-                    "tiled_id_2": TiledBackground(
-                        tiled_id="tiled_id_2", bg_type="air", time_per_pdf=5
-                    ),
-                },
-                "sample": "my_sample",
-            },
-        ),
-    ],
-)
-def test_add_tiled_background_to_dict_adds_expected_metadata(
-    params: dict[str, Any],
-    tiled_backgrounds: list[TiledBackground],
-    expected_params: dict[str, Any],
-):
-    for background in tiled_backgrounds:
-        I151Converter()._add_tiled_background_to_dict(params, background)
-
-    assert params == expected_params
+    # Tiled backgrounds info should be saved in state
+    assert len(converter._tiled_backgrounds.keys()) == 5
+    assert converter._tiled_backgrounds == {
+        task.id: [
+            TiledBackground(bg_type="fq", time_per_pdf=5, tiled_id="fake_tiled_id")
+        ]
+        for task in i15_1_tasks
+    }
 
 
 async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: TaskQueue):
