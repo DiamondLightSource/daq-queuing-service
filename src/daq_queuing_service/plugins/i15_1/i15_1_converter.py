@@ -240,6 +240,7 @@ class I151Converter(Converter):
                     "background"
                 ].get_matched_requirements(background):
                     index = i
+                    break
         bg_experiment = self._construct_background_experiment(
             matched_background or background, instrument_session
         )
