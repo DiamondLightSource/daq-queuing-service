@@ -25,6 +25,7 @@ from ...conftest import make_sample
 
 @pytest.fixture
 def i15_1_tasks(tasks: list[Task]):
+    time_per_pdfs = [5, 10, 10, 20, 25]
     tasks = [
         Task(
             experiment=Experiment(
@@ -35,7 +36,7 @@ def i15_1_tasks(tasks: list[Task]):
                     id="",
                     data={
                         "list_of_temperatures": [100 * i, 100 * i + 20],
-                        "time_per_pdf": (i + 1) * 5,
+                        "time_per_pdf": time_per_pdfs[i],
                         "settle_time": 5,
                         "ramp_rate": 10,
                     },
@@ -308,9 +309,9 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
             "name": "Background",
             "instrument_session": "cm12345-1",
             "sample": {
-                "name": "fq Background Sample",
+                "name": "Empty fq",
                 "id": "",
-                "data": {},
+                "data": {"capillary": "fq"},
                 "container": {
                     "id": "",
                     "positionInParent": {
@@ -348,9 +349,7 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
     bg_2 = BackgroundInfo(bg_type="bs", time_per_pdf=10)
     bg_3 = BackgroundInfo(bg_type="fq", time_per_pdf=15)
 
-    def fake_get_required_background(
-        self: I151Converter, experiment: Experiment, max_time_per_pdf: int
-    ):
+    def fake_get_required_background(self: I151Converter, experiment: Experiment):
         # Get the same background scans every other experiment
         # Only one of each background should be added
         if int(experiment.sample.id) % 2 == 0:
@@ -400,21 +399,22 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
     background_not_found_in_tiled: None,
 ):
     i15_1_tasks[1].experiment.instrument_session = "different"
+    i15_1_tasks[2].experiment.instrument_session = "also_different"
 
     assert len(i15_1_tasks) == 5
 
     new_tasks = i15_1_converter._add_required_background_scans(i15_1_tasks)
 
-    assert len(new_tasks) == 7
+    assert len(new_tasks) == 8
     new_tasks[0].id = ""
     assert new_tasks[0].model_dump() == {
         "experiment": {
             "name": "Background",
             "instrument_session": "cm12345-1",
             "sample": {
-                "name": "fq Background Sample",
+                "name": "Empty fq",
                 "id": "",
-                "data": {},
+                "data": {"capillary": "fq"},
                 "container": {
                     "id": "",
                     "positionInParent": {
@@ -446,9 +446,9 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "name": "Background",
             "instrument_session": "different",
             "sample": {
-                "name": "fq Background Sample",
+                "name": "Empty fq",
                 "id": "",
-                "data": {},
+                "data": {"capillary": "fq"},
                 "container": {
                     "id": "",
                     "positionInParent": {
@@ -463,8 +463,42 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
                 "name": "Background",
                 "id": "",
                 "data": {
-                    "background": {"bg_type": "fq", "time_per_pdf": 25},
-                    "time_per_pdf": 25,
+                    "background": {"bg_type": "fq", "time_per_pdf": 10},
+                    "time_per_pdf": 10,
+                },
+            },
+        },
+        "id": "",
+        "blueapi_calls": [],
+        "status": Status.QUEUED,
+        "kind": TaskKind.EXPERIMENT,
+        "user": None,
+    }
+    new_tasks[4].id = ""
+    assert new_tasks[4].model_dump() == {
+        "experiment": {
+            "name": "Background",
+            "instrument_session": "also_different",
+            "sample": {
+                "name": "Empty fq",
+                "id": "",
+                "data": {"capillary": "fq"},
+                "container": {
+                    "id": "",
+                    "positionInParent": {
+                        "position": 1,
+                    },
+                },
+                "positionInContainer": {
+                    "position": 1,
+                },
+            },
+            "experiment_definition": {
+                "name": "Background",
+                "id": "",
+                "data": {
+                    "background": {"bg_type": "fq", "time_per_pdf": 10},
+                    "time_per_pdf": 10,
                 },
             },
         },

@@ -156,7 +156,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "sample": {
                     "name": "test_8_2",
                     "id": "2",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -191,7 +191,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "sample": {
                     "name": "test_8_3",
                     "id": "3",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -226,7 +226,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "sample": {
                     "name": "test_8_4",
                     "id": "4",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -268,7 +268,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                 "sample": {
                     "name": "test_8_2",
                     "id": "2",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -320,7 +320,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                 "sample": {
                     "name": "test_8_1",
                     "id": "1",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -660,7 +660,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                 "sample": {
                     "name": "test_8_3",
                     "id": "3",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -695,7 +695,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                 "sample": {
                     "name": "test_8_4",
                     "id": "4",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -802,7 +802,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                 "sample": {
                     "name": "test_8_3",
                     "id": "3",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {
                         "id": "",
                         "positionInParent": {
@@ -844,7 +844,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                 "sample": {
                     "name": "test_8_4",
                     "id": "4",
-                    "data": {},
+                    "data": {"capillary": "fq"},
                     "container": {
                         "id": "",
                         "positionInParent": {
@@ -892,7 +892,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
             "sample": {
                 "name": "test_8_3",
                 "id": "3",
-                "data": {},
+                "data": {"capillary": "fq"},
                 "container": {
                     "id": "",
                     "positionInParent": {
@@ -939,7 +939,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
             "sample": {
                 "name": "test_8_3",
                 "id": "3",
-                "data": {},
+                "data": {"capillary": "fq"},
                 "container": {
                     "id": "",
                     "positionInParent": {

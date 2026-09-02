@@ -19,6 +19,32 @@ class BackgroundInfo(BaseModel):
             bg_type=self.bg_type, tiled_id=tiled_id, time_per_pdf=self.time_per_pdf
         )
 
+    def is_suitable(self, required_background: "BackgroundInfo") -> bool:
+        """Determine if this background is suitable compared to an experiment's required
+        background.
+
+        Args:
+            required_background (BackgroundInfo): The required background
+
+        Returns:
+            bool: True if suitable, False if not
+        """
+        return (
+            self.bg_type == required_background.bg_type
+            and self.time_per_pdf >= required_background.time_per_pdf
+        )
+
+    def get_matched_requirements(
+        self, required_background: "BackgroundInfo"
+    ) -> "BackgroundInfo | None":
+        if not self.bg_type == required_background.bg_type:
+            return
+
+        return BackgroundInfo(
+            bg_type=self.bg_type,
+            time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
+        )
+
 
 class TiledBackground(BackgroundInfo):
     tiled_id: str
