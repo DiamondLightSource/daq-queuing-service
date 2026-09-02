@@ -89,6 +89,13 @@ def background_not_found_in_tiled():
         yield mock_get_tiled_background
 
 
+@pytest.fixture
+def i15_1_converter():
+    converter = I151Converter()
+    converter.tiled_client = MagicMock()
+    return converter
+
+
 def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     experiment = Experiment(
         name="test_experiment",
@@ -333,7 +340,9 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
 
 
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
-    i15_1_tasks: list[Task], background_not_found_in_tiled: None
+    i15_1_converter: I151Converter,
+    i15_1_tasks: list[Task],
+    background_not_found_in_tiled: None,
 ):
     bg_1 = BackgroundInfo(bg_type="air", time_per_pdf=5)
     bg_2 = BackgroundInfo(bg_type="bs", time_per_pdf=10)
@@ -354,7 +363,7 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
         "daq_queuing_service.plugins.i15_1.i15_1_converter.I151Converter._get_required_backgrounds",
         fake_get_required_background,
     ):
-        new_tasks = I151Converter()._add_required_background_scans(i15_1_tasks)
+        new_tasks = i15_1_converter._add_required_background_scans(i15_1_tasks)
 
     assert len(new_tasks) == 8
 
@@ -386,13 +395,15 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_background_in_each(
-    i15_1_tasks: list[Task], background_not_found_in_tiled: None
+    i15_1_converter: I151Converter,
+    i15_1_tasks: list[Task],
+    background_not_found_in_tiled: None,
 ):
     i15_1_tasks[1].experiment.instrument_session = "different"
 
     assert len(i15_1_tasks) == 5
 
-    new_tasks = I151Converter()._add_required_background_scans(i15_1_tasks)
+    new_tasks = i15_1_converter._add_required_background_scans(i15_1_tasks)
 
     assert len(new_tasks) == 7
     new_tasks[0].id = ""
@@ -466,18 +477,18 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
 
 
 def test_add_required_background_scans_if_found_in_tiled_then_no_background_added(
+    i15_1_converter: I151Converter,
     i15_1_tasks: list[Task],
     background_found_in_tiled: None,
 ):
-    converter = I151Converter()
-    assert converter._tiled_backgrounds == {}
+    assert i15_1_converter._tiled_backgrounds == {}
 
-    tasks_after = converter._add_required_background_scans(i15_1_tasks)
+    tasks_after = i15_1_converter._add_required_background_scans(i15_1_tasks)
 
     assert tasks_after == i15_1_tasks
     # Tiled backgrounds info should be saved in state
-    assert len(converter._tiled_backgrounds.keys()) == 5
-    assert converter._tiled_backgrounds == {
+    assert len(i15_1_converter._tiled_backgrounds.keys()) == 5
+    assert i15_1_converter._tiled_backgrounds == {
         task.id: [
             TiledBackground(bg_type="fq", time_per_pdf=5, tiled_id="fake_tiled_id")
         ]
