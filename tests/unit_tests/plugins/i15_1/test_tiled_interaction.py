@@ -140,9 +140,7 @@ def test_get_background_tiled_returns_most_recent_valid_background(
 
 
 def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
-    mock_tiled_searches: tuple[
-        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
-    ],
+    mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_, final_search = mock_tiled_searches
     final_search.search.return_value = {}
