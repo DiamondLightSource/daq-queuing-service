@@ -88,13 +88,13 @@ class I151Converter(Converter):
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
+        time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+
         if "list_of_temperatures" in experiment.experiment_definition.data.keys():
             data_collection = TaskRequest(
                 name="blower_collection",
                 params={
-                    "time_per_collection": experiment.experiment_definition.data[
-                        "time_per_pdf"
-                    ],
+                    "time_per_collection": time_per_pdf,
                     "exposure_time_per_frame": 0.1,
                     "ramp_rate_c_per_min": experiment.experiment_definition.data[
                         "ramp_rate"
@@ -111,14 +111,23 @@ class I151Converter(Converter):
             data_collection = TaskRequest(
                 name="data_collection",
                 params={
-                    "full_collection_time": experiment.experiment_definition.data[
-                        "time_per_pdf"
-                    ],
+                    "full_collection_time": time_per_pdf,
                     "exposure_time_per_frame": 0.1,
                     "metadata": metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
+
+        # Temp while the gonio can't move
+        data_collection = TaskRequest(
+            name="static_collection",
+            instrument_session=experiment.instrument_session,
+            params={
+                "frames": time_per_pdf / 0.1,
+                "exposure_time": 0.01,
+                "time_between_frames": 0.1,
+            },
+        )
 
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83

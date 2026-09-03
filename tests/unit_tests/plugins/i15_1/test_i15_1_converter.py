@@ -173,6 +173,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
     assert len(call_list) == 4
 
 
+@pytest.mark.skip("Temp while gonio cant move")
 def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
     experiment = Experiment(
         name="test_experiment",
@@ -194,6 +195,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
     }
 
 
+@pytest.mark.skip("Temp while gonio cant move")
 def test_experiment_with_temperatures_runs_a_blower_collection():
     experiment_definition = ExperimentDefinition(
         name="",
@@ -225,6 +227,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     }
 
 
+@pytest.mark.skip("Temp while gonio cant move")
 def test_tiled_backgrounds_added_to_metadata_if_present():
     converter = I151Converter()
     converter._tiled_backgrounds["id"] = [
