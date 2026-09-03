@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Any
 
 from blueapi.service.model import TaskRequest
@@ -27,8 +28,11 @@ from daq_queuing_service.task_queue.task import (
 
 class I151Converter(Converter):
     def __init__(self):
-        self.tiled_client = None
         self._tiled_backgrounds: dict[str, list[TiledBackground]] = {}
+
+    @cached_property
+    def _tiled_client(self):
+        return get_tiled_client()
 
     def pre_process(
         self,
@@ -36,8 +40,6 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        if not self.tiled_client:
-            self.tiled_client = get_tiled_client()
         return self._add_required_background_scans(queue)
 
     def construct_blueapi_calls(
@@ -159,7 +161,6 @@ class I151Converter(Converter):
             list[Task]: New list of tasks including backgrounds
         """
         LOGGER.info("Adding required background scans")
-        assert self.tiled_client
         self._tiled_backgrounds = {task.id: [] for task in tasks}
 
         # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
@@ -187,7 +188,7 @@ class I151Converter(Converter):
 
                 for background in backgrounds:
                     if tiled_background := get_tiled_background(
-                        self.tiled_client,
+                        self._tiled_client,
                         background,
                         instrument_session,
                     ):
