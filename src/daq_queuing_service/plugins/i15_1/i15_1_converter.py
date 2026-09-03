@@ -2,6 +2,7 @@ from functools import cached_property
 from typing import Any
 
 from blueapi.service.model import TaskRequest
+from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
@@ -31,7 +32,7 @@ class I151Converter(Converter):
         self._tiled_backgrounds: dict[str, list[TiledBackground]] = {}
 
     @cached_property
-    def _tiled_client(self):
+    def _tiled_client(self) -> TiledContainer:
         return get_tiled_client()
 
     def pre_process(
