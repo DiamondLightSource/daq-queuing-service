@@ -92,7 +92,7 @@ def background_not_found_in_tiled():
 @pytest.fixture
 def i15_1_converter():
     converter = I151Converter()
-    converter.tiled_client = MagicMock()
+    converter._tiled_client = MagicMock()
     return converter
 
 
