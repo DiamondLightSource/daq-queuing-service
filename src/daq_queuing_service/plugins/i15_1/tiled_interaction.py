@@ -7,12 +7,15 @@ from pydantic import SecretStr
 from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.client.container import Container as TiledContainer
-from tiled.queries import Eq
+from tiled.queries import Comparison, Eq
 
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
+from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BackgroundInfo,
+    TiledBackground,
+)
 
-# Ignoring the following rules as the tiled client is poorly typed as scares the linter
+# Ignoring the following rules as the tiled client is poorly typed and scares the linter
 # pyright: reportUnknownMemberType=false
 # pyright: reportUnknownVariableType=false
 # pyright: reportUnknownArgumentType=false
@@ -21,6 +24,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
 cache: TTLCache[tuple[BackgroundInfo, str], str | None] = TTLCache(maxsize=100, ttl=1)
 
 TILED_URL = "https://tiled.diamond.ac.uk"
+BACKGROUND_SCAN = "Background"
 
 
 def get_tiled_client(
@@ -52,24 +56,32 @@ def get_tiled_client(
     return from_uri(TILED_URL, auth=tiled_auth)
 
 
-def get_background_tiled_id(
+def get_tiled_background(
     tiled_client: Container,
     required_background: BackgroundInfo,
     instrument_session: str,
-) -> str | None:
+) -> TiledBackground | None:
 
     @cached(cache)
-    def _get_background_tiled_id(
+    def _get_tiled_background(
         required_background: BackgroundInfo, instrument_session: str
-    ) -> str | None:
+    ) -> TiledBackground | None:
 
         result: Container = (
             tiled_client.search(Eq("start.instrument_session", instrument_session))
             .search(Eq("start.instrument", "i15-1"))
+            .search(Eq("start.experiment_definition.name", BACKGROUND_SCAN))
             .search(
                 Eq(
-                    "start.experiment_definition.metadata.background",
-                    required_background.model_dump_json(),
+                    "start.experiment_definition.data.background.bg_type",
+                    required_background.bg_type,
+                )
+            )
+            .search(
+                Comparison(
+                    "ge",
+                    "start.experiment_definition.data.background.time_per_pdf",
+                    required_background.time_per_pdf,
                 )
             )
         )
@@ -87,10 +99,13 @@ def get_background_tiled_id(
 
         # return the tiled ID
         tiled_id = items[-1][0]
+        background = items[-1][1].metadata["start"]["experiment_definition"]["data"][
+            "background"
+        ]
         LOGGER.debug(
             f"Found {len(items)} scans in tiled matching background: "
             + f"{required_background}. Returning the first: {tiled_id}"
         )
-        return tiled_id
+        return TiledBackground.model_validate({"tiled_id": tiled_id} | background)
 
-    return _get_background_tiled_id(required_background, instrument_session)
+    return _get_tiled_background(required_background, instrument_session)

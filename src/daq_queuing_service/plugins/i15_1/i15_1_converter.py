@@ -1,13 +1,19 @@
+from functools import cached_property
 from typing import Any
 
 from blueapi.service.model import TaskRequest
+from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
-from daq_queuing_service.plugins.i15_1.backgrounds import BackgroundInfo
+from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BackgroundInfo,
+    TiledBackground,
+)
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    get_background_tiled_id,
+    BACKGROUND_SCAN,
+    get_tiled_background,
     get_tiled_client,
 )
 from daq_queuing_service.task_queue.task import (
@@ -20,12 +26,14 @@ from daq_queuing_service.task_queue.task import (
     TaskWithPosition,
 )
 
-BACKGROUND_SCAN = "Background"
-
 
 class I151Converter(Converter):
     def __init__(self):
-        self.tiled_client = get_tiled_client()
+        self._tiled_backgrounds: dict[str, list[TiledBackground]] = {}
+
+    @cached_property
+    def _tiled_client(self) -> TiledContainer:
+        return get_tiled_client()
 
     def pre_process(
         self,
@@ -57,7 +65,7 @@ class I151Converter(Converter):
                             BlueapiCall(task_request=b_api_task, parent_task_id=task.id)
                             for b_api_task in (
                                 self._construct_blueapi_tasks_from_experiment(
-                                    task.experiment
+                                    task.experiment, task.id
                                 )
                             )
                         ]
@@ -65,12 +73,18 @@ class I151Converter(Converter):
         return call_list
 
     def _construct_blueapi_tasks_from_experiment(
-        self,
-        experiment: Experiment,
+        self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
+
+        metadata: dict[str, Any] = {
+            "sample": experiment.sample,
+            "experiment_definition": experiment.experiment_definition,
+        }
+        if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
+            metadata["tiled_backgrounds"] = tiled_backgrounds
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
@@ -89,10 +103,7 @@ class I151Converter(Converter):
                     "temperatures_celsius": experiment.experiment_definition.data[
                         "list_of_temperatures"
                     ],
-                    "metadata": {
-                        "sample": experiment.sample,
-                        "experiment_definition": experiment.experiment_definition,
-                    },
+                    "metadata": metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
@@ -104,10 +115,7 @@ class I151Converter(Converter):
                         "time_per_pdf"
                     ],
                     "exposure_time_per_frame": 0.1,
-                    "metadata": {
-                        "sample": experiment.sample,
-                        "experiment_definition": experiment.experiment_definition,
-                    },
+                    "metadata": metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
@@ -154,6 +162,7 @@ class I151Converter(Converter):
             list[Task]: New list of tasks including backgrounds
         """
         LOGGER.info("Adding required background scans")
+        self._tiled_backgrounds = {task.id: [] for task in tasks}
 
         # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
@@ -179,14 +188,12 @@ class I151Converter(Converter):
                 )
 
                 for background in backgrounds:
-                    if tiled_id := get_background_tiled_id(
-                        self.tiled_client,
+                    if tiled_background := get_tiled_background(
+                        self._tiled_client,
                         background,
                         instrument_session,
                     ):
-                        self._add_tiled_background_to_md(
-                            experiment.experiment_definition.data, tiled_id, background
-                        )
+                        self._tiled_backgrounds[task.id].append(tiled_background)
 
                     else:
                         bg_experiment = self._construct_background_experiment(
@@ -221,18 +228,6 @@ class I151Converter(Converter):
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         return [BackgroundInfo(bg_type="fq", time_per_pdf=time_per_pdf)]
 
-    def _add_tiled_background_to_md(
-        self, params: dict[str, Any], tiled_id: str, background: BackgroundInfo
-    ):
-        LOGGER.debug("Adding background scan tiled info to metadata")
-        if metadata := params.get("metadata"):
-            if tiled_backgrounds := metadata.get("tiled_backgrounds"):
-                tiled_backgrounds[tiled_id] = background
-            else:
-                metadata["tiled_backgrounds"] = {tiled_id: background}
-        else:
-            params["metadata"] = {"tiled_backgrounds": {tiled_id: background}}
-
     def _construct_background_experiment(
         self, background: BackgroundInfo, instrument_session: str
     ) -> Experiment:
@@ -250,7 +245,7 @@ class I151Converter(Converter):
                 positionInContainer=container_position,
             ),
             experiment_definition=ExperimentDefinition(
-                name="background_scan",
+                name=BACKGROUND_SCAN,
                 id="",
                 data={
                     "background": background,
