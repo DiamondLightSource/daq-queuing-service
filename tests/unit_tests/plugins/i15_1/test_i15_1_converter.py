@@ -50,8 +50,16 @@ def i15_1_tasks(tasks: list[Task]):
     return tasks
 
 
-def make_background_task(bg_type: BACKGROUND_TYPES, time_per_pdf: int) -> Task:
-    background = BackgroundInfo(bg_type=bg_type, time_per_pdf=time_per_pdf)
+def make_background_task(
+    bg_type: BACKGROUND_TYPES,
+    time_per_pdf: int,
+    list_of_temperatures: list[int] | None = None,
+) -> Task:
+    background = BackgroundInfo(
+        bg_type=bg_type,
+        time_per_pdf=time_per_pdf,
+        list_of_temperatures=list_of_temperatures,
+    )
     return Task(
         experiment=I151Converter()._construct_background_experiment(
             background, "cm12345-1"
