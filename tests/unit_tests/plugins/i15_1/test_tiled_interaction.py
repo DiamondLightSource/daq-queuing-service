@@ -50,6 +50,21 @@ def mock_tiled_searches(
             },
         }
     }
+    result_4 = MagicMock()
+    result_4.metadata = {
+        "start": {
+            "time": 0,
+            "experiment_definition": {
+                "data": {
+                    "background": {
+                        "bg_type": "fq1.0",
+                        "time_per_pdf": 12,
+                        "list_of_temperatures": [100, 200, 300],
+                    }
+                }
+            },
+        }
+    }
 
     search_result_5 = MagicMock()
     search_result_5.search = MagicMock(
@@ -57,6 +72,7 @@ def mock_tiled_searches(
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
             "tiled_id_3": result_3,
+            "tiled_id_4": result_4,
         }
     )
 
@@ -102,18 +118,38 @@ def test_get_tiled_background_makes_expected_searches(
     )
 
 
+@pytest.mark.parametrize(
+    "required_background, expected_tiled_background",
+    [
+        (
+            BackgroundInfo(bg_type="fq1.0", time_per_pdf=10),
+            TiledBackground(tiled_id="tiled_id_2", bg_type="fq1.0", time_per_pdf=11),
+        ),
+        (
+            BackgroundInfo(
+                bg_type="fq1.0", time_per_pdf=10, list_of_temperatures=[130, 140]
+            ),
+            TiledBackground(
+                tiled_id="tiled_id_4",
+                bg_type="fq1.0",
+                time_per_pdf=12,
+                list_of_temperatures=[100, 200, 300],
+            ),
+        ),
+    ],
+)
 def test_get_background_tiled_returns_most_recent_valid_background(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+    required_background: BackgroundInfo,
+    expected_tiled_background: TiledBackground,
+    mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_ = mock_tiled_searches
     result = get_tiled_background(
         client,
-        BackgroundInfo(bg_type="fq1.0", time_per_pdf=10),
+        required_background,
         instrument_session="cm12345-1",
     )
-    assert result == TiledBackground(
-        tiled_id="tiled_id_2", bg_type="fq1.0", time_per_pdf=11
-    )
+    assert result == expected_tiled_background
 
 
 def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
