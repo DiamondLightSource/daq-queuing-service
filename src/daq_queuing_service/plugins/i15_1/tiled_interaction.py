@@ -92,20 +92,26 @@ def get_tiled_background(
             )
             return
 
-        items = sorted(
+        suitable_tiled_background = None
+
+        for item in sorted(
             ((key, value) for key, value in result.items()),
             key=lambda item: item[1].metadata["start"]["time"],
-        )
+            reverse=True,
+        ):
+            background = TiledBackground.model_validate(
+                {"tiled_id": item[0]}
+                | item[1].metadata["start"]["experiment_definition"]["data"][
+                    "background"
+                ]
+            )
+            if background.is_suitable(required_background):
+                suitable_tiled_background = background
+                LOGGER.debug(
+                    f"Found a matching background in tiled: {suitable_tiled_background}"
+                )
+                break
 
-        # return the tiled ID
-        tiled_id = items[-1][0]
-        background = items[-1][1].metadata["start"]["experiment_definition"]["data"][
-            "background"
-        ]
-        LOGGER.debug(
-            f"Found {len(items)} scans in tiled matching background: "
-            + f"{required_background}. Returning the first: {tiled_id}"
-        )
-        return TiledBackground.model_validate({"tiled_id": tiled_id} | background)
+        return suitable_tiled_background
 
     return _get_tiled_background(required_background, instrument_session)

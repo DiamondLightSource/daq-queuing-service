@@ -28,7 +28,7 @@ def mock_tiled_searches(
         "start": {
             "time": 1,
             "experiment_definition": {
-                "data": {"background": {"bg_type": "air", "time_per_pdf": 10}}
+                "data": {"background": {"bg_type": "fq1.0", "time_per_pdf": 10}}
             },
         }
     }
@@ -46,7 +46,7 @@ def mock_tiled_searches(
         "start": {
             "time": 2,
             "experiment_definition": {
-                "data": {"background": {"bg_type": "bs1.0", "time_per_pdf": 12}}
+                "data": {"background": {"bg_type": "fq1.0", "time_per_pdf": 12}}
             },
         }
     }
@@ -105,10 +105,10 @@ def test_get_tiled_background_makes_expected_searches(
 def test_get_background_tiled_returns_most_recent_valid_background(
     mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
 ):
-    client, _, _, _, _ = mock_tiled_searches
+    client, *_ = mock_tiled_searches
     result = get_tiled_background(
         client,
-        BackgroundInfo(bg_type="air", time_per_pdf=10),
+        BackgroundInfo(bg_type="fq1.0", time_per_pdf=10),
         instrument_session="cm12345-1",
     )
     assert result == TiledBackground(
