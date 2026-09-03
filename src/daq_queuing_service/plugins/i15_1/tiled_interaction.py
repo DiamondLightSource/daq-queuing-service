@@ -69,10 +69,12 @@ def get_tiled_background(
     def _get_tiled_background(
         required_background: BackgroundInfo, instrument_session: str
     ) -> TiledBackground | None:
-
+        oldest_valid_time = time.time() - TILED_STALE_TIME
         result: Container = (
             tiled_client.search(Eq("start.instrument_session", instrument_session))
             .search(Eq("start.instrument", "i15-1"))
+            .search(Eq("stop.exit_status", "success"))
+            .search(Comparison("ge", "stop.time", oldest_valid_time))
             .search(Eq("start.experiment_definition.name", BACKGROUND_SCAN))
             .search(
                 Eq(
@@ -100,15 +102,6 @@ def get_tiled_background(
             key=lambda item: item[1].metadata["start"]["time"],
         )
 
-        time_since_background = time.time() - items[-1][1].metadata["start"]["time"]
-        if time_since_background > TILED_STALE_TIME:
-            LOGGER.info(
-                "Most recent suitable tiled background is too old "
-                + f"({time_since_background}s), returning None"
-            )
-            return
-
-        # return the tiled ID
         tiled_id = items[-1][0]
         background = items[-1][1].metadata["start"]["experiment_definition"]["data"][
             "background"
