@@ -1,4 +1,5 @@
 import os
+import time
 
 from blueapi.config import ServiceAccount
 from blueapi.service.authentication import TiledAuth
@@ -25,6 +26,8 @@ cache: TTLCache[tuple[BackgroundInfo, str], str | None] = TTLCache(maxsize=100, 
 
 TILED_URL = "https://tiled.diamond.ac.uk"
 BACKGROUND_SCAN = "Background"
+
+TILED_STALE_TIME = 60 * 15
 
 
 def get_tiled_client(
@@ -97,11 +100,20 @@ def get_tiled_background(
             key=lambda item: item[1].metadata["start"]["time"],
         )
 
+        time_since_background = time.time() - items[-1][1].metadata["start"]["time"]
+        if time_since_background > TILED_STALE_TIME:
+            LOGGER.info(
+                "Most recent suitable tiled background is too old "
+                + f"{(time_since_background)}s, returning None"
+            )
+            return
+
         # return the tiled ID
         tiled_id = items[-1][0]
         background = items[-1][1].metadata["start"]["experiment_definition"]["data"][
             "background"
         ]
+
         LOGGER.debug(
             f"Found {len(items)} scans in tiled matching background: "
             + f"{required_background}. Returning the first: {tiled_id}"

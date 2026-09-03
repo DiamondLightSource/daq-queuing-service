@@ -12,10 +12,19 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     BACKGROUND_SCAN,
+    TILED_STALE_TIME,
     TILED_URL,
     get_tiled_background,
     get_tiled_client,
 )
+
+
+@pytest.fixture(autouse=True)
+def mock_current_time():
+    with patch(
+        "daq_queuing_service.plugins.i15_1.tiled_interaction.time.time", return_value=30
+    ) as mock_current_time:
+        yield mock_current_time
 
 
 @pytest.fixture()
@@ -114,6 +123,19 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     assert result == TiledBackground(
         tiled_id="tiled_id_2", bg_type="fq", time_per_pdf=11
     )
+
+
+def test_get_background_tiled_returns_none_if_most_recent_valid_background_it_too_old(
+    mock_tiled_searches: tuple[MagicMock, ...], mock_current_time: MagicMock
+):
+    mock_current_time.return_value = 30 + TILED_STALE_TIME
+    client, *_ = mock_tiled_searches
+    result = get_tiled_background(
+        client,
+        BackgroundInfo(bg_type="air", time_per_pdf=10),
+        instrument_session="cm12345-1",
+    )
+    assert result is None
 
 
 def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
