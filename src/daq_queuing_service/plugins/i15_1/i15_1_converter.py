@@ -8,6 +8,7 @@ from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BackgroundInfo,
     TiledBackground,
+    get_background_temperatures,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     BACKGROUND_SCAN,
@@ -254,10 +255,21 @@ class I151Converter(Converter):
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         # And we should instead do the following to work out pdf_times for backgrounds
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
+        list_of_temperatures = experiment.experiment_definition.data.get(
+            "list_of_temperatures"
+        )
+
+        bg_temperatures = (
+            get_background_temperatures(list_of_temperatures)
+            if list_of_temperatures
+            else None
+        )
+
         return [
             BackgroundInfo(
                 bg_type=experiment.sample.data["capillary"],
                 time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
+                list_of_temperatures=bg_temperatures,
             )
         ]
 
