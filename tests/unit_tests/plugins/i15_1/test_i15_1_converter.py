@@ -6,6 +6,7 @@ from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BACKGROUND_TYPES,
     BackgroundInfo,
     TiledBackground,
 )
@@ -49,6 +50,15 @@ def i15_1_tasks(tasks: list[Task]):
     return tasks
 
 
+def make_background_task(bg_type: BACKGROUND_TYPES, time_per_pdf: int) -> Task:
+    background = BackgroundInfo(bg_type=bg_type, time_per_pdf=time_per_pdf)
+    return Task(
+        experiment=I151Converter()._construct_background_experiment(
+            background, "cm12345-1"
+        )
+    )
+
+
 def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPosition):
     # Check two tasks are equal other than the generated UUID
     copy1 = type(task1).model_validate(task1)
@@ -59,7 +69,7 @@ def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPos
 
 @pytest.fixture
 async def queue_with_i15_1_plugin(
-    i15_1_tasks: list[Task], background_not_found_in_tiled: None
+    i15_1_tasks: list[Task], background_not_found_in_tiled: MagicMock
 ):
     queue = TaskQueue(converter=I151Converter(), broadcaster=Broadcaster())
 
@@ -286,7 +296,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
 
 
 def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
-    background_not_found_in_tiled: None,
+    background_not_found_in_tiled: MagicMock,
 ):
     converter = I151Converter()
     experiment = Experiment(
@@ -343,7 +353,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
     i15_1_converter: I151Converter,
     i15_1_tasks: list[Task],
-    background_not_found_in_tiled: None,
+    background_not_found_in_tiled: MagicMock,
 ):
     bg_1 = BackgroundInfo(bg_type="air", time_per_pdf=5)
     bg_2 = BackgroundInfo(bg_type="bs", time_per_pdf=10)
@@ -393,10 +403,24 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
     )
 
 
+def test_add_required_background_scans_combines_similar_background_requirements(
+    i15_1_converter: I151Converter,
+    i15_1_tasks: list[Task],
+    background_not_found_in_tiled: MagicMock,
+):
+
+    assert len(i15_1_tasks) == 5
+    new_tasks = i15_1_converter._add_required_background_scans(i15_1_tasks)
+    assert len(new_tasks) == 6
+    assert isinstance(new_tasks[0].experiment, Experiment)
+    # Should have the maximum time_per_pdf of i15_1_tasks
+    assert new_tasks[0].experiment.experiment_definition.data["time_per_pdf"] == 25
+
+
 def test_same_experiment_in_different_instrument_sessions_will_add_background_in_each(
     i15_1_converter: I151Converter,
     i15_1_tasks: list[Task],
-    background_not_found_in_tiled: None,
+    background_not_found_in_tiled: MagicMock,
 ):
     i15_1_tasks[1].experiment.instrument_session = "different"
     i15_1_tasks[2].experiment.instrument_session = "also_different"
@@ -513,7 +537,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
 def test_add_required_background_scans_if_found_in_tiled_then_no_background_added(
     i15_1_converter: I151Converter,
     i15_1_tasks: list[Task],
-    background_found_in_tiled: None,
+    background_found_in_tiled: MagicMock,
 ):
     assert i15_1_converter._tiled_backgrounds == {}
 
@@ -534,3 +558,55 @@ async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: Task
     first_task = await queue_with_i15_1_plugin.get_task_by_position(0)
     assert first_task
     await queue_with_i15_1_plugin.move_task(first_task.id, 2)
+
+
+def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(
+    i15_1_converter: I151Converter, background_not_found_in_tiled: None
+):
+    background = BackgroundInfo(bg_type="fq", time_per_pdf=25)
+    new_tasks = [make_background_task("fq", 25)]
+    result = i15_1_converter._ensure_background_in_queue_or_tiled(
+        background, new_tasks, "task_id", "cm12345-1"
+    )
+    assert result == new_tasks
+
+
+def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_possible(
+    i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
+):
+    background = BackgroundInfo(bg_type="fq", time_per_pdf=25)
+    new_tasks = [make_background_task("fq", 10)]
+    result = i15_1_converter._ensure_background_in_queue_or_tiled(
+        background, new_tasks, "task_id", "cm12345-1"
+    )
+    assert len(result) == 1
+    assert_tasks_equal(result[0], make_background_task("fq", 25))
+
+
+def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_in_queue(
+    i15_1_converter: I151Converter,
+    background_not_found_in_tiled: MagicMock,
+):
+    background = BackgroundInfo(bg_type="fq", time_per_pdf=25)
+    result = i15_1_converter._ensure_background_in_queue_or_tiled(
+        background, [], "task_id", "cm12345-1"
+    )
+    assert len(result) == 1
+    assert_tasks_equal(result[0], make_background_task("fq", 25))
+
+
+def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
+    i15_1_converter: I151Converter,
+    background_found_in_tiled: MagicMock,
+):
+    i15_1_converter._tiled_backgrounds["task_id"] = []
+    background = BackgroundInfo(bg_type="fq", time_per_pdf=25)
+    result = i15_1_converter._ensure_background_in_queue_or_tiled(
+        background, [], "task_id", "cm12345-1"
+    )
+    assert len(result) == 0
+    assert i15_1_converter._tiled_backgrounds == {
+        "task_id": [
+            TiledBackground(bg_type="fq", time_per_pdf=5, tiled_id="fake_tiled_id")
+        ]
+    }
