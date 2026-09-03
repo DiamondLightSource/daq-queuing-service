@@ -18,12 +18,13 @@ CAPILLARIES = Literal[
     "pi1.5",
     "pi2.0",
 ]
+BACKGROUND_TYPES = CAPILLARIES | Literal["air"]
 
-TEMPERATURE_STEP = 100
+DEFAULT_TEMPERATURE_STEP = 100
 
 
 def get_background_temperatures(
-    list_of_temperatures: list[int], temperature_step: int = 100
+    list_of_temperatures: list[int], temperature_step: int = DEFAULT_TEMPERATURE_STEP
 ):
     return list(
         range(
@@ -36,7 +37,7 @@ def get_background_temperatures(
 
 class BackgroundInfo(BaseModel):
     model_config = ConfigDict(frozen=True)
-    bg_type: CAPILLARIES | Literal["air"]
+    bg_type: BACKGROUND_TYPES
     time_per_pdf: int
     # Empty list or None signifies a room temperature collection
     list_of_temperatures: list[int] | None = None
@@ -46,12 +47,21 @@ class BackgroundInfo(BaseModel):
             bg_type=self.bg_type, tiled_id=tiled_id, time_per_pdf=self.time_per_pdf
         )
 
-    def is_suitable(self, required_background: "BackgroundInfo") -> bool:
+    def is_suitable(
+        self,
+        required_background: "BackgroundInfo",
+        temperature_step: int = DEFAULT_TEMPERATURE_STEP,
+    ) -> bool:
         """Determine if this background is suitable compared to an experiment's required
         background.
 
         Args:
             required_background (BackgroundInfo): The required background
+            temperature_step (int): The difference in °C between the temperature of each
+            scan. To be considered suitable, each temperature in the required background
+            must be <= half this number away from a temperature in this background's
+            list_of_temperatures. Defaults to DEFAULT_TEMPERATURE_STEP.
+
 
         Returns:
             bool: True if suitable, False if not
@@ -67,7 +77,10 @@ class BackgroundInfo(BaseModel):
                 return False
             if not all(
                 # All required temperatures should be within 50C
-                any(abs(temp1 - temp2) <= 50 for temp1 in self.list_of_temperatures)
+                any(
+                    abs(temp1 - temp2) <= temperature_step / 2
+                    for temp1 in self.list_of_temperatures
+                )
                 for temp2 in required_background.list_of_temperatures
             ):
                 return False
@@ -77,8 +90,22 @@ class BackgroundInfo(BaseModel):
         )
 
     def get_matched_requirements(
-        self, required_background: "BackgroundInfo"
+        self,
+        required_background: "BackgroundInfo",
+        temperature_step: int = DEFAULT_TEMPERATURE_STEP,
     ) -> "BackgroundInfo | None":
+        """Creates a background that combines the requirements of this background object
+        and a provided required background, if possible.
+
+        Args:
+            required_background (BackgroundInfo): The required background
+            temperature_step (int, optional): The difference in °C between the
+            temperature of each scan. Defaults to DEFAULT_TEMPERATURE_STEP.
+
+        Returns:
+            BackgroundInfo | None: The combined background, or None if one is not
+            possible.
+        """
         if not self.bg_type == required_background.bg_type:
             return
 
@@ -90,7 +117,8 @@ class BackgroundInfo(BaseModel):
 
         if required_background.list_of_temperatures and self.list_of_temperatures:
             list_of_temperatures = get_background_temperatures(
-                required_background.list_of_temperatures + self.list_of_temperatures
+                required_background.list_of_temperatures + self.list_of_temperatures,
+                temperature_step=temperature_step,
             )
         else:
             list_of_temperatures = None
@@ -100,7 +128,7 @@ class BackgroundInfo(BaseModel):
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
             list_of_temperatures=list_of_temperatures,
         )
-        assert background.is_suitable(required_background)
+        assert background.is_suitable(required_background, temperature_step)
         return background
 
 

@@ -37,7 +37,7 @@ def mock_tiled_searches(
         "start": {
             "time": 10,
             "experiment_definition": {
-                "data": {"background": {"bg_type": "fq", "time_per_pdf": 11}}
+                "data": {"background": {"bg_type": "fq1.0", "time_per_pdf": 11}}
             },
         }
     }
@@ -46,7 +46,7 @@ def mock_tiled_searches(
         "start": {
             "time": 2,
             "experiment_definition": {
-                "data": {"background": {"bg_type": "bs", "time_per_pdf": 12}}
+                "data": {"background": {"bg_type": "bs1.0", "time_per_pdf": 12}}
             },
         }
     }
@@ -112,7 +112,7 @@ def test_get_background_tiled_returns_most_recent_valid_background(
         instrument_session="cm12345-1",
     )
     assert result == TiledBackground(
-        tiled_id="tiled_id_2", bg_type="fq", time_per_pdf=11
+        tiled_id="tiled_id_2", bg_type="fq1.0", time_per_pdf=11
     )
 
 
