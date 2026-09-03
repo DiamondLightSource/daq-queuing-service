@@ -104,7 +104,7 @@ def get_tiled_background(
         if time_since_background > TILED_STALE_TIME:
             LOGGER.info(
                 "Most recent suitable tiled background is too old "
-                + f"{(time_since_background)}s, returning None"
+                + f"({time_since_background}s), returning None"
             )
             return
 
