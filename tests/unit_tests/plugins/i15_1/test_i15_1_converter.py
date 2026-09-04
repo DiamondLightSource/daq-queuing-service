@@ -303,7 +303,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         experiment=experiment,
         id="1",
     )
-    tasks = converter.pre_process([task], [], [])
+    tasks = converter.pre_process(None, [task], [], [])
     assert len(tasks) == 2
     tasks[0].id = ""
     assert tasks[0].model_dump() == {
