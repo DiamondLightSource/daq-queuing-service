@@ -1,6 +1,8 @@
+from functools import cached_property
 from typing import Any
 
 from blueapi.service.model import TaskRequest
+from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
@@ -36,8 +38,11 @@ def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, Experiment]]:
 
 class I151Converter(Converter):
     def __init__(self):
-        self.tiled_client = None
         self._tiled_backgrounds: dict[str, list[TiledBackground]] = {}
+
+    @cached_property
+    def _tiled_client(self) -> TiledContainer:
+        return get_tiled_client()
 
     def pre_process(
         self,
@@ -45,8 +50,6 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        if not self.tiled_client:
-            self.tiled_client = get_tiled_client()
         return self._add_required_background_scans(queue)
 
     def construct_blueapi_calls(
@@ -94,13 +97,13 @@ class I151Converter(Converter):
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
+        time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+
         if "list_of_temperatures" in experiment.experiment_definition.data.keys():
             data_collection = TaskRequest(
                 name="blower_collection",
                 params={
-                    "time_per_collection": experiment.experiment_definition.data[
-                        "time_per_pdf"
-                    ],
+                    "time_per_collection": time_per_pdf,
                     "exposure_time_per_frame": 0.1,
                     "ramp_rate_c_per_min": experiment.experiment_definition.data[
                         "ramp_rate"
@@ -117,14 +120,24 @@ class I151Converter(Converter):
             data_collection = TaskRequest(
                 name="data_collection",
                 params={
-                    "full_collection_time": experiment.experiment_definition.data[
-                        "time_per_pdf"
-                    ],
+                    "full_collection_time": time_per_pdf,
                     "exposure_time_per_frame": 0.1,
                     "metadata": metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
+
+        # Temp while the gonio can't move
+        data_collection = TaskRequest(
+            name="static_collection",
+            instrument_session=experiment.instrument_session,
+            params={
+                "frames": time_per_pdf / 0.1,
+                "exposure_time": 0.01,
+                "time_between_frames": 0.1,
+                "metadata": metadata,
+            },
+        )
 
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
@@ -168,6 +181,7 @@ class I151Converter(Converter):
             list[Task]: New list of tasks including backgrounds
         """
         LOGGER.info("Adding required background scans")
+        self._tiled_backgrounds = {task.id: [] for task in tasks}
 
         self._tiled_backgrounds = {task.id: [] for task in tasks}
 
@@ -199,7 +213,6 @@ class I151Converter(Converter):
         task_id: str,
         instrument_session: str,
     ):
-        assert self.tiled_client
         queued_backgrounds = _filter_backgrounds(new_tasks)
 
         if any(
@@ -210,7 +223,7 @@ class I151Converter(Converter):
             return new_tasks
 
         if tiled_background := get_tiled_background(
-            self.tiled_client,
+            self._tiled_client,
             background,
             instrument_session,
         ):
