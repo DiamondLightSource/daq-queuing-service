@@ -4,7 +4,21 @@ from pydantic import BaseModel, ConfigDict
 
 # This should be generated from the json schema
 # https://github.com/DiamondLightSource/daq-queuing-service/issues/78
-BACKGROUND_TYPES = Literal["air", "bs", "fq", "pi"]
+CAPILLARIES = Literal[
+    "bs1.0",
+    "bs1.5",
+    "bs2.0",
+    "fq0.4",
+    "fq1.0",
+    "fq1.5",
+    "fq2.0",
+    "fq2.5",
+    "fq3.17",
+    "pi1.0",
+    "pi1.5",
+    "pi2.0",
+]
+BACKGROUND_TYPES = CAPILLARIES | Literal["air"]
 
 
 class BackgroundInfo(BaseModel):

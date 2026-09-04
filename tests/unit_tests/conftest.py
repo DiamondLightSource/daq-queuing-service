@@ -46,7 +46,7 @@ def make_sample(name: str, id: str):
     return Sample(
         name=name,
         id=id,
-        data={"capillary": "fq"},
+        data={"capillary": "fq1.0"},
         positionInContainer=CONTAINER_POSITION,
         container=CONTAINER,
     )
