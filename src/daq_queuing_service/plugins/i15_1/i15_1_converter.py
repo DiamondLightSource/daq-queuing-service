@@ -88,9 +88,12 @@ class I151Converter(Converter):
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
 
+        background: bool = experiment.name == BACKGROUND_SCAN
+
         metadata: dict[str, Any] = {
             "sample": experiment.sample,
             "experiment_definition": experiment.experiment_definition,
+            "background": background,
         }
         if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
             metadata["tiled_backgrounds"] = tiled_backgrounds

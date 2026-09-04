@@ -76,7 +76,7 @@ def get_tiled_background(
             .search(Eq("start.instrument", "i15-1"))
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
-            .search(Eq("start.experiment_definition.name", BACKGROUND_SCAN))
+            .search(Eq("start.background", True))
             .search(
                 Eq(
                     "start.experiment_definition.data.background.bg_type",
@@ -110,7 +110,7 @@ def get_tiled_background(
 
         LOGGER.debug(
             f"Found {len(items)} scans in tiled matching background: "
-            + f"{required_background}. Returning the first: {tiled_id}"
+            + f"{required_background}. Returning the most recent: {tiled_id}"
         )
         return TiledBackground.model_validate({"tiled_id": tiled_id} | background)
 

@@ -11,7 +11,6 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
     TiledBackground,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    BACKGROUND_SCAN,
     TILED_STALE_TIME,
     TILED_URL,
     get_tiled_background,
@@ -114,9 +113,7 @@ def test_get_tiled_background_makes_expected_searches(
     search_4.search.assert_called_once_with(
         Comparison("ge", "stop.time", 30 - TILED_STALE_TIME)
     )
-    search_5.search.assert_called_once_with(
-        Eq("start.experiment_definition.name", BACKGROUND_SCAN)
-    )
+    search_5.search.assert_called_once_with(Eq("start.background", True))
     search_6.search.assert_called_once_with(
         Eq("start.experiment_definition.data.background.bg_type", "air")
     )
