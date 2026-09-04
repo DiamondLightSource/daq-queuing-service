@@ -11,7 +11,6 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
     TiledBackground,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    BACKGROUND_SCAN,
     TILED_STALE_TIME,
     TILED_URL,
     get_tiled_background,
@@ -46,7 +45,7 @@ def mock_tiled_searches(
         "start": {
             "time": 10,
             "experiment_definition": {
-                "data": {"background": {"bg_type": "fq", "time_per_pdf": 11}}
+                "data": {"background": {"bg_type": "fq1.0", "time_per_pdf": 11}}
             },
         }
     }
@@ -55,7 +54,7 @@ def mock_tiled_searches(
         "start": {
             "time": 2,
             "experiment_definition": {
-                "data": {"background": {"bg_type": "bs", "time_per_pdf": 12}}
+                "data": {"background": {"bg_type": "bs1.0", "time_per_pdf": 12}}
             },
         }
     }
@@ -114,9 +113,7 @@ def test_get_tiled_background_makes_expected_searches(
     search_4.search.assert_called_once_with(
         Comparison("ge", "stop.time", 30 - TILED_STALE_TIME)
     )
-    search_5.search.assert_called_once_with(
-        Eq("start.experiment_definition.name", BACKGROUND_SCAN)
-    )
+    search_5.search.assert_called_once_with(Eq("start.background", True))
     search_6.search.assert_called_once_with(
         Eq("start.experiment_definition.data.background.bg_type", "air")
     )
@@ -135,7 +132,7 @@ def test_get_background_tiled_returns_most_recent_valid_background(
         instrument_session="cm12345-1",
     )
     assert result == TiledBackground(
-        tiled_id="tiled_id_2", bg_type="fq", time_per_pdf=11
+        tiled_id="tiled_id_2", bg_type="fq1.0", time_per_pdf=11
     )
 
 
