@@ -154,6 +154,7 @@ class TaskQueue:
 
         try:
             new_tasks = self._converter.pre_process(
+                self._get_running_task(),
                 [
                     self._tasks[task_id]
                     for task_id in self._queue
@@ -373,9 +374,12 @@ class TaskQueue:
         """
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._lock:
-            if position < -self.length or position >= self.length:
-                return None
-            return self._get_task_by_id(self._queue[position])
+            return self._get_task_by_position(position)
+
+    def _get_task_by_position(self, position: int) -> TaskWithPosition | None:
+        if position < -self.length or position >= self.length:
+            return
+        return self._get_task_by_id(self._queue[position])
 
     async def get_queue(self) -> list[TaskWithPosition]:
         """Get the entire queue (not including history)
@@ -655,3 +659,8 @@ class TaskQueue:
 
     def _get_call_history(self) -> list[BlueapiCallResponse]:
         return [call.to_response() for call in self._call_history]
+
+    def _get_running_task(self) -> TaskWithPosition | None:
+        current_task = self._get_task_by_position(0)
+        if current_task and current_task.status == Status.IN_PROGRESS:
+            return current_task

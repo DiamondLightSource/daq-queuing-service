@@ -43,7 +43,7 @@ def test_default_converter_raises_error_when_converting_ulims_experiment():
 
 
 def test_default_converter_pre_process_does_not_modify_queue(tasks: list[Task]):
-    new_queue = Converter().pre_process(tasks, [], [])
+    new_queue = Converter().pre_process(None, tasks, [], [])
     assert new_queue == tasks
 
 
