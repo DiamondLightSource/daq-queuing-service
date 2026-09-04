@@ -12,16 +12,25 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     BACKGROUND_SCAN,
+    TILED_STALE_TIME,
     TILED_URL,
     get_tiled_background,
     get_tiled_client,
 )
 
 
+@pytest.fixture(autouse=True)
+def mock_current_time():
+    with patch(
+        "daq_queuing_service.plugins.i15_1.tiled_interaction.time.time", return_value=30
+    ) as mock_current_time:
+        yield mock_current_time
+
+
 @pytest.fixture()
 def mock_tiled_searches(
     tiled_client: MagicMock,
-) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
 
     result_1.metadata = {
@@ -51,8 +60,8 @@ def mock_tiled_searches(
         }
     }
 
-    search_result_5 = MagicMock()
-    search_result_5.search = MagicMock(
+    search_result_7 = MagicMock()
+    search_result_7.search = MagicMock(
         return_value={
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
@@ -60,6 +69,10 @@ def mock_tiled_searches(
         }
     )
 
+    search_result_6 = MagicMock()
+    search_result_6.search = MagicMock(return_value=search_result_7)
+    search_result_5 = MagicMock()
+    search_result_5.search = MagicMock(return_value=search_result_6)
     search_result_4 = MagicMock()
     search_result_4.search = MagicMock(return_value=search_result_5)
     search_result_3 = MagicMock()
@@ -75,13 +88,19 @@ def mock_tiled_searches(
         search_result_3,
         search_result_4,
         search_result_5,
+        search_result_6,
+        search_result_7,
     )
 
 
 def test_get_tiled_background_makes_expected_searches(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+    mock_tiled_searches: tuple[
+        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
+    ],
 ):
-    client, search_2, search_3, search_4, search_5 = mock_tiled_searches
+    client, search_2, search_3, search_4, search_5, search_6, search_7 = (
+        mock_tiled_searches
+    )
     get_tiled_background(
         client,
         BackgroundInfo(bg_type="air", time_per_pdf=10),
@@ -91,21 +110,25 @@ def test_get_tiled_background_makes_expected_searches(
         Eq(key="start.instrument_session", value="cm12345-1")
     )
     search_2.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
-    search_3.search.assert_called_once_with(
-        Eq("start.experiment_definition.name", BACKGROUND_SCAN)
-    )
+    search_3.search.assert_called_once_with(Eq("stop.exit_status", "success"))
     search_4.search.assert_called_once_with(
-        Eq("start.experiment_definition.data.background.bg_type", "air")
+        Comparison("ge", "stop.time", 30 - TILED_STALE_TIME)
     )
     search_5.search.assert_called_once_with(
+        Eq("start.experiment_definition.name", BACKGROUND_SCAN)
+    )
+    search_6.search.assert_called_once_with(
+        Eq("start.experiment_definition.data.background.bg_type", "air")
+    )
+    search_7.search.assert_called_once_with(
         Comparison("ge", "start.experiment_definition.data.background.time_per_pdf", 10)
     )
 
 
 def test_get_background_tiled_returns_most_recent_valid_background(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+    mock_tiled_searches: tuple[MagicMock, ...],
 ):
-    client, _, _, _, _ = mock_tiled_searches
+    client, *_ = mock_tiled_searches
     result = get_tiled_background(
         client,
         BackgroundInfo(bg_type="air", time_per_pdf=10),
@@ -117,9 +140,9 @@ def test_get_background_tiled_returns_most_recent_valid_background(
 
 
 def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+    mock_tiled_searches: tuple[MagicMock, ...],
 ):
-    client, _, _, _, final_search = mock_tiled_searches
+    client, *_, final_search = mock_tiled_searches
     final_search.search.return_value = {}
     assert (
         get_tiled_background(
