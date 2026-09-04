@@ -126,6 +126,7 @@ class I151Converter(Converter):
                 "frames": time_per_pdf / 0.1,
                 "exposure_time": 0.01,
                 "time_between_frames": 0.1,
+                "metadata": metadata,
             },
         )
 
