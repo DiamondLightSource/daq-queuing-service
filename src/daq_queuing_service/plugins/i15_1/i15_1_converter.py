@@ -130,18 +130,6 @@ class I151Converter(Converter):
                 instrument_session=experiment.instrument_session,
             )
 
-        # Temp while the gonio can't move
-        data_collection = TaskRequest(
-            name="static_collection",
-            instrument_session=experiment.instrument_session,
-            params={
-                "frames": time_per_pdf / 0.1,
-                "exposure_time": 0.01,
-                "time_between_frames": 0.1,
-                "metadata": metadata,
-            },
-        )
-
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
         return [

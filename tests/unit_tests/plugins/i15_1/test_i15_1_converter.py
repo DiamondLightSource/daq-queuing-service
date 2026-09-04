@@ -184,7 +184,6 @@ def test_experiment_with_correct_experiment_type_are_converted():
     assert len(call_list) == 4
 
 
-@pytest.mark.skip("Temp while gonio cant move")
 def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
     experiment = Experiment(
         name="test_experiment",
@@ -203,10 +202,10 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
             name="", id="", data={"time_per_pdf": 100}
         ),
         "sample": make_sample("test_8_1", ""),
+        "background": False,
     }
 
 
-@pytest.mark.skip("Temp while gonio cant move")
 def test_experiment_with_temperatures_runs_a_blower_collection():
     experiment_definition = ExperimentDefinition(
         name="",
@@ -235,6 +234,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     assert tasks[2].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
+        "background": False,
     }
 
 
