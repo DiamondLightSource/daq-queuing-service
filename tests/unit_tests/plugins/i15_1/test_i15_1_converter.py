@@ -262,7 +262,20 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
         "tiled_backgrounds": [
             TiledBackground(bg_type="pi", time_per_pdf=1, tiled_id="tiled_id"),
         ],
+        "background": False,
     }
+
+
+def test_tiled_backgrounds_tagged_as_backgrounds_in_metadata():
+    converter = I151Converter()
+    background_task = make_background_task("air", 10)
+    assert isinstance(background_task.experiment, Experiment)
+    tasks = converter._construct_blueapi_tasks_from_experiment(
+        background_task.experiment, "id"
+    )
+    assert tasks[2].params["metadata"]["background"] is True
+    # Centring should not be tagged as a background scan
+    assert not tasks[1].params["metadata"].get("background")
 
 
 def test_mix_of_experiments_with_correct_experiment_type_are_converted():
