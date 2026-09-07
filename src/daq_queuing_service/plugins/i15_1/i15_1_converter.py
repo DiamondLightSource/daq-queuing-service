@@ -37,6 +37,7 @@ class I151Converter(Converter):
 
     def pre_process(
         self,
+        current_task: TaskWithPosition | None,
         queue: list[Task],
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
