@@ -63,7 +63,6 @@ def get_tiled_client(
 def get_tiled_background(
     tiled_client: Container,
     required_background: BackgroundInfo,
-    instrument_session: str,
 ) -> TiledBackground | None:
 
     @cached(cache)
@@ -90,6 +89,7 @@ def get_tiled_background(
 
         for item in items:
             tiled_id = item[0]
+            instrument_session = instrument_session
             filepath = Path(item[1].metadata["start"]["data_session_directory"]) / Path(
                 f"{item[1].metadata['start']['scan_file']}.nxs"
             )
@@ -101,6 +101,7 @@ def get_tiled_background(
             backgrounds.append(
                 TiledBackground(
                     tiled_id=tiled_id,
+                    instrument_session=instrument_session,
                     filepath=filepath,
                     bg_type=bg_type,
                     time_per_pdf=time_per_pdf,
@@ -113,7 +114,7 @@ def get_tiled_background(
         )
         return backgrounds
 
-    backgrounds = _query_tiled(instrument_session)
+    backgrounds = _query_tiled(required_background.instrument_session)
     for background in backgrounds:
         if background.is_suitable(required_background):
             LOGGER.info(f"Found suitable background in tiled: {background.tiled_id}")

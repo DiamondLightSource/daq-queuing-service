@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from daq_queuing_service.task_queue.task import Experiment
+
 # This should be generated from the json schema
 # https://github.com/DiamondLightSource/daq-queuing-service/issues/78
 CAPILLARIES = Literal[
@@ -26,6 +28,7 @@ class BackgroundInfo(BaseModel):
     # Currently only room temperatures scans are supported
     # https://github.com/DiamondLightSource/daq-queuing-service/issues/84
     model_config = ConfigDict(frozen=True)
+    instrument_session: str
     bg_type: BACKGROUND_TYPES
     time_per_pdf: float
 
@@ -40,19 +43,31 @@ class BackgroundInfo(BaseModel):
             bool: True if suitable, False if not
         """
         return (
-            self.bg_type == required_background.bg_type
+            self.instrument_session == required_background.instrument_session
+            and self.bg_type == required_background.bg_type
             and self.time_per_pdf >= required_background.time_per_pdf
         )
 
     def get_matched_requirements(
         self, required_background: "BackgroundInfo"
     ) -> "BackgroundInfo | None":
+        if not self.instrument_session == required_background.instrument_session:
+            return
         if not self.bg_type == required_background.bg_type:
             return
 
         return BackgroundInfo(
+            instrument_session=self.instrument_session,
             bg_type=self.bg_type,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
+        )
+
+    @classmethod
+    def from_experiment(cls, experiment: Experiment) -> "BackgroundInfo":
+        return cls(
+            instrument_session=experiment.instrument_session,
+            bg_type=experiment.sample.data["capillary"],
+            time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
         )
 
 

@@ -52,7 +52,9 @@ def i15_1_tasks(tasks: list[Task]):
 
 
 def make_background_task(bg_type: BACKGROUND_TYPES, time_per_pdf: int) -> Task:
-    background = BackgroundInfo(bg_type=bg_type, time_per_pdf=time_per_pdf)
+    background = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type=bg_type, time_per_pdf=time_per_pdf
+    )
     return Task(
         experiment=I151Converter()._construct_background_experiment(
             background, "cm12345-1"
@@ -85,6 +87,7 @@ def background_found_in_tiled():
         "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_background",
         MagicMock(
             return_value=TiledBackground(
+                instrument_session="cm12345-1",
                 tiled_id="fake_tiled_id",
                 bg_type="fq1.0",
                 time_per_pdf=5,
@@ -246,7 +249,11 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
     converter = I151Converter()
     converter._tiled_backgrounds["id"] = [
         TiledBackground(
-            tiled_id="tiled_id", bg_type="pi1.0", time_per_pdf=1, filepath=Path("")
+            instrument_session="cm12345-1",
+            tiled_id="tiled_id",
+            bg_type="pi1.0",
+            time_per_pdf=1,
+            filepath=Path(""),
         )
     ]
     experiment_definition = ExperimentDefinition(
@@ -267,7 +274,11 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
         "sample": make_sample("test_8_1", ""),
         "tiled_backgrounds": [
             TiledBackground(
-                bg_type="pi1.0", time_per_pdf=1, tiled_id="tiled_id", filepath=Path("")
+                instrument_session="cm12345-1",
+                bg_type="pi1.0",
+                time_per_pdf=1,
+                tiled_id="tiled_id",
+                filepath=Path(""),
             ),
         ],
         "background": False,
@@ -358,10 +369,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
             "experiment_definition": {
                 "name": "Background",
                 "id": "",
-                "data": {
-                    "background": {"bg_type": "fq1.0", "time_per_pdf": 100},
-                    "time_per_pdf": 100,
-                },
+                "data": {"time_per_pdf": 100.0},
             },
         },
         "id": "",
@@ -378,9 +386,13 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
     i15_1_tasks: list[Task],
     background_not_found_in_tiled: MagicMock,
 ):
-    bg_1 = BackgroundInfo(bg_type="air", time_per_pdf=5)
-    bg_2 = BackgroundInfo(bg_type="bs1.0", time_per_pdf=10)
-    bg_3 = BackgroundInfo(bg_type="fq1.0", time_per_pdf=15)
+    bg_1 = BackgroundInfo(instrument_session="cm12345-1", bg_type="air", time_per_pdf=5)
+    bg_2 = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type="bs1.0", time_per_pdf=10
+    )
+    bg_3 = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=15
+    )
 
     def fake_get_required_background(self: I151Converter, experiment: Experiment):
         # Get the same background scans every other experiment
@@ -395,7 +407,7 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
         "daq_queuing_service.plugins.i15_1.i15_1_converter.I151Converter._get_required_backgrounds",
         fake_get_required_background,
     ):
-        new_tasks = i15_1_converter._add_required_background_scans(i15_1_tasks)
+        new_tasks = i15_1_converter._add_required_background_scans(None, i15_1_tasks)
 
     assert len(new_tasks) == 8
 
@@ -433,7 +445,7 @@ def test_add_required_background_scans_combines_similar_background_requirements(
 ):
 
     assert len(i15_1_tasks) == 5
-    new_tasks = i15_1_converter._add_required_background_scans(i15_1_tasks)
+    new_tasks = i15_1_converter._add_required_background_scans(None, i15_1_tasks)
     assert len(new_tasks) == 6
     assert isinstance(new_tasks[0].experiment, Experiment)
     # Should have the maximum time_per_pdf of i15_1_tasks
@@ -450,7 +462,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
 
     assert len(i15_1_tasks) == 5
 
-    new_tasks = i15_1_converter._add_required_background_scans(i15_1_tasks)
+    new_tasks = i15_1_converter._add_required_background_scans(None, i15_1_tasks)
 
     assert len(new_tasks) == 8
     new_tasks[0].id = ""
@@ -476,8 +488,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
                 "name": "Background",
                 "id": "",
                 "data": {
-                    "background": {"bg_type": "fq1.0", "time_per_pdf": 25},
-                    "time_per_pdf": 25,
+                    "time_per_pdf": 25.0,
                 },
             },
         },
@@ -509,10 +520,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "experiment_definition": {
                 "name": "Background",
                 "id": "",
-                "data": {
-                    "background": {"bg_type": "fq1.0", "time_per_pdf": 10},
-                    "time_per_pdf": 10,
-                },
+                "data": {"time_per_pdf": 10.0},
             },
         },
         "id": "",
@@ -543,10 +551,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
             "experiment_definition": {
                 "name": "Background",
                 "id": "",
-                "data": {
-                    "background": {"bg_type": "fq1.0", "time_per_pdf": 10},
-                    "time_per_pdf": 10,
-                },
+                "data": {"time_per_pdf": 10.0},
             },
         },
         "id": "",
@@ -564,7 +569,7 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
 ):
     assert i15_1_converter._tiled_backgrounds == {}
 
-    tasks_after = i15_1_converter._add_required_background_scans(i15_1_tasks)
+    tasks_after = i15_1_converter._add_required_background_scans(None, i15_1_tasks)
 
     assert tasks_after == i15_1_tasks
     # Tiled backgrounds info should be saved in state
@@ -572,6 +577,7 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     assert i15_1_converter._tiled_backgrounds == {
         task.id: [
             TiledBackground(
+                instrument_session="cm12345-1",
                 bg_type="fq1.0",
                 time_per_pdf=5,
                 tiled_id="fake_tiled_id",
@@ -591,10 +597,12 @@ async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: Task
 def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(
     i15_1_converter: I151Converter, background_not_found_in_tiled: None
 ):
-    background = BackgroundInfo(bg_type="fq1.0", time_per_pdf=25)
+    background = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
+    )
     new_tasks = [make_background_task("fq1.0", 25)]
     result = i15_1_converter._ensure_background_in_queue_or_tiled(
-        background, new_tasks, "task_id", "cm12345-1"
+        background, None, new_tasks, "task_id", "cm12345-1"
     )
     assert result == new_tasks
 
@@ -602,10 +610,12 @@ def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued
 def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_possible(
     i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
 ):
-    background = BackgroundInfo(bg_type="fq1.0", time_per_pdf=25)
+    background = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
+    )
     new_tasks = [make_background_task("fq1.0", 10)]
     result = i15_1_converter._ensure_background_in_queue_or_tiled(
-        background, new_tasks, "task_id", "cm12345-1"
+        background, None, new_tasks, "task_id", "cm12345-1"
     )
     assert len(result) == 1
     assert_tasks_equal(result[0], make_background_task("fq1.0", 25))
@@ -615,9 +625,11 @@ def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_i
     i15_1_converter: I151Converter,
     background_not_found_in_tiled: MagicMock,
 ):
-    background = BackgroundInfo(bg_type="fq1.0", time_per_pdf=25)
+    background = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
+    )
     result = i15_1_converter._ensure_background_in_queue_or_tiled(
-        background, [], "task_id", "cm12345-1"
+        background, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 1
     assert_tasks_equal(result[0], make_background_task("fq1.0", 25))
@@ -628,14 +640,17 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
     background_found_in_tiled: MagicMock,
 ):
     i15_1_converter._tiled_backgrounds["task_id"] = []
-    background = BackgroundInfo(bg_type="fq1.0", time_per_pdf=25)
+    background = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
+    )
     result = i15_1_converter._ensure_background_in_queue_or_tiled(
-        background, [], "task_id", "cm12345-1"
+        background, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 0
     assert i15_1_converter._tiled_backgrounds == {
         "task_id": [
             TiledBackground(
+                instrument_session="cm12345-1",
                 bg_type="fq1.0",
                 time_per_pdf=5,
                 tiled_id="fake_tiled_id",

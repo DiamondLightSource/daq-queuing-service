@@ -117,8 +117,7 @@ def test_get_tiled_background_makes_expected_searches(
     )
     get_tiled_background(
         client,
-        BackgroundInfo(bg_type="air", time_per_pdf=10),
-        instrument_session="cm12345-1",
+        BackgroundInfo(instrument_session="cm12345-1", bg_type="air", time_per_pdf=10),
     )
     client.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_2.search.assert_called_once_with(
@@ -143,10 +142,12 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     client, *_ = mock_tiled_searches
     result = get_tiled_background(
         client,
-        BackgroundInfo(bg_type="fq1.0", time_per_pdf=10),
-        instrument_session="cm12345-1",
+        BackgroundInfo(
+            instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=10
+        ),
     )
     assert result == TiledBackground(
+        instrument_session="cm12345-1",
         tiled_id="tiled_id_2",
         bg_type="fq1.0",
         time_per_pdf=11,
@@ -162,8 +163,9 @@ def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
     assert (
         get_tiled_background(
             client,
-            BackgroundInfo(bg_type="air", time_per_pdf=10),
-            instrument_session="cm12345-1",
+            BackgroundInfo(
+                instrument_session="cm12345-1", bg_type="air", time_per_pdf=10
+            ),
         )
         is None
     )
