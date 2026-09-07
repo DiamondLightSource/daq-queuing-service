@@ -1200,3 +1200,41 @@ async def test__sync_not_called_for_read_only_methods(
     await getattr(task_queue, method_name)(*args)
 
     task_queue._sync.assert_not_called()
+
+
+def test_get_running_task_returns_first_task_if_in_progress(
+    task_queue_in_progress: TaskQueue,
+):
+    current_task = task_queue_in_progress._get_running_task()
+    assert current_task and current_task.status == Status.IN_PROGRESS
+
+
+def test_get_running_task_returns_none_if_no_task_in_progress(
+    task_queue: TaskQueue,
+):
+    assert task_queue._get_running_task() is None
+
+
+async def test_get_running_task_returns_none_if_no_tasks_in_queue(
+    task_queue: TaskQueue,
+):
+    await task_queue.cancel_all_tasks()
+    assert task_queue._get_running_task() is None
+
+
+async def test__sync_calls_converter_pre_process_with_expected_args(
+    task_queue_with_history: TaskQueue, converter: Converter
+):
+    task_queue_with_history._modifying = MagicMock()
+    converter.pre_process = MagicMock()
+
+    first_task = task_queue_with_history._get_running_task()
+    other_tasks = [
+        task_queue_with_history._tasks[task_id]
+        for task_id in task_queue_with_history._queue[1:]
+    ]
+    history = task_queue_with_history._get_history()
+
+    task_queue_with_history._sync()
+
+    converter.pre_process.assert_called_once_with(first_task, other_tasks, history, [])

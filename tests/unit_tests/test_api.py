@@ -463,6 +463,7 @@ async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
     class SomeError(Exception): ...
 
     def fail_conversion(
+        current_task: TaskWithPosition | None,
         queue: list[Task],
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
