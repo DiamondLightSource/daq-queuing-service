@@ -1,4 +1,5 @@
 from copy import deepcopy
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -84,7 +85,10 @@ def background_found_in_tiled():
         "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_background",
         MagicMock(
             return_value=TiledBackground(
-                tiled_id="fake_tiled_id", bg_type="fq1.0", time_per_pdf=5
+                tiled_id="fake_tiled_id",
+                bg_type="fq1.0",
+                time_per_pdf=5,
+                filepath=Path(""),
             )
         ),
     ) as mock_get_tiled_background:
@@ -241,7 +245,9 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
 def test_tiled_backgrounds_added_to_metadata_if_present():
     converter = I151Converter()
     converter._tiled_backgrounds["id"] = [
-        TiledBackground(tiled_id="tiled_id", bg_type="pi1.0", time_per_pdf=1)
+        TiledBackground(
+            tiled_id="tiled_id", bg_type="pi1.0", time_per_pdf=1, filepath=Path("")
+        )
     ]
     experiment_definition = ExperimentDefinition(
         name="",
@@ -260,7 +266,9 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
         "tiled_backgrounds": [
-            TiledBackground(bg_type="pi1.0", time_per_pdf=1, tiled_id="tiled_id"),
+            TiledBackground(
+                bg_type="pi1.0", time_per_pdf=1, tiled_id="tiled_id", filepath=Path("")
+            ),
         ],
         "background": False,
     }
@@ -563,7 +571,12 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     assert len(i15_1_converter._tiled_backgrounds.keys()) == 5
     assert i15_1_converter._tiled_backgrounds == {
         task.id: [
-            TiledBackground(bg_type="fq1.0", time_per_pdf=5, tiled_id="fake_tiled_id")
+            TiledBackground(
+                bg_type="fq1.0",
+                time_per_pdf=5,
+                tiled_id="fake_tiled_id",
+                filepath=Path(""),
+            )
         ]
         for task in i15_1_tasks
     }
@@ -622,6 +635,11 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
     assert len(result) == 0
     assert i15_1_converter._tiled_backgrounds == {
         "task_id": [
-            TiledBackground(bg_type="fq1.0", time_per_pdf=5, tiled_id="fake_tiled_id")
+            TiledBackground(
+                bg_type="fq1.0",
+                time_per_pdf=5,
+                tiled_id="fake_tiled_id",
+                filepath=Path(""),
+            )
         ]
     }

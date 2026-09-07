@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -35,27 +36,30 @@ def mock_tiled_searches(
     result_1.metadata = {
         "start": {
             "time": 1,
-            "experiment_definition": {
-                "data": {"background": {"bg_type": "air", "time_per_pdf": 10}}
-            },
+            "experiment_definition": {"data": {"time_per_pdf": 10}},
+            "sample_info": {"data": {"capillary": "air"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10000",
         }
     }
     result_2 = MagicMock()
     result_2.metadata = {
         "start": {
             "time": 10,
-            "experiment_definition": {
-                "data": {"background": {"bg_type": "fq1.0", "time_per_pdf": 11}}
-            },
+            "experiment_definition": {"data": {"time_per_pdf": 11}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10001",
         }
     }
     result_3 = MagicMock()
     result_3.metadata = {
         "start": {
             "time": 2,
-            "experiment_definition": {
-                "data": {"background": {"bg_type": "bs1.0", "time_per_pdf": 12}}
-            },
+            "experiment_definition": {"data": {"time_per_pdf": 12}},
+            "sample_info": {"data": {"capillary": "bs1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10002",
         }
     }
 
@@ -115,10 +119,10 @@ def test_get_tiled_background_makes_expected_searches(
     )
     search_5.search.assert_called_once_with(Eq("start.background", True))
     search_6.search.assert_called_once_with(
-        Eq("start.experiment_definition.data.background.bg_type", "air")
+        Eq("start.sample_info.data.capillary", "air")
     )
     search_7.search.assert_called_once_with(
-        Comparison("ge", "start.experiment_definition.data.background.time_per_pdf", 10)
+        Comparison("ge", "start.experiment_definition.data.time_per_pdf", 10)
     )
 
 
@@ -132,7 +136,10 @@ def test_get_background_tiled_returns_most_recent_valid_background(
         instrument_session="cm12345-1",
     )
     assert result == TiledBackground(
-        tiled_id="tiled_id_2", bg_type="fq1.0", time_per_pdf=11
+        tiled_id="tiled_id_2",
+        bg_type="fq1.0",
+        time_per_pdf=11,
+        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
     )
 
 

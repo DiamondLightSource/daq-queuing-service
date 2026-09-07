@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 
 from blueapi.config import ServiceAccount
 from blueapi.service.authentication import TiledAuth
@@ -79,14 +80,14 @@ def get_tiled_background(
             .search(Eq("start.background", True))
             .search(
                 Eq(
-                    "start.experiment_definition.data.background.bg_type",
+                    "start.sample_info.data.capillary",
                     required_background.bg_type,
                 )
             )
             .search(
                 Comparison(
                     "ge",
-                    "start.experiment_definition.data.background.time_per_pdf",
+                    "start.experiment_definition.data.time_per_pdf",
                     required_background.time_per_pdf,
                 )
             )
@@ -104,14 +105,23 @@ def get_tiled_background(
         )
 
         tiled_id = items[-1][0]
-        background = items[-1][1].metadata["start"]["experiment_definition"]["data"][
-            "background"
+        filepath = Path(
+            items[-1][1].metadata["start"]["data_session_directory"]
+        ) / Path(f"{items[-1][1].metadata['start']['scan_file']}.nxs")
+        bg_type = items[-1][1].metadata["start"]["sample_info"]["data"]["capillary"]
+        time_per_pdf = items[-1][1].metadata["start"]["experiment_definition"]["data"][
+            "time_per_pdf"
         ]
 
         LOGGER.debug(
             f"Found {len(items)} scans in tiled matching background: "
             + f"{required_background}. Returning the most recent: {tiled_id}"
         )
-        return TiledBackground.model_validate({"tiled_id": tiled_id} | background)
+        return TiledBackground(
+            tiled_id=tiled_id,
+            filepath=filepath,
+            bg_type=bg_type,
+            time_per_pdf=time_per_pdf,
+        )
 
     return _get_tiled_background(required_background, instrument_session)

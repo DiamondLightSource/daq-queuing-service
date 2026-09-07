@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -28,11 +29,6 @@ class BackgroundInfo(BaseModel):
     bg_type: BACKGROUND_TYPES
     time_per_pdf: float
 
-    def add_tiled_id(self, tiled_id: str) -> "TiledBackground":
-        return TiledBackground(
-            bg_type=self.bg_type, tiled_id=tiled_id, time_per_pdf=self.time_per_pdf
-        )
-
     def is_suitable(self, required_background: "BackgroundInfo") -> bool:
         """Determine if this background is suitable compared to an experiment's required
         background.
@@ -62,3 +58,4 @@ class BackgroundInfo(BaseModel):
 
 class TiledBackground(BackgroundInfo):
     tiled_id: str
+    filepath: Path
