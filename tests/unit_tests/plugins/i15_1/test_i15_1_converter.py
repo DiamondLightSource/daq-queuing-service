@@ -595,7 +595,7 @@ async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: Task
 
 
 def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(
-    i15_1_converter: I151Converter, background_not_found_in_tiled: None
+    i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
 ):
     background = BackgroundInfo(
         instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
@@ -608,7 +608,7 @@ def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued
 
 
 def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitable(
-    i15_1_converter: I151Converter, background_not_found_in_tiled: None
+    i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
 ):
     background = BackgroundInfo(
         instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
