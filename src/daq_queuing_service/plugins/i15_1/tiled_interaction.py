@@ -9,7 +9,7 @@ from pydantic import SecretStr
 from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.client.container import Container as TiledContainer
-from tiled.queries import Comparison, Eq
+from tiled.queries import Comparison, Eq, KeyPresent
 
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.i15_1.backgrounds import (
@@ -67,61 +67,57 @@ def get_tiled_background(
 ) -> TiledBackground | None:
 
     @cached(cache)
-    def _get_tiled_background(
-        required_background: BackgroundInfo, instrument_session: str
-    ) -> TiledBackground | None:
+    def _query_tiled(instrument_session: str) -> list[TiledBackground]:
 
         oldest_valid_time = time.time() - TILED_STALE_TIME
         result: Container = (
-            tiled_client.search(Eq("start.instrument_session", instrument_session))
-            .search(Eq("start.instrument", "i15-1"))
+            tiled_client.search(Eq("start.instrument", "i15-1"))
+            .search(Eq("start.instrument_session", instrument_session))
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
             .search(Eq("start.background", True))
-            .search(
-                Eq(
-                    "start.sample_info.data.capillary",
-                    required_background.bg_type,
-                )
-            )
-            .search(
-                Comparison(
-                    "ge",
-                    "start.experiment_definition.data.time_per_pdf",
-                    required_background.time_per_pdf,
-                )
-            )
+            .search(KeyPresent("start.sample_info.data.capillary"))
+            .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
         )
-
-        if not len(result):
-            LOGGER.debug(
-                f"Found no scans in tiled matching background: {required_background}"
-            )
-            return
 
         items = sorted(
             ((key, value) for key, value in result.items()),
             key=lambda item: item[1].metadata["start"]["time"],
+            reverse=True,
         )
 
-        tiled_id = items[-1][0]
-        filepath = Path(
-            items[-1][1].metadata["start"]["data_session_directory"]
-        ) / Path(f"{items[-1][1].metadata['start']['scan_file']}.nxs")
-        bg_type = items[-1][1].metadata["start"]["sample_info"]["data"]["capillary"]
-        time_per_pdf = items[-1][1].metadata["start"]["experiment_definition"]["data"][
-            "time_per_pdf"
-        ]
+        backgrounds: list[TiledBackground] = []
+
+        for item in items:
+            tiled_id = item[0]
+            filepath = Path(item[1].metadata["start"]["data_session_directory"]) / Path(
+                f"{item[1].metadata['start']['scan_file']}.nxs"
+            )
+            bg_type = item[1].metadata["start"]["sample_info"]["data"]["capillary"]
+            time_per_pdf = item[1].metadata["start"]["experiment_definition"]["data"][
+                "time_per_pdf"
+            ]
+
+            backgrounds.append(
+                TiledBackground(
+                    tiled_id=tiled_id,
+                    filepath=filepath,
+                    bg_type=bg_type,
+                    time_per_pdf=time_per_pdf,
+                )
+            )
 
         LOGGER.debug(
-            f"Found {len(items)} scans in tiled matching background: "
-            + f"{required_background}. Returning the most recent: {tiled_id}"
+            f"Found {len(backgrounds)} background scans in tiled since "
+            + f"{TILED_STALE_TIME}s ago for visit {instrument_session}."
         )
-        return TiledBackground(
-            tiled_id=tiled_id,
-            filepath=filepath,
-            bg_type=bg_type,
-            time_per_pdf=time_per_pdf,
-        )
+        return backgrounds
 
-    return _get_tiled_background(required_background, instrument_session)
+    backgrounds = _query_tiled(instrument_session)
+    for background in backgrounds:
+        if background.is_suitable(required_background):
+            LOGGER.info(f"Found suitable background in tiled: {background.tiled_id}")
+            return background
+    LOGGER.info(
+        f"Found no suitable backgrounds in tiled matching: {required_background}."
+    )

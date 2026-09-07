@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import SecretStr
 from pytest import LogCaptureFixture
-from tiled.queries import Comparison, Eq
+from tiled.queries import Comparison, Eq, KeyPresent
 
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BackgroundInfo,
@@ -56,10 +56,20 @@ def mock_tiled_searches(
     result_3.metadata = {
         "start": {
             "time": 2,
-            "experiment_definition": {"data": {"time_per_pdf": 12}},
-            "sample_info": {"data": {"capillary": "bs1.0"}},
+            "experiment_definition": {"data": {"time_per_pdf": 9}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10002",
+        }
+    }
+    result_4 = MagicMock()
+    result_4.metadata = {
+        "start": {
+            "time": 5,
+            "experiment_definition": {"data": {"time_per_pdf": 12}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10003",
         }
     }
 
@@ -69,6 +79,7 @@ def mock_tiled_searches(
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
             "tiled_id_3": result_3,
+            "tiled_id_4": result_4,
         }
     )
 
@@ -109,20 +120,20 @@ def test_get_tiled_background_makes_expected_searches(
         BackgroundInfo(bg_type="air", time_per_pdf=10),
         instrument_session="cm12345-1",
     )
-    client.search.assert_called_once_with(
+    client.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
+    search_2.search.assert_called_once_with(
         Eq(key="start.instrument_session", value="cm12345-1")
     )
-    search_2.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_3.search.assert_called_once_with(Eq("stop.exit_status", "success"))
     search_4.search.assert_called_once_with(
         Comparison("ge", "stop.time", 30 - TILED_STALE_TIME)
     )
     search_5.search.assert_called_once_with(Eq("start.background", True))
     search_6.search.assert_called_once_with(
-        Eq("start.sample_info.data.capillary", "air")
+        KeyPresent("start.sample_info.data.capillary")
     )
     search_7.search.assert_called_once_with(
-        Comparison("ge", "start.experiment_definition.data.time_per_pdf", 10)
+        KeyPresent("start.experiment_definition.data.time_per_pdf")
     )
 
 
@@ -132,7 +143,7 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     client, *_ = mock_tiled_searches
     result = get_tiled_background(
         client,
-        BackgroundInfo(bg_type="air", time_per_pdf=10),
+        BackgroundInfo(bg_type="fq1.0", time_per_pdf=10),
         instrument_session="cm12345-1",
     )
     assert result == TiledBackground(
