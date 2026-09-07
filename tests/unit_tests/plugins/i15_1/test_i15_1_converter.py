@@ -607,6 +607,23 @@ def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued
     assert result == new_tasks
 
 
+def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitable(
+    i15_1_converter: I151Converter, background_not_found_in_tiled: None
+):
+    background = BackgroundInfo(
+        instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
+    )
+    new_tasks: list[Task] = []
+    result = i15_1_converter._ensure_background_in_queue_or_tiled(
+        background,
+        TaskWithPosition.from_task(make_background_task("fq1.0", 25)),
+        new_tasks,
+        "task_id",
+        "cm12345-1",
+    )
+    assert result == new_tasks
+
+
 def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_possible(
     i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
 ):
@@ -658,3 +675,10 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
             )
         ]
     }
+
+
+async def test_background_scans_are_tagged_as_backgrounds(
+    queue_with_i15_1_plugin: TaskQueue,
+):
+    blueapi_calls = await queue_with_i15_1_plugin.get_call_queue()
+    assert blueapi_calls[2].task_request.params["metadata"]["background"] is True
