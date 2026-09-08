@@ -262,8 +262,6 @@ class I151Converter(Converter):
 
     def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
-        # And we should instead do the following to work out pdf_times for backgrounds
-        # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         return [
             BackgroundInfo(
                 instrument_session=experiment.instrument_session,
