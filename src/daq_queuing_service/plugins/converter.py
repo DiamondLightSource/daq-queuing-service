@@ -50,6 +50,8 @@ class Converter:
         If not overridden, this method returns the queue as is with no modification.
 
         Args:
+            current_task (TaskWithPosition | None): The current running task, if one
+                exists.
             queue (list[Task]): List of tasks currently in the queue
             history (list[TaskWithPosition]): List of completed tasks
             call_history (list[BlueapiCall]): List of completed blueapi calls
