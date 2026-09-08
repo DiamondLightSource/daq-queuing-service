@@ -8,11 +8,11 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BACKGROUND_SCAN,
     BackgroundInfo,
     TiledBackground,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    BACKGROUND_SCAN,
     get_tiled_background,
     get_tiled_client,
 )

@@ -608,7 +608,7 @@ def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued
 
 
 def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitable(
-    i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
+    i15_1_converter: I151Converter,
 ):
     background = BackgroundInfo(
         instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
@@ -630,9 +630,12 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
     background = BackgroundInfo(
         instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=25
     )
+    current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25))
+    # Current task is suitable but not a background
+    current_task.experiment.name = "Not a background"
     new_tasks = [make_background_task("fq1.0", 10)]
     result = i15_1_converter._ensure_background_in_queue_or_tiled(
-        background, None, new_tasks, "task_id", "cm12345-1"
+        background, current_task, new_tasks, "task_id", "cm12345-1"
     )
     assert len(result) == 1
     assert_tasks_equal(result[0], make_background_task("fq1.0", 25))

@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 from daq_queuing_service.task_queue.task import Experiment
 
+BACKGROUND_SCAN = "Background"
 # This should be generated from the json schema
 # https://github.com/DiamondLightSource/daq-queuing-service/issues/78
 CAPILLARIES = Literal[
@@ -64,6 +65,9 @@ class BackgroundInfo(BaseModel):
 
     @classmethod
     def from_experiment(cls, experiment: Experiment) -> "BackgroundInfo":
+        assert experiment.name == BACKGROUND_SCAN, (
+            f"This experiment is not a background scan: {experiment}"
+        )
         return cls(
             instrument_session=experiment.instrument_session,
             bg_type=experiment.sample.data["capillary"],

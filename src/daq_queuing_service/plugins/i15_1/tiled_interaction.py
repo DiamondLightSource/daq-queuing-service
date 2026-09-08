@@ -26,7 +26,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
 cache: TTLCache[tuple[BackgroundInfo, str], str | None] = TTLCache(maxsize=100, ttl=1)
 
 TILED_URL = "https://tiled.diamond.ac.uk"
-BACKGROUND_SCAN = "Background"
+
 
 TILED_STALE_TIME = 60 * 15
 
