@@ -169,6 +169,7 @@ class I151Converter(Converter):
         in front of the first task in the queue that requires them.
 
         Args:
+            current_task (TaskWithPosition | None): Current running task, if one exists.
             tasks (list[Task]): Current list of tasks
 
         Returns:
