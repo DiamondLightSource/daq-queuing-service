@@ -178,9 +178,6 @@ class I151Converter(Converter):
         LOGGER.info("Adding required background scans")
         self._tiled_backgrounds = {task.id: [] for task in tasks}
 
-        self._tiled_backgrounds = {task.id: [] for task in tasks}
-
-        # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
 
         for task in tasks:
