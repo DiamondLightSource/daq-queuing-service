@@ -38,7 +38,7 @@ def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
 
 class I151Converter(Converter):
     def __init__(self):
-        self._tiled_backgrounds: dict[str, list[TiledBackground]] = {}
+        self._tiled_backgrounds: dict[str, dict[str, TiledBackground]] = {}
 
     @cached_property
     def _tiled_client(self) -> TiledContainer:
@@ -176,7 +176,7 @@ class I151Converter(Converter):
             list[Task]: New list of tasks including backgrounds
         """
         LOGGER.info("Adding required background scans")
-        self._tiled_backgrounds = {task.id: [] for task in tasks}
+        self._tiled_backgrounds = {task.id: {} for task in tasks}
 
         new_tasks: list[Task] = []
 
@@ -224,7 +224,9 @@ class I151Converter(Converter):
             return new_tasks
 
         if tiled_background := get_tiled_background(self._tiled_client, background):
-            self._tiled_backgrounds[task_id].append(tiled_background)
+            self._tiled_backgrounds[task_id][tiled_background.tiled_id] = (
+                tiled_background
+            )
             return new_tasks
 
         return self._add_or_replace_background(
