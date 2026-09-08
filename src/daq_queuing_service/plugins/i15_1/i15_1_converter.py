@@ -206,12 +206,14 @@ class I151Converter(Converter):
         task_id: str,
         instrument_session: str,
     ):
-        current_task_background = (
-            BackgroundInfo.from_experiment(current_task.experiment)
-            if current_task and isinstance(current_task.experiment, Experiment)
-            else None
-        )
-        if current_task_background and current_task_background.is_suitable(background):
+        if (
+            current_task
+            and isinstance(current_task.experiment, Experiment)
+            and current_task.experiment.name == BACKGROUND_SCAN
+            and BackgroundInfo.from_experiment(current_task.experiment).is_suitable(
+                background
+            )
+        ):
             return new_tasks
 
         queued_backgrounds = _filter_backgrounds(new_tasks)
