@@ -52,6 +52,16 @@ class BackgroundInfo(BaseModel):
     def get_matched_requirements(
         self, required_background: "BackgroundInfo"
     ) -> "BackgroundInfo | None":
+        """Creates a background that combines the requirements of this background object
+        and a provided required background, if possible.
+
+        Args:
+            required_background (BackgroundInfo): The required background
+
+        Returns:
+            BackgroundInfo | None: The combined background, or None if one is not
+            possible.
+        """
         if not self.instrument_session == required_background.instrument_session:
             return
         if not self.bg_type == required_background.bg_type:
