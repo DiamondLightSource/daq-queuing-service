@@ -100,6 +100,7 @@ def get_suitable_tiled_background(
                 TiledBackground(
                     tiled_id=tiled_id,
                     instrument_session=instrument_session,
+                    rel_filepath=rel_filepath,
                     filepath=filepath,
                     bg_type=bg_type,
                     time_per_pdf=time_per_pdf,
