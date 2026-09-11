@@ -160,13 +160,11 @@ def protected_routes(
 
     @router.get("/events")
     async def stream_events() -> EventSourceResponse:
-
         connection_id = uuid.uuid4().hex[:8]
         subscriber = broadcaster.subscribe()
 
         LOGGER.info(
-            "SSE connection subscribed connection_id=%s",
-            connection_id,
+            f"SSE connection subscribed connection_id={connection_id}",
         )
 
         async def event_generator() -> AsyncGenerator[str, None]:
@@ -181,19 +179,16 @@ def protected_routes(
             except asyncio.CancelledError:
                 # Client disconnected
                 LOGGER.info(
-                    "SSE connection cancelled connection_id=%s",
-                    connection_id,
+                    f"SSE connection cancelled connection_id={connection_id}",
                 )
             except Exception:
                 LOGGER.exception(
-                    "SSE generator failed connection_id=%s",
-                    connection_id,
+                    f"SSE generator failed connection_id={connection_id}",
                 )
                 raise
             finally:
                 LOGGER.info(
-                    "SSE connection unsubscribing connection_id=%s",
-                    connection_id,
+                    f"SSE connection unsubscribing connection_id={connection_id}",
                 )
                 broadcaster.unsubscribe(subscriber)
 
