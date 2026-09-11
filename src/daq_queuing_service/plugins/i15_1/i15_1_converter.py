@@ -38,7 +38,8 @@ def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
 
 class I151Converter(Converter):
     def __init__(self):
-        # dict with task IDs as keys, containing dicts with tiled IDs as keys.
+        # First key is the ID of the task using the background
+        # Second key is the tiled ID of the background
         self._tiled_backgrounds: dict[str, dict[str, TiledBackground]] = {}
 
     @cached_property
