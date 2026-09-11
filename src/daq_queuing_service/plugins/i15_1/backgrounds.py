@@ -49,7 +49,7 @@ class BackgroundInfo(BaseModel):
             and self.time_per_pdf >= required_background.time_per_pdf
         )
 
-    def get_matched_requirements(
+    def attempt_to_combine_with(
         self, required_background: "BackgroundInfo"
     ) -> "BackgroundInfo | None":
         """Creates a background that combines the requirements of this background object

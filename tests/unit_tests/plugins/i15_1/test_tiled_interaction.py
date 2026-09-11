@@ -14,7 +14,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     TILED_STALE_TIME,
     TILED_URL,
-    get_tiled_background,
+    get_suitable_tiled_background,
     get_tiled_client,
 )
 
@@ -107,7 +107,7 @@ def mock_tiled_searches(
     )
 
 
-def test_get_tiled_background_makes_expected_searches(
+def test_get_suitable_tiled_background_makes_expected_searches(
     mock_tiled_searches: tuple[
         MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
     ],
@@ -115,7 +115,7 @@ def test_get_tiled_background_makes_expected_searches(
     client, search_2, search_3, search_4, search_5, search_6, search_7 = (
         mock_tiled_searches
     )
-    get_tiled_background(
+    get_suitable_tiled_background(
         client,
         BackgroundInfo(instrument_session="cm12345-1", bg_type="air", time_per_pdf=10),
     )
@@ -140,7 +140,7 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_ = mock_tiled_searches
-    result = get_tiled_background(
+    result = get_suitable_tiled_background(
         client,
         BackgroundInfo(
             instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=10
@@ -155,13 +155,13 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     )
 
 
-def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
+def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_found(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_, final_search = mock_tiled_searches
     final_search.search.return_value = {}
     assert (
-        get_tiled_background(
+        get_suitable_tiled_background(
             client,
             BackgroundInfo(
                 instrument_session="cm12345-1", bg_type="air", time_per_pdf=10

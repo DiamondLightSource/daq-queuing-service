@@ -60,7 +60,7 @@ def get_tiled_client(
     return from_uri(TILED_URL, auth=tiled_auth)
 
 
-def get_tiled_background(
+def get_suitable_tiled_background(
     tiled_client: Container,
     required_background: BackgroundInfo,
 ) -> TiledBackground | None:
@@ -89,14 +89,12 @@ def get_tiled_background(
 
         for item in items:
             tiled_id = item[0]
-            instrument_session = instrument_session
-            filepath = Path(item[1].metadata["start"]["data_session_directory"]) / Path(
-                f"{item[1].metadata['start']['scan_file']}.nxs"
-            )
-            bg_type = item[1].metadata["start"]["sample_info"]["data"]["capillary"]
-            time_per_pdf = item[1].metadata["start"]["experiment_definition"]["data"][
-                "time_per_pdf"
-            ]
+            start_doc = item[1].metadata["start"]
+            rel_filepath = Path(f"{start_doc['scan_file']}.nxs")
+            filepath = Path(start_doc["data_session_directory"]) / rel_filepath
+
+            bg_type = start_doc["sample_info"]["data"]["capillary"]
+            time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
 
             backgrounds.append(
                 TiledBackground(

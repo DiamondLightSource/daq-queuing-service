@@ -84,7 +84,7 @@ async def queue_with_i15_1_plugin(
 @pytest.fixture(autouse=True)
 def background_found_in_tiled():
     with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_background",
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_suitable_tiled_background",
         MagicMock(
             return_value=TiledBackground(
                 instrument_session="cm12345-1",
@@ -94,17 +94,17 @@ def background_found_in_tiled():
                 filepath=Path(""),
             )
         ),
-    ) as mock_get_tiled_background:
-        yield mock_get_tiled_background
+    ) as mock_get_suitable_tiled_background:
+        yield mock_get_suitable_tiled_background
 
 
 @pytest.fixture()
 def background_not_found_in_tiled():
     with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_background",
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_suitable_tiled_background",
         MagicMock(return_value=None),
-    ) as mock_get_tiled_background:
-        yield mock_get_tiled_background
+    ) as mock_get_suitable_tiled_background:
+        yield mock_get_suitable_tiled_background
 
 
 @pytest.fixture

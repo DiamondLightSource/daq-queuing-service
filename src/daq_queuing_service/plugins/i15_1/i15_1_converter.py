@@ -13,7 +13,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
     TiledBackground,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    get_tiled_background,
+    get_suitable_tiled_background,
     get_tiled_client,
 )
 from daq_queuing_service.task_queue.task import (
@@ -38,6 +38,7 @@ def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
 
 class I151Converter(Converter):
     def __init__(self):
+        # dict with task IDs as keys, containing dicts with tiled IDs as keys.
         self._tiled_backgrounds: dict[str, dict[str, TiledBackground]] = {}
 
     @cached_property
@@ -89,12 +90,12 @@ class I151Converter(Converter):
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
 
-        background: bool = experiment.name == BACKGROUND_SCAN
+        is_background: bool = experiment.name == BACKGROUND_SCAN
 
         metadata: dict[str, Any] = {
             "sample": experiment.sample,
             "experiment_definition": experiment.experiment_definition,
-            "background": background,
+            "background": is_background,
         }
         if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
             metadata["tiled_backgrounds"] = tiled_backgrounds
@@ -200,7 +201,7 @@ class I151Converter(Converter):
 
     def _ensure_background_in_queue_or_tiled(
         self,
-        background: BackgroundInfo,
+        required_background: BackgroundInfo,
         current_task: TaskWithPosition | None,
         new_tasks: list[Task],
         task_id: str,
@@ -211,26 +212,32 @@ class I151Converter(Converter):
             and isinstance(current_task.experiment, Experiment)
             and current_task.experiment.name == BACKGROUND_SCAN
             and BackgroundInfo.from_experiment(current_task.experiment).is_suitable(
-                background
+                required_background
             )
         ):
             return new_tasks
 
         queued_backgrounds = _filter_backgrounds(new_tasks)
         if any(
-            queued_background.is_suitable(background)
+            queued_background.is_suitable(required_background)
             for _, queued_background in queued_backgrounds
         ):
             return new_tasks
 
-        if tiled_background := get_tiled_background(self._tiled_client, background):
+        if tiled_background := get_suitable_tiled_background(
+            self._tiled_client, required_background
+        ):
             self._tiled_backgrounds[task_id][tiled_background.tiled_id] = (
                 tiled_background
             )
             return new_tasks
 
+        LOGGER.info(
+            f"No existing suitable backgrounds found for {required_background}, "
+            + "modifying or adding one"
+        )
         return self._add_or_replace_background(
-            background,
+            required_background,
             new_tasks,
             queued_backgrounds,
             instrument_session,
@@ -243,18 +250,18 @@ class I151Converter(Converter):
         queued_backgrounds: list[tuple[int, BackgroundInfo]],
         instrument_session: str,
     ) -> list[Task]:
-        matched_background = None
+        combined_background = None
         index = None
 
         for i, background in queued_backgrounds:
-            if matched_background := background.get_matched_requirements(
+            if combined_background := background.attempt_to_combine_with(
                 required_background
             ):
                 index = i
                 break
 
         bg_experiment = self._construct_background_experiment(
-            matched_background or required_background, instrument_session
+            combined_background or required_background, instrument_session
         )
         if index is None:
             new_tasks.append(Task(experiment=bg_experiment))
