@@ -90,8 +90,9 @@ def get_suitable_tiled_background(
         for item in items:
             tiled_id = item[0]
             start_doc = item[1].metadata["start"]
-            filename = Path(f"{start_doc['scan_file']}.nxs")
-            filepath = Path(start_doc["data_session_directory"]) / filename
+            filename = f"{start_doc['scan_file']}.nxs"
+            instrument_session_directory = Path(start_doc["data_session_directory"])
+            filepath = instrument_session_directory / filename
 
             bg_type = start_doc["sample_info"]["data"]["capillary"]
             time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
@@ -101,6 +102,7 @@ def get_suitable_tiled_background(
                     tiled_id=tiled_id,
                     instrument_session=instrument_session,
                     filename=filename,
+                    instrument_session_directory=instrument_session_directory,
                     filepath=filepath,
                     bg_type=bg_type,
                     time_per_pdf=time_per_pdf,

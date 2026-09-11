@@ -151,8 +151,9 @@ def test_get_background_tiled_returns_most_recent_valid_background(
         tiled_id="tiled_id_2",
         bg_type="fq1.0",
         time_per_pdf=11,
+        filename="i15-1-10001.nxs",
+        instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
         filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
-        filename=Path("i15-1-10001.nxs"),
     )
 
 
