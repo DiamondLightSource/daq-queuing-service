@@ -195,10 +195,6 @@ def protected_routes(
                     "SSE connection unsubscribing connection_id=%s",
                     connection_id,
                 )
-                LOGGER.exception(
-                    "SSE generator failed connection_id=%s",
-                    connection_id,
-                )
                 broadcaster.unsubscribe(subscriber)
 
         return EventSourceResponse(event_generator())
