@@ -16,7 +16,7 @@ class Event(TypedDict, Generic[T]):
 
 def serialise(data: Any) -> Any:
     if isinstance(data, BaseModel):
-        return data.model_dump()
+        return data.model_dump(mode="json")
 
     if isinstance(data, (str, bytes)):
         return data
