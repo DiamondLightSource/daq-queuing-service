@@ -1,5 +1,6 @@
 import asyncio
 import json
+import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
@@ -12,6 +13,7 @@ from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter, ValidateError
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
@@ -158,7 +160,14 @@ def protected_routes(
 
     @router.get("/events")
     async def stream_events() -> EventSourceResponse:
+
+        connection_id = uuid.uuid4().hex[:8]
         subscriber = broadcaster.subscribe()
+
+        LOGGER.info(
+            "SSE connection subscribed connection_id=%s",
+            connection_id,
+        )
 
         async def event_generator() -> AsyncGenerator[str, None]:
             try:
@@ -171,8 +180,25 @@ def protected_routes(
 
             except asyncio.CancelledError:
                 # Client disconnected
+                LOGGER.info(
+                    "SSE connection cancelled connection_id=%s",
+                    connection_id,
+                )
+            except Exception:
+                LOGGER.exception(
+                    "SSE generator failed connection_id=%s",
+                    connection_id,
+                )
                 raise
             finally:
+                LOGGER.info(
+                    "SSE connection unsubscribing connection_id=%s",
+                    connection_id,
+                )
+                LOGGER.exception(
+                    "SSE generator failed connection_id=%s",
+                    connection_id,
+                )
                 broadcaster.unsubscribe(subscriber)
 
         return EventSourceResponse(event_generator())
