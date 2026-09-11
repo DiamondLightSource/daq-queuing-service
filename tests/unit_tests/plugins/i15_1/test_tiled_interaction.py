@@ -152,7 +152,7 @@ def test_get_background_tiled_returns_most_recent_valid_background(
         bg_type="fq1.0",
         time_per_pdf=11,
         filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
-        rel_filepath=Path("i15-1-10001.nxs"),
+        filename=Path("i15-1-10001.nxs"),
     )
 
 

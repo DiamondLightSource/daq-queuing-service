@@ -92,7 +92,7 @@ def background_found_in_tiled():
                 bg_type="fq1.0",
                 time_per_pdf=5,
                 filepath=Path(""),
-                rel_filepath=Path(""),
+                filename=Path(""),
             )
         ),
     ) as mock_get_suitable_tiled_background:
@@ -255,7 +255,7 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
             bg_type="pi1.0",
             time_per_pdf=1,
             filepath=Path(""),
-            rel_filepath=Path(""),
+            filename=Path(""),
         )
     }
     experiment_definition = ExperimentDefinition(
@@ -281,7 +281,7 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
                 time_per_pdf=1,
                 tiled_id="tiled_id",
                 filepath=Path(""),
-                rel_filepath=Path(""),
+                filename=Path(""),
             ),
         },
         "background": False,
@@ -585,7 +585,7 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
                 time_per_pdf=5,
                 tiled_id="fake_tiled_id",
                 filepath=Path(""),
-                rel_filepath=Path(""),
+                filename=Path(""),
             )
         }
         for task in i15_1_tasks
@@ -679,7 +679,7 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
                 time_per_pdf=5,
                 tiled_id="fake_tiled_id",
                 filepath=Path(""),
-                rel_filepath=Path(""),
+                filename=Path(""),
             )
         }
     }

@@ -87,5 +87,5 @@ class BackgroundInfo(BaseModel):
 
 class TiledBackground(BackgroundInfo):
     tiled_id: str
-    rel_filepath: Path
+    filename: Path
     filepath: Path
