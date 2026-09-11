@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -5,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from blueapi.service.model import TaskRequest
 
-from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.broadcaster import Broadcaster, serialise
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BACKGROUND_TYPES,
     BackgroundInfo,
@@ -695,3 +696,33 @@ async def test_background_scans_are_tagged_as_backgrounds(
 ):
     blueapi_calls = await queue_with_i15_1_plugin.get_call_queue()
     assert blueapi_calls[2].task_request.params["metadata"]["background"] is True
+
+
+def test_test_i15_1_tasks_can_be_serialised():
+    converter = I151Converter()
+    converter._tiled_backgrounds["id"] = {
+        "tiled_id": TiledBackground(
+            instrument_session="cm12345-1",
+            tiled_id="tiled_id",
+            bg_type="pi1.0",
+            time_per_pdf=1,
+            filepath=Path(""),
+            instrument_session_directory=Path(""),
+            filename="",
+        )
+    }
+    experiment_definition = ExperimentDefinition(
+        name="",
+        id="",
+        data={"time_per_pdf": 100},
+    )
+
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=experiment_definition,
+        sample=make_sample("test_8_1", ""),
+        instrument_session="cm12345-1",
+    )
+    tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
+    serialised = serialise(tasks)
+    json.dumps(serialised)

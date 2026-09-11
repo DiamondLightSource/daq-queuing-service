@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pathlib import Path
 from typing import Any, Literal
 
 import pytest
@@ -13,6 +14,7 @@ TEST_EVENTS = Literal["test"]
 
 class FakeModel(BaseModel):
     data: str
+    path: Path
 
 
 async def test_broadcast_broadcasts_event_to_subscribers():
@@ -76,14 +78,20 @@ def test_if_subscriber_unsubscribes_then_it_no_longer_receives_broadcasts():
     [
         ("data", "data"),
         ([1, 2, "3", "4"], [1, 2, "3", "4"]),
-        (FakeModel(data="test"), {"data": "test"}),
+        (FakeModel(data="test", path=Path("abc")), {"data": "test", "path": "abc"}),
         (
-            [FakeModel(data="test"), FakeModel(data="test2")],
-            [{"data": "test"}, {"data": "test2"}],
+            [
+                FakeModel(data="test", path=Path("abc")),
+                FakeModel(data="test2", path=Path("def")),
+            ],
+            [{"data": "test", "path": "abc"}, {"data": "test2", "path": "def"}],
         ),
         (
-            {1: FakeModel(data="test"), 2: FakeModel(data="test2")},
-            {1: {"data": "test"}, 2: {"data": "test2"}},
+            {
+                1: FakeModel(data="test", path=Path("abc")),
+                2: FakeModel(data="test2", path=Path("def")),
+            },
+            {1: {"data": "test", "path": "abc"}, 2: {"data": "test2", "path": "def"}},
         ),
     ],
 )
