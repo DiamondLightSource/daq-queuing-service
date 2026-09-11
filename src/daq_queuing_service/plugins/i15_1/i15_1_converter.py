@@ -8,12 +8,12 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import (
+    BACKGROUND_SCAN,
     BackgroundInfo,
     TiledBackground,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    BACKGROUND_SCAN,
-    get_tiled_background,
+    get_suitable_tiled_background,
     get_tiled_client,
 )
 from daq_queuing_service.task_queue.task import (
@@ -27,9 +27,20 @@ from daq_queuing_service.task_queue.task import (
 )
 
 
+def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
+    return [
+        (i, BackgroundInfo.from_experiment(task.experiment))
+        for i, task in enumerate(tasks)
+        if isinstance(task.experiment, Experiment)
+        and task.experiment.name == BACKGROUND_SCAN
+    ]
+
+
 class I151Converter(Converter):
     def __init__(self):
-        self._tiled_backgrounds: dict[str, list[TiledBackground]] = {}
+        # First key is the ID of the task using the background
+        # Second key is the tiled ID of the background
+        self._tiled_backgrounds: dict[str, dict[str, TiledBackground]] = {}
 
     @cached_property
     def _tiled_client(self) -> TiledContainer:
@@ -42,7 +53,7 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        return self._add_required_background_scans(queue)
+        return self._add_required_background_scans(current_task, queue)
 
     def construct_blueapi_calls(
         self,
@@ -80,9 +91,12 @@ class I151Converter(Converter):
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
 
+        is_background: bool = experiment.name == BACKGROUND_SCAN
+
         metadata: dict[str, Any] = {
             "sample": experiment.sample,
             "experiment_definition": experiment.experiment_definition,
+            "background": is_background,
         }
         if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
             metadata["tiled_backgrounds"] = tiled_backgrounds
@@ -119,18 +133,6 @@ class I151Converter(Converter):
                 instrument_session=experiment.instrument_session,
             )
 
-        # Temp while the gonio can't move
-        data_collection = TaskRequest(
-            name="static_collection",
-            instrument_session=experiment.instrument_session,
-            params={
-                "frames": time_per_pdf / 0.1,
-                "exposure_time": 0.01,
-                "time_between_frames": 0.1,
-                "metadata": metadata,
-            },
-        )
-
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
         return [
@@ -162,30 +164,23 @@ class I151Converter(Converter):
             ),
         ]
 
-    def _add_required_background_scans(self, tasks: list[Task]) -> list[Task]:
+    def _add_required_background_scans(
+        self, current_task: TaskWithPosition | None, tasks: list[Task]
+    ) -> list[Task]:
         """Adds background scan tasks to the queue. Backgrounds will be added directly
         in front of the first task in the queue that requires them.
 
         Args:
+            current_task (TaskWithPosition | None): Current running task, if one exists.
             tasks (list[Task]): Current list of tasks
 
         Returns:
             list[Task]: New list of tasks including backgrounds
         """
         LOGGER.info("Adding required background scans")
-        self._tiled_backgrounds = {task.id: [] for task in tasks}
+        self._tiled_backgrounds = {task.id: {} for task in tasks}
 
-        # This can be made more robust https://github.com/DiamondLightSource/daq-queuing-service/issues/80
         new_tasks: list[Task] = []
-
-        pdf_times = [
-            task.experiment.experiment_definition.data["time_per_pdf"]
-            for task in tasks
-            if isinstance(task.experiment, Experiment)
-            and not task.experiment.name == BACKGROUND_SCAN
-        ]
-
-        max_time_per_pdf = max(pdf_times) if pdf_times else 10
 
         for task in tasks:
             experiment = task.experiment
@@ -194,50 +189,96 @@ class I151Converter(Converter):
                 and experiment.name != BACKGROUND_SCAN
             ):
                 instrument_session = experiment.instrument_session
-                backgrounds = self._get_required_backgrounds(
-                    experiment, max_time_per_pdf
-                )
 
-                for background in backgrounds:
-                    if tiled_background := get_tiled_background(
-                        self._tiled_client,
-                        background,
-                        instrument_session,
-                    ):
-                        self._tiled_backgrounds[task.id].append(tiled_background)
+                required_backgrounds = self._get_required_backgrounds(experiment)
 
-                    else:
-                        bg_experiment = self._construct_background_experiment(
-                            background, instrument_session
-                        )
-                        new_tasks.append(Task(experiment=bg_experiment))
+                for background in required_backgrounds:
+                    new_tasks = self._ensure_background_in_queue_or_tiled(
+                        background, current_task, new_tasks, task.id, instrument_session
+                    )
 
             new_tasks.append(task)
-        return self._remove_repeated_backgrounds(new_tasks)
-
-    def _remove_repeated_backgrounds(self, tasks: list[Task]) -> list[Task]:
-        LOGGER.info("Removing repeated background scans")
-        new_tasks: list[Task] = []
-        queued_background_experiments: list[Experiment] = []
-
-        for task in tasks:
-            if task.experiment.name != BACKGROUND_SCAN:
-                new_tasks.append(task)
-            elif task.experiment not in queued_background_experiments:
-                assert isinstance(task.experiment, Experiment)
-                queued_background_experiments.append(task.experiment)
-                new_tasks.append(task)
-            else:
-                LOGGER.debug(f"Removing repeated background scan: {task.experiment}")
         return new_tasks
 
-    def _get_required_backgrounds(
-        self, experiment: Experiment, time_per_pdf: int
-    ) -> list[BackgroundInfo]:
+    def _ensure_background_in_queue_or_tiled(
+        self,
+        required_background: BackgroundInfo,
+        current_task: TaskWithPosition | None,
+        new_tasks: list[Task],
+        task_id: str,
+        instrument_session: str,
+    ):
+        if (
+            current_task
+            and isinstance(current_task.experiment, Experiment)
+            and current_task.experiment.name == BACKGROUND_SCAN
+            and BackgroundInfo.from_experiment(current_task.experiment).is_suitable(
+                required_background
+            )
+        ):
+            return new_tasks
+
+        queued_backgrounds = _filter_backgrounds(new_tasks)
+        if any(
+            queued_background.is_suitable(required_background)
+            for _, queued_background in queued_backgrounds
+        ):
+            return new_tasks
+
+        if tiled_background := get_suitable_tiled_background(
+            self._tiled_client, required_background
+        ):
+            self._tiled_backgrounds[task_id][tiled_background.tiled_id] = (
+                tiled_background
+            )
+            return new_tasks
+
+        LOGGER.info(
+            f"No existing suitable backgrounds found for {required_background}, "
+            + "modifying or adding one"
+        )
+        return self._add_or_replace_background(
+            required_background,
+            new_tasks,
+            queued_backgrounds,
+            instrument_session,
+        )
+
+    def _add_or_replace_background(
+        self,
+        required_background: BackgroundInfo,
+        new_tasks: list[Task],
+        queued_backgrounds: list[tuple[int, BackgroundInfo]],
+        instrument_session: str,
+    ) -> list[Task]:
+        combined_background = None
+        index = None
+
+        for i, background in queued_backgrounds:
+            if combined_background := background.attempt_to_combine_with(
+                required_background
+            ):
+                index = i
+                break
+
+        bg_experiment = self._construct_background_experiment(
+            combined_background or required_background, instrument_session
+        )
+        if index is None:
+            new_tasks.append(Task(experiment=bg_experiment))
+        else:
+            new_tasks[index] = Task(experiment=bg_experiment)
+        return new_tasks
+
+    def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
-        # And we should instead do the following to work out pdf_times for backgrounds
-        # https://github.com/DiamondLightSource/daq-queuing-service/issues/80
-        return [BackgroundInfo(bg_type="fq", time_per_pdf=time_per_pdf)]
+        return [
+            BackgroundInfo(
+                instrument_session=experiment.instrument_session,
+                bg_type=experiment.sample.data["capillary"],
+                time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
+            )
+        ]
 
     def _construct_background_experiment(
         self, background: BackgroundInfo, instrument_session: str
@@ -249,18 +290,17 @@ class I151Converter(Converter):
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
             sample=Sample(
-                name="fq Background Sample",
+                name=background.bg_type
+                if background.bg_type == "air"
+                else f"Empty {background.bg_type}",
                 id="",
-                data={},
+                data={"capillary": background.bg_type},
                 container=Container(id="", positionInParent=container_position),
                 positionInContainer=container_position,
             ),
             experiment_definition=ExperimentDefinition(
                 name=BACKGROUND_SCAN,
                 id="",
-                data={
-                    "background": background,
-                    "time_per_pdf": background.time_per_pdf,
-                },
+                data={"time_per_pdf": background.time_per_pdf},
             ),
         )

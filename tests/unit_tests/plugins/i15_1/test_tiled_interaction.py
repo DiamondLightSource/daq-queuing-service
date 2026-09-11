@@ -1,20 +1,20 @@
 import logging
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import SecretStr
 from pytest import LogCaptureFixture
-from tiled.queries import Comparison, Eq
+from tiled.queries import Comparison, Eq, KeyPresent
 
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BackgroundInfo,
     TiledBackground,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    BACKGROUND_SCAN,
     TILED_STALE_TIME,
     TILED_URL,
-    get_tiled_background,
+    get_suitable_tiled_background,
     get_tiled_client,
 )
 
@@ -36,27 +36,40 @@ def mock_tiled_searches(
     result_1.metadata = {
         "start": {
             "time": 1,
-            "experiment_definition": {
-                "data": {"background": {"bg_type": "air", "time_per_pdf": 10}}
-            },
+            "experiment_definition": {"data": {"time_per_pdf": 10}},
+            "sample_info": {"data": {"capillary": "air"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10000",
         }
     }
     result_2 = MagicMock()
     result_2.metadata = {
         "start": {
             "time": 10,
-            "experiment_definition": {
-                "data": {"background": {"bg_type": "fq", "time_per_pdf": 11}}
-            },
+            "experiment_definition": {"data": {"time_per_pdf": 11}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10001",
         }
     }
     result_3 = MagicMock()
     result_3.metadata = {
         "start": {
             "time": 2,
-            "experiment_definition": {
-                "data": {"background": {"bg_type": "bs", "time_per_pdf": 12}}
-            },
+            "experiment_definition": {"data": {"time_per_pdf": 9}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10002",
+        }
+    }
+    result_4 = MagicMock()
+    result_4.metadata = {
+        "start": {
+            "time": 5,
+            "experiment_definition": {"data": {"time_per_pdf": 12}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10003",
         }
     }
 
@@ -66,6 +79,7 @@ def mock_tiled_searches(
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
             "tiled_id_3": result_3,
+            "tiled_id_4": result_4,
         }
     )
 
@@ -93,7 +107,7 @@ def mock_tiled_searches(
     )
 
 
-def test_get_tiled_background_makes_expected_searches(
+def test_get_suitable_tiled_background_makes_expected_searches(
     mock_tiled_searches: tuple[
         MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
     ],
@@ -101,27 +115,24 @@ def test_get_tiled_background_makes_expected_searches(
     client, search_2, search_3, search_4, search_5, search_6, search_7 = (
         mock_tiled_searches
     )
-    get_tiled_background(
+    get_suitable_tiled_background(
         client,
-        BackgroundInfo(bg_type="air", time_per_pdf=10),
-        instrument_session="cm12345-1",
+        BackgroundInfo(instrument_session="cm12345-1", bg_type="air", time_per_pdf=10),
     )
-    client.search.assert_called_once_with(
+    client.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
+    search_2.search.assert_called_once_with(
         Eq(key="start.instrument_session", value="cm12345-1")
     )
-    search_2.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_3.search.assert_called_once_with(Eq("stop.exit_status", "success"))
     search_4.search.assert_called_once_with(
         Comparison("ge", "stop.time", 30 - TILED_STALE_TIME)
     )
-    search_5.search.assert_called_once_with(
-        Eq("start.experiment_definition.name", BACKGROUND_SCAN)
-    )
+    search_5.search.assert_called_once_with(Eq("start.background", True))
     search_6.search.assert_called_once_with(
-        Eq("start.experiment_definition.data.background.bg_type", "air")
+        KeyPresent("start.sample_info.data.capillary")
     )
     search_7.search.assert_called_once_with(
-        Comparison("ge", "start.experiment_definition.data.background.time_per_pdf", 10)
+        KeyPresent("start.experiment_definition.data.time_per_pdf")
     )
 
 
@@ -129,26 +140,34 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_ = mock_tiled_searches
-    result = get_tiled_background(
+    result = get_suitable_tiled_background(
         client,
-        BackgroundInfo(bg_type="air", time_per_pdf=10),
-        instrument_session="cm12345-1",
+        BackgroundInfo(
+            instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=10
+        ),
     )
     assert result == TiledBackground(
-        tiled_id="tiled_id_2", bg_type="fq", time_per_pdf=11
+        instrument_session="cm12345-1",
+        tiled_id="tiled_id_2",
+        bg_type="fq1.0",
+        time_per_pdf=11,
+        filename="i15-1-10001.nxs",
+        instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
+        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
     )
 
 
-def test_get_tiled_background_returns_none_if_no_matching_backgrounds_found(
+def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_found(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_, final_search = mock_tiled_searches
     final_search.search.return_value = {}
     assert (
-        get_tiled_background(
+        get_suitable_tiled_background(
             client,
-            BackgroundInfo(bg_type="air", time_per_pdf=10),
-            instrument_session="cm12345-1",
+            BackgroundInfo(
+                instrument_session="cm12345-1", bg_type="air", time_per_pdf=10
+            ),
         )
         is None
     )
