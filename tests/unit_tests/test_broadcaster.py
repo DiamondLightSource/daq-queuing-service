@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from pathlib import Path
 from typing import Any, Literal
@@ -95,5 +96,9 @@ def test_if_subscriber_unsubscribes_then_it_no_longer_receives_broadcasts():
         ),
     ],
 )
-def test_serialise_works_as_expected(data: Any, expected_serialised_data: Any):
-    assert serialise(data) == expected_serialised_data
+def test_serialise_works_as_expected_and_can_be_json_dumped(
+    data: Any, expected_serialised_data: Any
+):
+    result = serialise(data)
+    assert result == expected_serialised_data
+    json.dumps(result)
