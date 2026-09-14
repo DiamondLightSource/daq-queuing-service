@@ -94,7 +94,7 @@ def get_suitable_tiled_background(
             instrument_session_directory = Path(start_doc["data_session_directory"])
             filepath = instrument_session_directory / filename
 
-            bg_type = start_doc["sample_info"]["data"]["capillary"]
+            capillary = start_doc["sample_info"]["data"]["capillary"]
             time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
 
             backgrounds.append(
@@ -104,7 +104,7 @@ def get_suitable_tiled_background(
                     filename=filename,
                     instrument_session_directory=instrument_session_directory,
                     filepath=filepath,
-                    bg_type=bg_type,
+                    capillary=capillary,
                     time_per_pdf=time_per_pdf,
                 )
             )

@@ -291,12 +291,12 @@ class I151Converter(Converter):
         return [
             BackgroundInfo(
                 instrument_session=experiment.instrument_session,
-                bg_type="air",
+                capillary="air",
                 time_per_pdf=time_per_pdf,
             ),
             BackgroundInfo(
                 instrument_session=experiment.instrument_session,
-                bg_type=experiment.sample.data["capillary"],
+                capillary=experiment.sample.data["capillary"],
                 time_per_pdf=time_per_pdf,
             ),
         ]
@@ -311,11 +311,11 @@ class I151Converter(Converter):
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
             sample=Sample(
-                name=background.bg_type
-                if background.bg_type == "air"
-                else f"Empty {background.bg_type}",
+                name=background.capillary
+                if background.capillary == "air"
+                else f"Empty {background.capillary}",
                 id="",
-                data={"capillary": background.bg_type},
+                data={"capillary": background.capillary},
                 container=Container(id="", positionInParent=container_position),
                 positionInContainer=container_position,
             ),

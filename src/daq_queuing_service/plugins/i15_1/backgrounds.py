@@ -32,7 +32,7 @@ class BackgroundInfo(BaseModel):
     # https://github.com/DiamondLightSource/daq-queuing-service/issues/84
     model_config = ConfigDict(frozen=True)
     instrument_session: str
-    bg_type: BACKGROUND_TYPES
+    capillary: BACKGROUND_TYPES
     time_per_pdf: float
 
     def is_suitable(self, required_background: "BackgroundInfo") -> bool:
@@ -47,7 +47,7 @@ class BackgroundInfo(BaseModel):
         """
         return (
             self.instrument_session == required_background.instrument_session
-            and self.bg_type == required_background.bg_type
+            and self.capillary == required_background.capillary
             and self.time_per_pdf >= required_background.time_per_pdf
         )
 
@@ -66,12 +66,12 @@ class BackgroundInfo(BaseModel):
         """
         if not self.instrument_session == required_background.instrument_session:
             return
-        if not self.bg_type == required_background.bg_type:
+        if not self.capillary == required_background.capillary:
             return
 
         return BackgroundInfo(
             instrument_session=self.instrument_session,
-            bg_type=self.bg_type,
+            capillary=self.capillary,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
         )
 
@@ -82,7 +82,7 @@ class BackgroundInfo(BaseModel):
         )
         return cls(
             instrument_session=experiment.instrument_session,
-            bg_type=experiment.sample.data["capillary"],
+            capillary=experiment.sample.data["capillary"],
             time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
         )
 
