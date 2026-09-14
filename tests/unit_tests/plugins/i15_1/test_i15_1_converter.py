@@ -1,6 +1,7 @@
 import json
 from copy import deepcopy
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,10 +10,11 @@ from blueapi.service.model import TaskRequest
 from daq_queuing_service.broadcaster import Broadcaster, serialise
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BACKGROUND_TYPES,
+    CAPILLARIES,
     BackgroundInfo,
     TiledBackground,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter, ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Experiment,
@@ -69,6 +71,71 @@ def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPos
     copy2 = type(task2).model_validate(task2)
     copy1.id = copy2.id = ""
     assert task1 == task2
+
+
+def air_task(
+    task_id: str, instrument_session: str, time_per_pdf: float
+) -> dict[str, Any]:
+    return {
+        "experiment": {
+            "name": "Background",
+            "instrument_session": instrument_session,
+            "sample": {
+                "name": "air",
+                "id": "",
+                "data": {"capillary": "air"},
+                "container": {"id": "", "positionInParent": {"position": 1}},
+                "positionInContainer": {"position": 1},
+            },
+            "experiment_definition": {
+                "name": "Background",
+                "id": "",
+                "data": {"time_per_pdf": time_per_pdf},
+            },
+        },
+        "id": task_id,
+        "blueapi_calls": [],
+        "status": Status.QUEUED,
+        "kind": TaskKind.EXPERIMENT,
+        "user": None,
+    }
+
+
+def empty_capillary_task(
+    task_id: str, instrument_session: str, time_per_pdf: float, capillary: CAPILLARIES
+) -> dict[str, Any]:
+    return {
+        "experiment": {
+            "name": "Background",
+            "instrument_session": instrument_session,
+            "sample": {
+                "name": f"Empty {capillary}",
+                "id": "",
+                "data": {"capillary": capillary},
+                "container": {
+                    "id": "",
+                    "positionInParent": {
+                        "position": 1,
+                    },
+                },
+                "positionInContainer": {
+                    "position": 1,
+                },
+            },
+            "experiment_definition": {
+                "name": "Background",
+                "id": "",
+                "data": {
+                    "time_per_pdf": time_per_pdf,
+                },
+            },
+        },
+        "id": task_id,
+        "blueapi_calls": [],
+        "status": Status.QUEUED,
+        "kind": TaskKind.EXPERIMENT,
+        "user": None,
+    }
 
 
 @pytest.fixture
@@ -153,6 +220,7 @@ def test_centre_sample_uses_expected_params():
                 name=" ", id="", data={"time_per_pdf": 100}
             ),
             "sample": make_sample("test_8_1", ""),
+            "scan_type": ScanType.CENTRING,
         },
     }
 
@@ -212,7 +280,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
             name="", id="", data={"time_per_pdf": 100}
         ),
         "sample": make_sample("test_8_1", ""),
-        "background": False,
+        "scan_type": ScanType.DATA_COLLECTION,
     }
 
 
@@ -244,7 +312,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     assert tasks[2].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
-        "background": False,
+        "scan_type": ScanType.DATA_COLLECTION,
     }
 
 
@@ -288,20 +356,8 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
                 filename="",
             ),
         },
-        "background": False,
+        "scan_type": ScanType.DATA_COLLECTION,
     }
-
-
-def test_tiled_backgrounds_tagged_as_backgrounds_in_metadata():
-    converter = I151Converter()
-    background_task = make_background_task("air", 10)
-    assert isinstance(background_task.experiment, Experiment)
-    tasks = converter._construct_blueapi_tasks_from_experiment(
-        background_task.experiment, "id"
-    )
-    assert tasks[2].params["metadata"]["background"] is True
-    # Centring should not be tagged as a background scan
-    assert not tasks[1].params["metadata"].get("background")
 
 
 def test_mix_of_experiments_with_correct_experiment_type_are_converted():
@@ -353,38 +409,11 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         id="1",
     )
     tasks = converter.pre_process(None, [task], [], [])
-    assert len(tasks) == 2
-    tasks[0].id = ""
-    assert tasks[0].model_dump() == {
-        "experiment": {
-            "name": "Background",
-            "instrument_session": "cm12345-1",
-            "sample": {
-                "name": "Empty fq1.0",
-                "id": "",
-                "data": {"capillary": "fq1.0"},
-                "container": {
-                    "id": "",
-                    "positionInParent": {
-                        "position": 1,
-                    },
-                },
-                "positionInContainer": {
-                    "position": 1,
-                },
-            },
-            "experiment_definition": {
-                "name": "Background",
-                "id": "",
-                "data": {"time_per_pdf": 100.0},
-            },
-        },
-        "id": "",
-        "blueapi_calls": [],
-        "status": Status.QUEUED,
-        "kind": TaskKind.EXPERIMENT,
-        "user": None,
-    }
+    assert len(tasks) == 3
+    assert tasks[0].model_dump() == air_task(tasks[0].id, "cm12345-1", 100.0)
+    assert tasks[1].model_dump() == empty_capillary_task(
+        tasks[1].id, "cm12345-1", 100.0, "fq1.0"
+    )
     assert converter._tiled_backgrounds == {"1": {}}
 
 
@@ -453,13 +482,21 @@ def test_add_required_background_scans_combines_similar_background_requirements(
 
     assert len(i15_1_tasks) == 5
     new_tasks = i15_1_converter._add_required_background_scans(None, i15_1_tasks)
-    assert len(new_tasks) == 6
-    assert isinstance(new_tasks[0].experiment, Experiment)
+    assert len(new_tasks) == 7
+    assert (
+        isinstance(new_tasks[0].experiment, Experiment)
+        and new_tasks[0].experiment.sample.name == "air"
+    )
+    assert (
+        isinstance(new_tasks[1].experiment, Experiment)
+        and new_tasks[1].experiment.sample.name == "Empty fq1.0"
+    )
     # Should have the maximum time_per_pdf of i15_1_tasks
     assert new_tasks[0].experiment.experiment_definition.data["time_per_pdf"] == 25
+    assert new_tasks[1].experiment.experiment_definition.data["time_per_pdf"] == 25
 
 
-def test_same_experiment_in_different_instrument_sessions_will_add_background_in_each(
+def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_in_each(
     i15_1_converter: I151Converter,
     i15_1_tasks: list[Task],
     background_not_found_in_tiled: MagicMock,
@@ -471,102 +508,24 @@ def test_same_experiment_in_different_instrument_sessions_will_add_background_in
 
     new_tasks = i15_1_converter._add_required_background_scans(None, i15_1_tasks)
 
-    assert len(new_tasks) == 8
-    new_tasks[0].id = ""
-    assert new_tasks[0].model_dump() == {
-        "experiment": {
-            "name": "Background",
-            "instrument_session": "cm12345-1",
-            "sample": {
-                "name": "Empty fq1.0",
-                "id": "",
-                "data": {"capillary": "fq1.0"},
-                "container": {
-                    "id": "",
-                    "positionInParent": {
-                        "position": 1,
-                    },
-                },
-                "positionInContainer": {
-                    "position": 1,
-                },
-            },
-            "experiment_definition": {
-                "name": "Background",
-                "id": "",
-                "data": {
-                    "time_per_pdf": 25.0,
-                },
-            },
-        },
-        "id": "",
-        "blueapi_calls": [],
-        "status": Status.QUEUED,
-        "kind": TaskKind.EXPERIMENT,
-        "user": None,
-    }
-    new_tasks[2].id = ""
-    assert new_tasks[2].model_dump() == {
-        "experiment": {
-            "name": "Background",
-            "instrument_session": "different",
-            "sample": {
-                "name": "Empty fq1.0",
-                "id": "",
-                "data": {"capillary": "fq1.0"},
-                "container": {
-                    "id": "",
-                    "positionInParent": {
-                        "position": 1,
-                    },
-                },
-                "positionInContainer": {
-                    "position": 1,
-                },
-            },
-            "experiment_definition": {
-                "name": "Background",
-                "id": "",
-                "data": {"time_per_pdf": 10.0},
-            },
-        },
-        "id": "",
-        "blueapi_calls": [],
-        "status": Status.QUEUED,
-        "kind": TaskKind.EXPERIMENT,
-        "user": None,
-    }
-    new_tasks[4].id = ""
-    assert new_tasks[4].model_dump() == {
-        "experiment": {
-            "name": "Background",
-            "instrument_session": "also_different",
-            "sample": {
-                "name": "Empty fq1.0",
-                "id": "",
-                "data": {"capillary": "fq1.0"},
-                "container": {
-                    "id": "",
-                    "positionInParent": {
-                        "position": 1,
-                    },
-                },
-                "positionInContainer": {
-                    "position": 1,
-                },
-            },
-            "experiment_definition": {
-                "name": "Background",
-                "id": "",
-                "data": {"time_per_pdf": 10.0},
-            },
-        },
-        "id": "",
-        "blueapi_calls": [],
-        "status": Status.QUEUED,
-        "kind": TaskKind.EXPERIMENT,
-        "user": None,
-    }
+    assert len(new_tasks) == 11
+
+    assert new_tasks[0].model_dump() == air_task(new_tasks[0].id, "cm12345-1", 25.0)
+    assert new_tasks[1].model_dump() == empty_capillary_task(
+        new_tasks[1].id, "cm12345-1", 25.0, "fq1.0"
+    )
+
+    assert new_tasks[3].model_dump() == air_task(new_tasks[3].id, "different", 10.0)
+    assert new_tasks[4].model_dump() == empty_capillary_task(
+        new_tasks[4].id, "different", 10.0, "fq1.0"
+    )
+
+    assert new_tasks[6].model_dump() == air_task(
+        new_tasks[6].id, "also_different", 10.0
+    )
+    assert new_tasks[7].model_dump() == empty_capillary_task(
+        new_tasks[7].id, "also_different", 10.0, "fq1.0"
+    )
 
 
 def test_add_required_background_scans_if_found_in_tiled_then_no_background_added(
@@ -691,11 +650,27 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
     }
 
 
-async def test_background_scans_are_tagged_as_backgrounds(
-    queue_with_i15_1_plugin: TaskQueue,
+@pytest.mark.parametrize(
+    "index, expected_scan_type",
+    [
+        (0, ScanType.BACKGROUND),  # air
+        # 1 is robot load
+        (2, ScanType.CENTRING),
+        (3, ScanType.BACKGROUND),  # empty capillary
+        # 4 is robot unload
+        # 5 is robot load
+        (6, ScanType.CENTRING),
+        (7, ScanType.DATA_COLLECTION),
+    ],
+)
+async def test_queued_scans_are_tagged_with_correct_scan_type_in_metadata(
+    index: int, expected_scan_type: ScanType, queue_with_i15_1_plugin: TaskQueue
 ):
     blueapi_calls = await queue_with_i15_1_plugin.get_call_queue()
-    assert blueapi_calls[2].task_request.params["metadata"]["background"] is True
+    assert (
+        blueapi_calls[index].task_request.params["metadata"]["scan_type"]
+        == expected_scan_type
+    )
 
 
 def test_test_i15_1_tasks_can_be_serialised():

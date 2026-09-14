@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict
 from daq_queuing_service.task_queue.task import Experiment
 
 BACKGROUND_SCAN = "Background"
+
+
 # This should be generated from the json schema
 # https://github.com/DiamondLightSource/daq-queuing-service/issues/78
 CAPILLARIES = Literal[

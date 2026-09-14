@@ -1,3 +1,4 @@
+from enum import StrEnum
 from functools import cached_property
 from typing import Any
 
@@ -27,12 +28,19 @@ from daq_queuing_service.task_queue.task import (
 )
 
 
+class ScanType(StrEnum):
+    DATA_COLLECTION = "Data Collection"
+    CENTRING = "Centring"
+    BACKGROUND = BACKGROUND_SCAN
+    STANDARD_SAMPLE = "Standard Sample"
+
+
 def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
     return [
         (i, BackgroundInfo.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
-        and task.experiment.name == BACKGROUND_SCAN
+        and task.experiment.name == ScanType.BACKGROUND
     ]
 
 
@@ -91,15 +99,21 @@ class I151Converter(Converter):
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
 
-        is_background: bool = experiment.name == BACKGROUND_SCAN
+        match experiment.name:
+            case ScanType.BACKGROUND:
+                scan_type = ScanType.BACKGROUND
+            case ScanType.STANDARD_SAMPLE:
+                scan_type = ScanType.STANDARD_SAMPLE
+            case _:
+                scan_type = ScanType.DATA_COLLECTION
 
-        metadata: dict[str, Any] = {
+        collection_metadata: dict[str, Any] = {
             "sample": experiment.sample,
             "experiment_definition": experiment.experiment_definition,
-            "background": is_background,
+            "scan_type": scan_type,
         }
         if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
-            metadata["tiled_backgrounds"] = tiled_backgrounds
+            collection_metadata["tiled_backgrounds"] = tiled_backgrounds
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
@@ -118,7 +132,7 @@ class I151Converter(Converter):
                     "temperatures_celsius": experiment.experiment_definition.data[
                         "list_of_temperatures"
                     ],
-                    "metadata": metadata,
+                    "metadata": collection_metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
@@ -128,13 +142,14 @@ class I151Converter(Converter):
                 params={
                     "full_collection_time": time_per_pdf,
                     "exposure_time_per_frame": 0.1,
-                    "metadata": metadata,
+                    "metadata": collection_metadata,
                 },
                 instrument_session=experiment.instrument_session,
             )
 
-        # For air calibration scans, we need to not to robot load/unload.
-        # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
+        if experiment.sample.data["capillary"] == "air":
+            return [data_collection]
+
         return [
             TaskRequest(
                 name="robot_load",
@@ -150,8 +165,8 @@ class I151Converter(Converter):
                     "exposure_time": 0.01,
                     "metadata": {
                         "sample": experiment.sample,
-                        # This will include tiled background scan info
                         "experiment_definition": experiment.experiment_definition,
+                        "scan_type": ScanType.CENTRING,
                     },
                 },
                 instrument_session=experiment.instrument_session,
@@ -186,7 +201,7 @@ class I151Converter(Converter):
             experiment = task.experiment
             if (
                 isinstance(experiment, Experiment)
-                and experiment.name != BACKGROUND_SCAN
+                and experiment.name != ScanType.BACKGROUND
             ):
                 instrument_session = experiment.instrument_session
 
@@ -211,7 +226,7 @@ class I151Converter(Converter):
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
-            and current_task.experiment.name == BACKGROUND_SCAN
+            and current_task.experiment.name == ScanType.BACKGROUND
             and BackgroundInfo.from_experiment(current_task.experiment).is_suitable(
                 required_background
             )
@@ -272,12 +287,18 @@ class I151Converter(Converter):
 
     def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
+        time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
         return [
             BackgroundInfo(
                 instrument_session=experiment.instrument_session,
+                bg_type="air",
+                time_per_pdf=time_per_pdf,
+            ),
+            BackgroundInfo(
+                instrument_session=experiment.instrument_session,
                 bg_type=experiment.sample.data["capillary"],
-                time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
-            )
+                time_per_pdf=time_per_pdf,
+            ),
         ]
 
     def _construct_background_experiment(
@@ -286,7 +307,7 @@ class I151Converter(Converter):
         LOGGER.debug(f"Constructing experiment for background: {background}")
         container_position = ContainerPosition(position=1)
         return Experiment(
-            name=BACKGROUND_SCAN,
+            name=ScanType.BACKGROUND,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
             sample=Sample(
@@ -299,7 +320,7 @@ class I151Converter(Converter):
                 positionInContainer=container_position,
             ),
             experiment_definition=ExperimentDefinition(
-                name=BACKGROUND_SCAN,
+                name=ScanType.BACKGROUND,
                 id="",
                 data={"time_per_pdf": background.time_per_pdf},
             ),
