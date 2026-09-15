@@ -31,7 +31,7 @@ def mock_current_time():
 @pytest.fixture()
 def mock_tiled_searches(
     tiled_client: MagicMock,
-) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
 
     result_1.metadata = {
@@ -78,8 +78,8 @@ def mock_tiled_searches(
         }
     }
 
-    search_result_7 = MagicMock()
-    search_result_7.search = MagicMock(
+    search_result_6 = MagicMock()
+    search_result_6.search = MagicMock(
         return_value={
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
@@ -88,8 +88,6 @@ def mock_tiled_searches(
         }
     )
 
-    search_result_6 = MagicMock()
-    search_result_6.search = MagicMock(return_value=search_result_7)
     search_result_5 = MagicMock()
     search_result_5.search = MagicMock(return_value=search_result_6)
     search_result_4 = MagicMock()
@@ -108,18 +106,15 @@ def mock_tiled_searches(
         search_result_4,
         search_result_5,
         search_result_6,
-        search_result_7,
     )
 
 
 def test_get_suitable_tiled_background_makes_expected_searches(
     mock_tiled_searches: tuple[
-        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
+        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
     ],
 ):
-    client, search_2, search_3, search_4, search_5, search_6, search_7 = (
-        mock_tiled_searches
-    )
+    client, search_2, search_3, search_4, search_5, search_6 = mock_tiled_searches
     get_suitable_tiled_background(
         client,
         BackgroundInfo(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
@@ -136,9 +131,6 @@ def test_get_suitable_tiled_background_makes_expected_searches(
         In(key="start.scan_type", value=["Air", "Empty Capillary", "Standard Sample"])
     )
     search_6.search.assert_called_once_with(
-        KeyPresent("start.sample_info.data.capillary")
-    )
-    search_7.search.assert_called_once_with(
         KeyPresent("start.experiment_definition.data.time_per_pdf")
     )
 

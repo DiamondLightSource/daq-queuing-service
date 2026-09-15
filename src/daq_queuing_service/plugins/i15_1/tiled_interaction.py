@@ -77,7 +77,6 @@ def get_suitable_tiled_background(
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
             .search(In("start.scan_type", AUXILIARY_SCAN_NAMES))
-            .search(KeyPresent("start.sample_info.data.capillary"))
             .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
         )
 
@@ -101,6 +100,12 @@ def get_suitable_tiled_background(
             if sample is None:
                 pin = None
             else:
+                capillary = sample["data"].get("capillary")
+                if not capillary:
+                    LOGGER.warning(
+                        f"No capillary found in tiled scan {tiled_id}. Skipping."
+                    )
+                    continue
                 pin = StandardsPin(
                     capillary=sample["data"]["capillary"],
                     contents=sample["data"].get("composition"),
@@ -119,14 +124,14 @@ def get_suitable_tiled_background(
             if background.kind != start_doc["scan_type"]:
                 LOGGER.warning(
                     f"Inferred auxiliary type: {background.kind} does not match scan "
-                    + f"type in metadata: {start_doc['scan_type']} for background: "
-                    + f"{background}. Skipping background."
+                    + f"type in metadata: {start_doc['scan_type']} for auxiliary scan "
+                    + f"{background}. Skipping."
                 )
                 continue
             backgrounds.append(background)
 
         LOGGER.debug(
-            f"Found {len(backgrounds)} background scans in tiled since "
+            f"Found {len(backgrounds)} auxiliary scans in tiled since "
             + f"{TILED_STALE_TIME}s ago for visit {instrument_session}."
         )
         return backgrounds
@@ -134,8 +139,10 @@ def get_suitable_tiled_background(
     backgrounds = _query_tiled(required_background.instrument_session)
     for background in backgrounds:
         if background.is_suitable(required_background):
-            LOGGER.info(f"Found suitable background in tiled: {background.tiled_id}")
+            LOGGER.info(
+                f"Found suitable auxiliary scans in tiled: {background.tiled_id}"
+            )
             return background
     LOGGER.info(
-        f"Found no suitable backgrounds in tiled matching: {required_background}."
+        f"Found no suitable auxiliary scans in tiled matching: {required_background}."
     )
