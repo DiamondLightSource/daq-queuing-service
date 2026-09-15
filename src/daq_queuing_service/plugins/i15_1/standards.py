@@ -62,7 +62,3 @@ class StandardsPuck(BaseModel):
             f"Pins must be 1-22, with no gaps. Current pins: {list(pins.keys())}"
         )
         return pins
-
-
-a = StandardsPuck()
-print(a.get_pin_number(StandardsPin(capillary="bs1.0", contents=None)))
