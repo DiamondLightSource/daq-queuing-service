@@ -121,7 +121,7 @@ class I151Converter(Converter):
             "scan_type": scan_type,
         }
         if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
-            collection_metadata["tiled_backgrounds"] = tiled_backgrounds
+            collection_metadata["auxiliary_scans"] = tiled_backgrounds
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
@@ -254,9 +254,7 @@ class I151Converter(Converter):
         if tiled_background := get_suitable_tiled_background(
             self._tiled_client, required_background
         ):
-            self._tiled_backgrounds[task_id][tiled_background.tiled_id] = (
-                tiled_background
-            )
+            self._tiled_backgrounds[task_id][tiled_background.kind] = tiled_background
             return new_tasks
 
         LOGGER.info(
