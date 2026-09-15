@@ -9,13 +9,15 @@ from pydantic import SecretStr
 from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.client.container import Container as TiledContainer
-from tiled.queries import Comparison, Eq, KeyPresent
+from tiled.queries import Comparison, Eq, In, KeyPresent
 
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.i15_1.backgrounds import (
+    AUXILIARY_SCAN_NAMES,
     BackgroundInfo,
     TiledBackground,
 )
+from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 
 # Ignoring the following rules as the tiled client is poorly typed and scares the linter
 # pyright: reportUnknownMemberType=false
@@ -74,7 +76,7 @@ def get_suitable_tiled_background(
             .search(Eq("start.instrument_session", instrument_session))
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
-            .search(Eq("start.background", True))
+            .search(In("start.scan_type", AUXILIARY_SCAN_NAMES))
             .search(KeyPresent("start.sample_info.data.capillary"))
             .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
         )
@@ -94,20 +96,34 @@ def get_suitable_tiled_background(
             instrument_session_directory = Path(start_doc["data_session_directory"])
             filepath = instrument_session_directory / filename
 
-            capillary = start_doc["sample_info"]["data"]["capillary"]
+            sample = start_doc.get("sample_info")
+
+            if sample is None:
+                pin = None
+            else:
+                pin = StandardsPin(
+                    capillary=sample["data"]["capillary"],
+                    contents=sample["data"].get("composition"),
+                )
             time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
 
-            backgrounds.append(
-                TiledBackground(
-                    tiled_id=tiled_id,
-                    instrument_session=instrument_session,
-                    filename=filename,
-                    instrument_session_directory=instrument_session_directory,
-                    filepath=filepath,
-                    capillary=capillary,
-                    time_per_pdf=time_per_pdf,
-                )
+            background = TiledBackground(
+                tiled_id=tiled_id,
+                instrument_session=instrument_session,
+                filename=filename,
+                instrument_session_directory=instrument_session_directory,
+                filepath=filepath,
+                pin=pin,
+                time_per_pdf=time_per_pdf,
             )
+            if background.kind != start_doc["scan_type"]:
+                LOGGER.warning(
+                    f"Inferred auxiliary type: {background.kind} does not match scan "
+                    + f"type in metadata: {start_doc['scan_type']} for background: "
+                    + f"{background}. Skipping background."
+                )
+                continue
+            backgrounds.append(background)
 
         LOGGER.debug(
             f"Found {len(backgrounds)} background scans in tiled since "

@@ -9,9 +9,15 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import (
-    BACKGROUND_SCAN,
+    AuxiliaryScan,
     BackgroundInfo,
     TiledBackground,
+    is_auxiliary_str,
+)
+from daq_queuing_service.plugins.i15_1.standards import (
+    STANDARDS_PUCK_PLACEMENT,
+    StandardsPin,
+    StandardsPuck,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     get_suitable_tiled_background,
@@ -31,8 +37,9 @@ from daq_queuing_service.task_queue.task import (
 class ScanType(StrEnum):
     DATA_COLLECTION = "Data Collection"
     CENTRING = "Centring"
-    BACKGROUND = BACKGROUND_SCAN
-    STANDARD_SAMPLE = "Standard Sample"
+    AIR = AuxiliaryScan.AIR
+    EMPTY_CAPILLARY = AuxiliaryScan.EMPTY_CAPILLARY
+    STANDARD_SAMPLE = AuxiliaryScan.STANDARD_SAMPLE
 
 
 def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
@@ -40,7 +47,7 @@ def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
         (i, BackgroundInfo.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
-        and task.experiment.name == ScanType.BACKGROUND
+        and is_auxiliary_str(task.experiment.name)
     ]
 
 
@@ -49,6 +56,7 @@ class I151Converter(Converter):
         # First key is the ID of the task using the background
         # Second key is the tiled ID of the background
         self._tiled_backgrounds: dict[str, dict[str, TiledBackground]] = {}
+        self._standards_puck = StandardsPuck()
 
     @cached_property
     def _tiled_client(self) -> TiledContainer:
@@ -96,12 +104,12 @@ class I151Converter(Converter):
         self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
-        position = experiment.sample.positionInContainer.position
-        puck = experiment.sample.container.positionInParent.position
 
         match experiment.name:
-            case ScanType.BACKGROUND:
-                scan_type = ScanType.BACKGROUND
+            case ScanType.AIR:
+                scan_type = ScanType.AIR
+            case ScanType.EMPTY_CAPILLARY:
+                scan_type = ScanType.EMPTY_CAPILLARY
             case ScanType.STANDARD_SAMPLE:
                 scan_type = ScanType.STANDARD_SAMPLE
             case _:
@@ -147,8 +155,12 @@ class I151Converter(Converter):
                 instrument_session=experiment.instrument_session,
             )
 
-        if experiment.sample.data["capillary"] == "air":
+        if experiment.sample is None:
+            # Air background
             return [data_collection]
+
+        position = experiment.sample.positionInContainer.position
+        puck = experiment.sample.container.positionInParent.position
 
         return [
             TaskRequest(
@@ -199,9 +211,8 @@ class I151Converter(Converter):
 
         for task in tasks:
             experiment = task.experiment
-            if (
-                isinstance(experiment, Experiment)
-                and experiment.name != ScanType.BACKGROUND
+            if isinstance(experiment, Experiment) and not is_auxiliary_str(
+                experiment.name
             ):
                 instrument_session = experiment.instrument_session
 
@@ -226,7 +237,7 @@ class I151Converter(Converter):
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
-            and current_task.experiment.name == ScanType.BACKGROUND
+            and is_auxiliary_str(current_task.experiment.name)
             and BackgroundInfo.from_experiment(current_task.experiment).is_suitable(
                 required_background
             )
@@ -288,15 +299,25 @@ class I151Converter(Converter):
     def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+        assert experiment.sample
         return [
             BackgroundInfo(
                 instrument_session=experiment.instrument_session,
-                capillary="air",
+                pin=None,
                 time_per_pdf=time_per_pdf,
             ),
             BackgroundInfo(
                 instrument_session=experiment.instrument_session,
-                capillary=experiment.sample.data["capillary"],
+                pin=StandardsPin(
+                    capillary=experiment.sample.data["capillary"], contents=None
+                ),
+                time_per_pdf=time_per_pdf,
+            ),
+            BackgroundInfo(
+                instrument_session=experiment.instrument_session,
+                pin=StandardsPin(
+                    capillary=experiment.sample.data["capillary"], contents="Silicon"
+                ),
                 time_per_pdf=time_per_pdf,
             ),
         ]
@@ -305,23 +326,39 @@ class I151Converter(Converter):
         self, background: BackgroundInfo, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for background: {background}")
-        container_position = ContainerPosition(position=1)
+
         return Experiment(
-            name=ScanType.BACKGROUND,
+            name=background.kind,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=Sample(
-                name=background.capillary
-                if background.capillary == "air"
-                else f"Empty {background.capillary}",
-                id="",
-                data={"capillary": background.capillary},
-                container=Container(id="", positionInParent=container_position),
-                positionInContainer=container_position,
-            ),
+            sample=self._construct_background_sample(background.pin),
             experiment_definition=ExperimentDefinition(
-                name=ScanType.BACKGROUND,
+                name=f"Auxiliary {background.kind} Scan",
                 id="",
                 data={"time_per_pdf": background.time_per_pdf},
             ),
+        )
+
+    def _construct_background_sample(self, pin: StandardsPin | None):
+        if pin is None:
+            return
+
+        data = {"capillary": pin.capillary, "composition": pin.contents}
+        puck = Container(
+            id="",
+            positionInParent=ContainerPosition(position=STANDARDS_PUCK_PLACEMENT),
+        )
+        position = ContainerPosition(position=self._standards_puck.get_pin_number(pin))
+
+        if pin.contents is None:
+            name = f"Empty {pin.capillary}"
+        else:
+            name = f"{pin.contents} {pin.capillary}"
+
+        return Sample(
+            name=name,
+            data=data,
+            id="",
+            container=puck,
+            positionInContainer=position,
         )
