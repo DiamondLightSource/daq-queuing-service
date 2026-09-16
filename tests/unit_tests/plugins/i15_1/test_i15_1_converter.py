@@ -9,6 +9,7 @@ from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.broadcaster import Broadcaster, serialise
 from daq_queuing_service.plugins.i15_1.backgrounds import (
+    AuxiliaryScanType,
     BackgroundInfo,
     TiledBackground,
 )
@@ -367,7 +368,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
 def test_tiled_backgrounds_added_to_metadata_if_present():
     converter = I151Converter()
     converter._tiled_backgrounds["id"] = {
-        "tiled_id": TiledBackground(
+        AuxiliaryScanType.EMPTY_CAPILLARY: TiledBackground(
             instrument_session="cm12345-1",
             tiled_id="tiled_id",
             pin=StandardsPin(capillary="bs1.5", contents=None),
@@ -393,8 +394,8 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
     assert tasks[2].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
-        "tiled_backgrounds": {
-            "tiled_id": TiledBackground(
+        "auxiliary_scans": {
+            AuxiliaryScanType.EMPTY_CAPILLARY: TiledBackground(
                 instrument_session="cm12345-1",
                 pin=StandardsPin(capillary="bs1.5", contents=None),
                 time_per_pdf=1,
@@ -614,7 +615,7 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     assert len(i15_1_converter._tiled_backgrounds.keys()) == 5
     assert i15_1_converter._tiled_backgrounds == {
         task.id: {
-            "fake_tiled_id": TiledBackground(
+            AuxiliaryScanType.EMPTY_CAPILLARY: TiledBackground(
                 instrument_session="cm12345-1",
                 pin=StandardsPin(capillary="fq1.0", contents=None),
                 time_per_pdf=5,
@@ -719,7 +720,7 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
     assert len(result) == 0
     assert i15_1_converter._tiled_backgrounds == {
         "task_id": {
-            "fake_tiled_id": TiledBackground(
+            AuxiliaryScanType.EMPTY_CAPILLARY: TiledBackground(
                 instrument_session="cm12345-1",
                 pin=StandardsPin(capillary="fq1.0", contents=None),
                 time_per_pdf=5,

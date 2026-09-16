@@ -9,7 +9,7 @@ from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.backgrounds import (
-    AuxiliaryScan,
+    AuxiliaryScanType,
     BackgroundInfo,
     TiledBackground,
     is_auxiliary_str,
@@ -37,9 +37,9 @@ from daq_queuing_service.task_queue.task import (
 class ScanType(StrEnum):
     DATA_COLLECTION = "Data Collection"
     CENTRING = "Centring"
-    AIR = AuxiliaryScan.AIR
-    EMPTY_CAPILLARY = AuxiliaryScan.EMPTY_CAPILLARY
-    STANDARD_SAMPLE = AuxiliaryScan.STANDARD_SAMPLE
+    AIR = AuxiliaryScanType.AIR
+    EMPTY_CAPILLARY = AuxiliaryScanType.EMPTY_CAPILLARY
+    STANDARD_SAMPLE = AuxiliaryScanType.STANDARD_SAMPLE
 
 
 def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
@@ -55,7 +55,9 @@ class I151Converter(Converter):
     def __init__(self):
         # First key is the ID of the task using the background
         # Second key is the tiled ID of the background
-        self._tiled_backgrounds: dict[str, dict[str, TiledBackground]] = {}
+        self._tiled_backgrounds: dict[
+            str, dict[AuxiliaryScanType, TiledBackground]
+        ] = {}
         self._standards_puck = StandardsPuck()
 
     @cached_property

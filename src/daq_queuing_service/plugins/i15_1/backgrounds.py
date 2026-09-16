@@ -10,13 +10,13 @@ from daq_queuing_service.task_queue.task import Experiment
 AUXILIARY_SCAN = Literal["air", "empty capillary", "standard sample"]
 
 
-class AuxiliaryScan(StrEnum):
+class AuxiliaryScanType(StrEnum):
     AIR = "Air"
     EMPTY_CAPILLARY = "Empty Capillary"
     STANDARD_SAMPLE = "Standard Sample"
 
 
-AUXILIARY_SCAN_NAMES = [member.value for member in AuxiliaryScan]
+AUXILIARY_SCAN_NAMES = [member.value for member in AuxiliaryScanType]
 
 
 def is_auxiliary_str(value: str) -> bool:
@@ -33,12 +33,12 @@ class BackgroundInfo(BaseModel):
 
     @computed_field
     @property
-    def kind(self) -> AuxiliaryScan:
+    def kind(self) -> AuxiliaryScanType:
         if self.pin is None:
-            return AuxiliaryScan.AIR
+            return AuxiliaryScanType.AIR
         if self.pin.contents is None:
-            return AuxiliaryScan.EMPTY_CAPILLARY
-        return AuxiliaryScan.STANDARD_SAMPLE
+            return AuxiliaryScanType.EMPTY_CAPILLARY
+        return AuxiliaryScanType.STANDARD_SAMPLE
 
     def is_suitable(self, required_background: "BackgroundInfo") -> bool:
         """Determine if this background is suitable compared to an experiment's required
