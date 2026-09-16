@@ -4,7 +4,7 @@ import pytest
 from pytest import MonkeyPatch
 from requests import Response
 
-from daq_queuing_service.blueapi_interaction.token_source import UDCTokenSource
+from daq_queuing_service.external_interaction.blueapi.token_source import UDCTokenSource
 
 
 @pytest.fixture(autouse=True)
@@ -13,7 +13,7 @@ def set_secret_env_vars(monkeypatch: MonkeyPatch):
     monkeypatch.setenv("UDC_CLIENT_ID", "ixxudc")
 
 
-@patch("daq_queuing_service.blueapi_interaction.token_source.requests.post")
+@patch("daq_queuing_service.external_interaction.blueapi.token_source.requests.post")
 def test_get_valid_access_token_makes_expected_request_and_returns_result(
     mock_post: MagicMock,
 ):

@@ -13,8 +13,13 @@ from blueapi.core import DataEvent
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
 from blueapi.worker.event import TaskError, TaskResult
 
-from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
+    BlueapiClientAdapter,
+)
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    CallStatus,
+)
 from daq_queuing_service.log import HANDLER
 from daq_queuing_service.task_queue.queue import TaskQueue
 

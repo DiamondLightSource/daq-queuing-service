@@ -2,7 +2,10 @@ import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskResult
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    CallStatus,
+)
 
 
 @pytest.mark.parametrize(

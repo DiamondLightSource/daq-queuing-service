@@ -11,8 +11,10 @@ from pydantic import BaseModel
 
 from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.app.authentication import User
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCallResponse,
+)
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter, ValidateError
 from daq_queuing_service.task_queue.queue import (

@@ -1,7 +1,7 @@
 import pytest
 from blueapi.service.model import TaskRequest
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
 from daq_queuing_service.plugins.converter import (
     Converter,
     get_converter,

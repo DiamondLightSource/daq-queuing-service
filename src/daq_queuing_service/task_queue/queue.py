@@ -8,12 +8,12 @@ from typing import Literal, TypedDict
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import (
+from daq_queuing_service.broadcaster import Broadcaster, Event
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
     CallStatus,
 )
-from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter, ConverterError
 from daq_queuing_service.task_queue.queue_utils import (
