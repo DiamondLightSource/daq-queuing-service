@@ -7,7 +7,7 @@ from pydantic import SecretStr
 from pytest import LogCaptureFixture
 from tiled.queries import Comparison, Eq, In, KeyPresent
 
-from daq_queuing_service.plugins.i15_1.backgrounds import (
+from daq_queuing_service.plugins.i15_1.auxiliary import (
     BackgroundInfo,
     TiledBackground,
 )

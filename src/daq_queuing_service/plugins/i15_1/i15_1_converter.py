@@ -8,7 +8,7 @@ from tiled.client.container import Container as TiledContainer
 from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
-from daq_queuing_service.plugins.i15_1.backgrounds import (
+from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     BackgroundInfo,
     TiledBackground,

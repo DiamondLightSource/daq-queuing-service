@@ -12,7 +12,7 @@ from tiled.client.container import Container as TiledContainer
 from tiled.queries import Comparison, Eq, In, KeyPresent
 
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.i15_1.backgrounds import (
+from daq_queuing_service.plugins.i15_1.auxiliary import (
     AUXILIARY_SCAN_NAMES,
     BackgroundInfo,
     TiledBackground,

@@ -8,7 +8,7 @@ import pytest
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.broadcaster import Broadcaster, serialise
-from daq_queuing_service.plugins.i15_1.backgrounds import (
+from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     BackgroundInfo,
     TiledBackground,
@@ -761,7 +761,7 @@ async def test_queued_scans_are_tagged_with_correct_scan_type_in_metadata(
 def test_test_i15_1_tasks_can_be_serialised():
     converter = I151Converter()
     converter._tiled_backgrounds["id"] = {
-        "tiled_id": TiledBackground(
+        AuxiliaryScanType.EMPTY_CAPILLARY: TiledBackground(
             instrument_session="cm12345-1",
             tiled_id="tiled_id",
             pin=StandardsPin(capillary="bs1.0", contents=None),
