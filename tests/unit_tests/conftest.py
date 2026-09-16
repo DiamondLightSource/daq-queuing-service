@@ -17,6 +17,7 @@ from daq_queuing_service.app.app import create_app
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.tiled.tiled import cache
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task_queue.queue import TaskQueue
@@ -232,3 +233,34 @@ def has_dependency_name(dep: Dependant, name: str) -> bool:
         return True
 
     return any(has_dependency_name(child, name) for child in dep.dependencies)
+
+
+@pytest.fixture(autouse=True)
+def patch_get_tiled_client():
+    with patch(
+        "daq_queuing_service.task_queue.queue.get_tiled_client"
+    ) as mock_get_metadata_from_tiled:
+        yield mock_get_metadata_from_tiled
+
+
+@pytest.fixture(autouse=True)
+def patch_get_metadata_from_tiled():
+    with patch(
+        "daq_queuing_service.task_queue.queue.get_metadata_from_tiled",
+        MagicMock(return_value=None),
+    ) as mock_get_metadata_from_tiled:
+        yield mock_get_metadata_from_tiled
+
+
+@pytest.fixture(autouse=True)
+def tiled_client():
+    with patch(
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_client"
+    ) as mock_get_tiled_client:
+        yield mock_get_tiled_client.return_value
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    yield
+    cache.clear()
