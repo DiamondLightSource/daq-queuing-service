@@ -8,14 +8,14 @@ from pytest import LogCaptureFixture
 from tiled.queries import Comparison, Eq, In, KeyPresent
 
 from daq_queuing_service.plugins.i15_1.auxiliary import (
-    BackgroundInfo,
-    TiledBackground,
+    AuxiliaryScan,
+    TiledAuxiliary,
 )
 from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     TILED_STALE_TIME,
     TILED_URL,
-    get_suitable_tiled_background,
+    get_suitable_tiled_scan,
     get_tiled_client,
 )
 
@@ -115,9 +115,9 @@ def test_get_suitable_tiled_background_makes_expected_searches(
     ],
 ):
     client, search_2, search_3, search_4, search_5, search_6 = mock_tiled_searches
-    get_suitable_tiled_background(
+    get_suitable_tiled_scan(
         client,
-        BackgroundInfo(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+        AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
     )
     client.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_2.search.assert_called_once_with(
@@ -139,15 +139,15 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_ = mock_tiled_searches
-    result = get_suitable_tiled_background(
+    result = get_suitable_tiled_scan(
         client,
-        BackgroundInfo(
+        AuxiliaryScan(
             instrument_session="cm12345-1",
             pin=StandardsPin(capillary="fq1.0", contents=None),
             time_per_pdf=10,
         ),
     )
-    assert result == TiledBackground(
+    assert result == TiledAuxiliary(
         instrument_session="cm12345-1",
         tiled_id="tiled_id_2",
         pin=StandardsPin(capillary="fq1.0", contents=None),
@@ -164,9 +164,9 @@ def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_f
     client, *_, final_search = mock_tiled_searches
     final_search.search.return_value = {}
     assert (
-        get_suitable_tiled_background(
+        get_suitable_tiled_scan(
             client,
-            BackgroundInfo(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
         )
         is None
     )

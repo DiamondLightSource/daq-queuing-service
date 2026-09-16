@@ -1,13 +1,10 @@
 from enum import StrEnum
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, computed_field
 
 from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 from daq_queuing_service.task_queue.task import Experiment
-
-AUXILIARY_SCAN = Literal["air", "empty capillary", "standard sample"]
 
 
 class AuxiliaryScanType(StrEnum):
@@ -23,7 +20,7 @@ def is_auxiliary_str(value: str) -> bool:
     return value in AUXILIARY_SCAN_NAMES
 
 
-class BackgroundInfo(BaseModel):
+class AuxiliaryScan(BaseModel):
     # Currently only room temperatures scans are supported
     # https://github.com/DiamondLightSource/daq-queuing-service/issues/84
     model_config = ConfigDict(frozen=True)
@@ -40,12 +37,12 @@ class BackgroundInfo(BaseModel):
             return AuxiliaryScanType.EMPTY_CAPILLARY
         return AuxiliaryScanType.STANDARD_SAMPLE
 
-    def is_suitable(self, required_background: "BackgroundInfo") -> bool:
+    def is_suitable(self, required_background: "AuxiliaryScan") -> bool:
         """Determine if this background is suitable compared to an experiment's required
         background.
 
         Args:
-            required_background (BackgroundInfo): The required background
+            required_background (AuxiliaryScan): The required background
 
         Returns:
             bool: True if suitable, False if not
@@ -57,16 +54,16 @@ class BackgroundInfo(BaseModel):
         )
 
     def attempt_to_combine_with(
-        self, required_background: "BackgroundInfo"
-    ) -> "BackgroundInfo | None":
+        self, required_background: "AuxiliaryScan"
+    ) -> "AuxiliaryScan | None":
         """Creates a background that combines the requirements of this background object
         and a provided required background, if possible.
 
         Args:
-            required_background (BackgroundInfo): The required background
+            required_background (AuxiliaryScan): The required background
 
         Returns:
-            BackgroundInfo | None: The combined background, or None if one is not
+            AuxiliaryScan | None: The combined background, or None if one is not
             possible.
         """
         if not self.instrument_session == required_background.instrument_session:
@@ -74,14 +71,14 @@ class BackgroundInfo(BaseModel):
         if not self.pin == required_background.pin:
             return
 
-        return BackgroundInfo(
+        return AuxiliaryScan(
             instrument_session=self.instrument_session,
             pin=self.pin,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
         )
 
     @classmethod
-    def from_experiment(cls, experiment: Experiment) -> "BackgroundInfo":
+    def from_experiment(cls, experiment: Experiment) -> "AuxiliaryScan":
         assert is_auxiliary_str(experiment.name), (
             f"This experiment is not a background scan: {experiment}"
         )
@@ -101,7 +98,7 @@ class BackgroundInfo(BaseModel):
         )
 
 
-class TiledBackground(BackgroundInfo):
+class TiledAuxiliary(AuxiliaryScan):
     tiled_id: str
     filename: str
     filepath: Path
