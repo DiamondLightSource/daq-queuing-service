@@ -156,39 +156,38 @@ class I151Converter(Converter):
             )
 
         if experiment.sample is None:
-            # Air background
-            return [data_collection]
+            return [data_collection]  # Air background
 
-        # position = experiment.sample.positionInContainer.position
-        # puck = experiment.sample.container.positionInParent.position
+        position = experiment.sample.positionInContainer.position
+        puck = experiment.sample.container.positionInParent.position
 
         return [
-            # TaskRequest(
-            #     name="robot_load",
-            #     params={"puck": puck, "position": position},
-            #     instrument_session=experiment.instrument_session,
-            # ),
-            # TaskRequest(
-            #     name="centre_sample",
-            #     params={
-            #         "start_z": -20,
-            #         "end_z": 0,
-            #         "steps": 20,
-            #         "exposure_time": 0.01,
-            #         "metadata": {
-            #             "sample": experiment.sample,
-            #             "experiment_definition": experiment.experiment_definition,
-            #             "scan_type": ScanType.CENTRING,
-            #         },
-            #     },
-            #     instrument_session=experiment.instrument_session,
-            # ),
+            TaskRequest(
+                name="robot_load",
+                params={"puck": puck, "position": position},
+                instrument_session=experiment.instrument_session,
+            ),
+            TaskRequest(
+                name="centre_sample",
+                params={
+                    "start_z": -20,
+                    "end_z": 0,
+                    "steps": 20,
+                    "exposure_time": 0.01,
+                    "metadata": {
+                        "sample": experiment.sample,
+                        "experiment_definition": experiment.experiment_definition,
+                        "scan_type": ScanType.CENTRING,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            ),
             data_collection,
-            # TaskRequest(
-            #     name="robot_unload",
-            #     params={},
-            #     instrument_session=experiment.instrument_session,
-            # ),
+            TaskRequest(
+                name="robot_unload",
+                params={},
+                instrument_session=experiment.instrument_session,
+            ),
         ]
 
     def _add_required_background_scans(
