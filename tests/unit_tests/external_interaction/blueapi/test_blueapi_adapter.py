@@ -12,7 +12,7 @@ from blueapi.service.model import TaskRequest
 from blueapi.worker import WorkerState
 from blueapi.worker.event import TaskResult, TaskStatus
 
-from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
+from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
     BlueapiClientAdapter,
     BlueapiResult,
 )

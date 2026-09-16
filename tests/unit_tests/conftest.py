@@ -15,8 +15,8 @@ from constants import TEST_CONFIG_WITH_AUTH_PATH
 from daq_queuing_service.app._config import AppConfig, load_config
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.app.authentication import User
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task_queue.queue import TaskQueue

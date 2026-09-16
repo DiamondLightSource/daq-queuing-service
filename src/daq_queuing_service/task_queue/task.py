@@ -6,7 +6,7 @@ from blueapi.service.model import TaskRequest
 from pydantic import BaseModel, Field, computed_field
 
 from daq_queuing_service.app.authentication import User
-from daq_queuing_service.blueapi_interaction.blueapi_call import (
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
     CallStatus,

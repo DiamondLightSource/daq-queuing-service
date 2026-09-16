@@ -18,9 +18,13 @@ from daq_queuing_service.app.authentication import (
 from daq_queuing_service.app.authorisation import (
     build_ensure_current_user_is_in_whitelist,
 )
-from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
-from daq_queuing_service.blueapi_interaction.get_client import get_blueapi_client
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
+    BlueapiClientAdapter,
+)
+from daq_queuing_service.external_interaction.blueapi.get_client import (
+    get_blueapi_client,
+)
 from daq_queuing_service.plugins.converter import get_converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
