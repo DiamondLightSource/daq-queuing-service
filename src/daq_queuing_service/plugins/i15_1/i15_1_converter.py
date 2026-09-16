@@ -5,7 +5,8 @@ from typing import Any
 from blueapi.service.model import TaskRequest
 from tiled.client.container import Container as TiledContainer
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.auxiliary import (
@@ -19,10 +20,7 @@ from daq_queuing_service.plugins.i15_1.standards import (
     StandardsPin,
     StandardsPuck,
 )
-from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    get_suitable_tiled_scan,
-    get_tiled_client,
-)
+from daq_queuing_service.plugins.i15_1.tiled_interaction import get_suitable_tiled_scan
 from daq_queuing_service.task_queue.task import (
     Container,
     ContainerPosition,
