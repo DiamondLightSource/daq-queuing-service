@@ -26,8 +26,7 @@ TILED_STALE_TIME = 60 * 15
 
 
 def get_suitable_tiled_background(
-    tiled_client: Container,
-    required_background: BackgroundInfo,
+    tiled_client: Container, required_background: BackgroundInfo
 ) -> TiledBackground | None:
 
     @cached(cache)

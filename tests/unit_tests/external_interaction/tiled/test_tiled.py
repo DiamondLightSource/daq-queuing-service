@@ -1,13 +1,52 @@
 import logging
 from unittest.mock import MagicMock, patch
 
+import pytest
 from pydantic import SecretStr
 from pytest import LogCaptureFixture
+from tiled.queries import Eq
 
 from daq_queuing_service.external_interaction.tiled.tiled import (
     TILED_URL,
+    get_metadata_from_tiled,
     get_tiled_client,
 )
+
+
+@pytest.fixture()
+def mock_tiled_search(
+    tiled_client: MagicMock,
+) -> tuple[MagicMock, MagicMock]:
+
+    result_1 = MagicMock()
+    result_1.metadata = {
+        "start": {
+            "time": 3,
+            "experiment_definition": {"data": {"time_per_pdf": 10}},
+            "sample_info": {"data": {"capillary": "air"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_id": 10001,
+        }
+    }
+    result_2 = MagicMock()
+    result_2.metadata = {
+        "start": {
+            "time": 2,
+            "experiment_definition": {"data": {"time_per_pdf": 15}},
+            "sample_info": {"data": {"capillary": "air"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_id": 10000,
+        }
+    }
+
+    search_result = MagicMock()
+    search_result.search = MagicMock(
+        return_value={"tiled_id_1": result_1, "tiled_id_2": result_2}
+    )
+
+    tiled_client.search = MagicMock(return_value=search_result)
+
+    return (tiled_client, search_result)
 
 
 def test_get_tiled_client_instantiates_client_from_uri():
@@ -63,3 +102,56 @@ def test_get_tiled_client_adds_tiled_auth_with_client_id_and_secret_if_found(
         TILED_URL,
         auth=mock_tiled_auth_cls.return_value,
     )
+
+
+def test_get_metadata_from_tiled_makes_expected_searches(
+    mock_tiled_search: tuple[MagicMock, MagicMock],
+):
+    client, result = mock_tiled_search
+    get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
+    client.search.assert_called_once_with(
+        Eq(key="start.instrument_session", value="cm12345-1")
+    )
+    result.search.assert_called_once_with(Eq("start.blueapi_task_id", "bapi_task_id"))
+
+
+def test_get_metadata_from_tiled_returns_expected_result(
+    mock_tiled_search: tuple[MagicMock, MagicMock],
+):
+    client, _ = mock_tiled_search
+    result = get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
+    assert result == [  # Should be in chronological order
+        (
+            "tiled_id_2",
+            {
+                "start": {
+                    "time": 2,
+                    "experiment_definition": {"data": {"time_per_pdf": 15}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10000,
+                }
+            },
+        ),
+        (
+            "tiled_id_1",
+            {
+                "start": {
+                    "time": 3,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10001,
+                }
+            },
+        ),
+    ]
+
+
+def test_get_metadata_from_tiled_returns_empty_list_if_no_result_found(
+    mock_tiled_search: tuple[MagicMock, MagicMock],
+):
+    client, search = mock_tiled_search
+    search.search = MagicMock(return_value={})
+    result = get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
+    assert result == []
