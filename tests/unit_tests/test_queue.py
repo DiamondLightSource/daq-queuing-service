@@ -302,8 +302,8 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     errors=[],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=0,
@@ -331,8 +331,8 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     errors=[],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=1,
@@ -360,8 +360,8 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     errors=[],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=2,
@@ -404,8 +404,8 @@ async def test_get_history_only_returns_tasks_in_history(
                     ],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
@@ -433,8 +433,8 @@ async def test_get_history_only_returns_tasks_in_history(
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
@@ -478,8 +478,8 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     ],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
@@ -507,8 +507,8 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
@@ -536,8 +536,8 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=0,
@@ -565,8 +565,8 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=1,
@@ -594,8 +594,8 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=None,
                     blueapi_id=None,
-                    tiled_id=None,
-                    scan_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=2,
@@ -899,8 +899,8 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             result=None,
             errors=[],
             blueapi_id=None,
-            tiled_id=None,
-            scan_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -911,8 +911,8 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             result=None,
             errors=[],
             blueapi_id=None,
-            tiled_id=None,
-            scan_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -923,8 +923,8 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             result=None,
             errors=[],
             blueapi_id=None,
-            tiled_id=None,
-            scan_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
     ]
 
@@ -947,8 +947,8 @@ async def test_get_call_history_returns_calls_in_call_history(
                 )
             ],
             blueapi_id=None,
-            tiled_id=None,
-            scan_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -959,8 +959,8 @@ async def test_get_call_history_returns_calls_in_call_history(
             result=TaskResult(outcome="success", result=None, type="NoneType"),
             errors=[],
             blueapi_id=None,
-            tiled_id=None,
-            scan_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
     ]
 
@@ -1273,44 +1273,48 @@ async def test__sync_calls_converter_pre_process_with_expected_args(
 async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
     task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
 ):
-    patch_get_metadata_from_tiled.return_value = (
-        "tiled_id",
-        {
-            "start": {
-                "time": 1,
-                "experiment_definition": {"data": {"time_per_pdf": 10}},
-                "sample_info": {"data": {"capillary": "air"}},
-                "data_session_directory": "/path/to/data/2026/cm12345-1",
-                "scan_id": "10000",
-            }
-        },
-    )
+    patch_get_metadata_from_tiled.return_value = [
+        (
+            "tiled_id",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": "10000",
+                }
+            },
+        )
+    ]
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
     assert call.status == CallStatus.IN_PROGRESS
     await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
-    assert call.scan_id == "10000"
-    assert call.tiled_id == "tiled_id"
+    assert call.scan_ids == ["10000"]
+    assert call.tiled_ids == ["tiled_id"]
 
 
 async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
     task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
 ):
-    patch_get_metadata_from_tiled.return_value = (
-        "tiled_id_1",
-        {
-            "start": {
-                "time": 1,
-                "experiment_definition": {"data": {"time_per_pdf": 10}},
-                "sample_info": {"data": {"capillary": "air"}},
-                "data_session_directory": "/path/to/data/2026/cm12345-1",
-                "scan_id": "10001",
-            }
-        },
-    )
+    patch_get_metadata_from_tiled.return_value = [
+        (
+            "tiled_id_1",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": "10001",
+                }
+            },
+        )
+    ]
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
     assert call.status == CallStatus.IN_PROGRESS
     await task_queue.fail_call(call)
-    assert call.scan_id == "10001"
-    assert call.tiled_id == "tiled_id_1"
+    assert call.scan_ids == ["10001"]
+    assert call.tiled_ids == ["tiled_id_1"]

@@ -246,8 +246,8 @@ def patch_get_tiled_client():
 @pytest.fixture(autouse=True)
 def patch_get_metadata_from_tiled():
     with patch(
-        "daq_queuing_service.task_queue.queue.get_metadata_from_tiled",
-        MagicMock(return_value=None),
+        "daq_queuing_service.external_interaction.tiled.tiled.get_metadata_from_tiled",
+        MagicMock(return_value=[]),
     ) as mock_get_metadata_from_tiled:
         yield mock_get_metadata_from_tiled
 

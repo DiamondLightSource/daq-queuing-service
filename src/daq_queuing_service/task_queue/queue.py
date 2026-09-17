@@ -4,7 +4,7 @@ from copy import deepcopy
 from enum import StrEnum
 from functools import cached_property
 from types import TracebackType
-from typing import Any, Literal, TypedDict
+from typing import Literal, TypedDict
 
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     CallStatus,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import (
-    get_metadata_from_tiled,
+    get_tiled_and_scan_ids,
     get_tiled_client,
 )
 from daq_queuing_service.log import LOGGER
@@ -324,22 +324,11 @@ class TaskQueue:
             task (Task): Task to be completed
             result (TaskResult): The result of the task from blueapi
         """
-
-        md = get_metadata_from_tiled(
-            self._tiled_client,
-            call.task_request.instrument_session,
-            call.blueapi_id or "",
-        )
-
-        tiled_id, metadata = md if md else (None, None)
-        scan_id = None
-        if metadata:
-            start_doc: dict[str, Any] = metadata["start"]
-            scan_id = start_doc.get("scan_id")
+        tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
 
         async with self._modifying:
-            call.tiled_id = tiled_id
-            call.scan_id = scan_id
+            call.tiled_ids = tiled_ids
+            call.scan_ids = scan_ids
             self._check_call_valid_to_be_returned(call)
             call.succeed(result)
             self._call_history.append(call)
@@ -355,21 +344,11 @@ class TaskQueue:
             errors (list[str  |  TaskError] | None, optional): A list of errors that
             occurred when trying to run the task. Defaults to None.
         """
-        md = get_metadata_from_tiled(
-            self._tiled_client,
-            call.task_request.instrument_session,
-            call.blueapi_id or "",
-        )
-
-        tiled_id, metadata = md if md else (None, None)
-        scan_id = None
-        if metadata:
-            start_doc: dict[str, Any] = metadata["start"]
-            scan_id = start_doc.get("scan_id")
+        tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
 
         async with self._modifying:
-            call.tiled_id = tiled_id
-            call.scan_id = scan_id
+            call.tiled_ids = tiled_ids
+            call.scan_ids = scan_ids
             self._pause_queue(PauseReason.ERROR)
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)

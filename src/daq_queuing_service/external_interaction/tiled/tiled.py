@@ -9,12 +9,14 @@ from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.queries import Eq
 
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
 from daq_queuing_service.log import LOGGER
 
 # Ignoring the following rule as the tiled client is poorly typed
 # pyright: reportUnknownMemberType=false
 # pyright: reportUnknownVariableType=false
 # pyright: reportUnknownArgumentType=false
+# pyright: reportUnknownLambdaType=false
 
 
 TILED_URL = "https://tiled.diamond.ac.uk"
@@ -53,18 +55,35 @@ def get_tiled_client(
 
 def get_metadata_from_tiled(
     tiled_client: Container, instrument_session: str, blueapi_task_id: str
-) -> tuple[str, dict[str, Any]] | None:
+) -> list[tuple[str, dict[str, Any]]]:
 
     @cached(cache)
     def _query_tiled(
         instrument_session: str, blueapi_task_id: str
-    ) -> tuple[str, dict[str, Any]] | None:
+    ) -> list[tuple[str, dict[str, Any]]]:
         result: Container = tiled_client.search(
             Eq("start.instrument_session", instrument_session)
         ).search(Eq("start.blueapi_task_id", blueapi_task_id))
-        if not result.keys():
-            return
-        tiled_id = list(result.keys())[0]
-        return tiled_id, dict(result[tiled_id].metadata)
+
+        items = sorted(
+            ((key, dict(value.metadata)) for key, value in result.items()),
+            key=lambda item: item[1]["start"]["time"],
+        )
+        return items
 
     return _query_tiled(instrument_session, blueapi_task_id)
+
+
+def get_tiled_and_scan_ids(tiled_client: Container, call: BlueapiCall):
+    tiled_ids: list[str] = []
+    scan_ids: list[str] = []
+    scan_metadatas = get_metadata_from_tiled(
+        tiled_client, call.task_request.instrument_session, call.blueapi_id or ""
+    )
+
+    for item in scan_metadatas:
+        tiled_id, metadata = item
+        tiled_ids.append(tiled_id)
+        scan_ids.append(metadata["start"]["scan_id"])
+
+    return tiled_ids, scan_ids

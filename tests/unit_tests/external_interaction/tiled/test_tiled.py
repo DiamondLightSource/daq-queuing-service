@@ -17,12 +17,22 @@ from daq_queuing_service.external_interaction.tiled.tiled import (
 def mock_tiled_search(
     tiled_client: MagicMock,
 ) -> tuple[MagicMock, MagicMock]:
-    result = MagicMock()
 
-    result.metadata = {
+    result_1 = MagicMock()
+    result_1.metadata = {
         "start": {
-            "time": 1,
+            "time": 3,
             "experiment_definition": {"data": {"time_per_pdf": 10}},
+            "sample_info": {"data": {"capillary": "air"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_id": "i15-1-10001",
+        }
+    }
+    result_2 = MagicMock()
+    result_2.metadata = {
+        "start": {
+            "time": 2,
+            "experiment_definition": {"data": {"time_per_pdf": 15}},
             "sample_info": {"data": {"capillary": "air"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_id": "i15-1-10000",
@@ -30,7 +40,9 @@ def mock_tiled_search(
     }
 
     search_result = MagicMock()
-    search_result.search = MagicMock(return_value={"tiled_id_1": result})
+    search_result.search = MagicMock(
+        return_value={"tiled_id_1": result_1, "tiled_id_2": result_2}
+    )
 
     tiled_client.search = MagicMock(return_value=search_result)
 
@@ -108,24 +120,38 @@ def test_get_metadata_from_tiled_returns_expected_result(
 ):
     client, _ = mock_tiled_search
     result = get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
-    assert result
-    tiled_id, metadata = result
-    assert tiled_id == "tiled_id_1"
-    assert metadata == {
-        "start": {
-            "time": 1,
-            "experiment_definition": {"data": {"time_per_pdf": 10}},
-            "sample_info": {"data": {"capillary": "air"}},
-            "data_session_directory": "/path/to/data/2026/cm12345-1",
-            "scan_id": "i15-1-10000",
-        }
-    }
+    assert result == [  # Should be in chronological order
+        (
+            "tiled_id_2",
+            {
+                "start": {
+                    "time": 2,
+                    "experiment_definition": {"data": {"time_per_pdf": 15}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": "i15-1-10000",
+                }
+            },
+        ),
+        (
+            "tiled_id_1",
+            {
+                "start": {
+                    "time": 3,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": "i15-1-10001",
+                }
+            },
+        ),
+    ]
 
 
-def test_get_metadata_from_tiled_returns_none_if_no_result_found(
+def test_get_metadata_from_tiled_returns_empty_list_if_no_result_found(
     mock_tiled_search: tuple[MagicMock, MagicMock],
 ):
     client, search = mock_tiled_search
     search.search = MagicMock(return_value={})
     result = get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
-    assert result is None
+    assert result == []
