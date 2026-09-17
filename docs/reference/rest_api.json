@@ -740,27 +740,19 @@
             ],
             "title": "Blueapi Id"
           },
-          "tiled_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tiled Id"
+          "tiled_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tiled Ids"
           },
-          "scan_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scan Id"
+          "scan_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scan Ids"
           }
         },
         "type": "object",
@@ -773,8 +765,8 @@
           "result",
           "errors",
           "blueapi_id",
-          "tiled_id",
-          "scan_id"
+          "tiled_ids",
+          "scan_ids"
         ],
         "title": "BlueapiCallResponse"
       },
