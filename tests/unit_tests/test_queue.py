@@ -1052,11 +1052,13 @@ def test__copy_contents_creates_copies(task_queue: TaskQueue):
     assert isinstance(contents["tasks"]["4"].experiment, Experiment)
     a_task = task_queue._tasks["4"]
     assert isinstance(a_task.experiment, Experiment)
-
-    assert a_task.experiment.sample.name == "test_8_4"
+    assert a_task.experiment.sample and a_task.experiment.sample.name == "test_8_4"
     a_task.experiment.sample.name = "changed_name"
 
-    assert contents["tasks"]["4"].experiment.sample.name == "test_8_4"
+    assert (
+        contents["tasks"]["4"].experiment.sample
+        and contents["tasks"]["4"].experiment.sample.name == "test_8_4"
+    )
 
 
 def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
