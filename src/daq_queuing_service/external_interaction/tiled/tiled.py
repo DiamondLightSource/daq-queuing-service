@@ -86,4 +86,8 @@ def get_tiled_and_scan_ids(tiled_client: Container, call: BlueapiCall):
         tiled_ids.append(tiled_id)
         scan_ids.append(metadata["start"]["scan_id"])
 
+    LOGGER.info(
+        f"Found {len(tiled_ids)} scans in tiled for blueapi task id {call.blueapi_id}"
+        + f": {tiled_ids}"
+    )
     return tiled_ids, scan_ids
