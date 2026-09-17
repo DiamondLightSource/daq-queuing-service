@@ -41,7 +41,7 @@ class BlueapiCall(BaseModel):
     errors: list[str | TaskError] = Field(default_factory=list[str | TaskError])
     blueapi_id: str | None = None
     tiled_ids: list[str] = Field(default_factory=list)
-    scan_ids: list[str] = Field(default_factory=list)
+    scan_ids: list[int] = Field(default_factory=list[int])
 
     def _update_status(self, new_status: CallStatus):
         """Updates the status of the task, checking that the transition is valid
@@ -117,7 +117,7 @@ class BlueapiCallResponse(BaseModel):
     errors: list[str | TaskError]
     blueapi_id: str | None
     tiled_ids: list[str]
-    scan_ids: list[str]
+    scan_ids: list[int]
 
     @classmethod
     def from_blueapi_call(cls, blueapi_call: BlueapiCall):

@@ -1282,7 +1282,7 @@ async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
                     "experiment_definition": {"data": {"time_per_pdf": 10}},
                     "sample_info": {"data": {"capillary": "air"}},
                     "data_session_directory": "/path/to/data/2026/cm12345-1",
-                    "scan_id": "10000",
+                    "scan_id": 10000,
                 }
             },
         )
@@ -1291,7 +1291,7 @@ async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
     call.put_in_progress()
     assert call.status == CallStatus.IN_PROGRESS
     await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
-    assert call.scan_ids == ["10000"]
+    assert call.scan_ids == [10000]
     assert call.tiled_ids == ["tiled_id"]
 
 
@@ -1307,7 +1307,7 @@ async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
                     "experiment_definition": {"data": {"time_per_pdf": 10}},
                     "sample_info": {"data": {"capillary": "air"}},
                     "data_session_directory": "/path/to/data/2026/cm12345-1",
-                    "scan_id": "10001",
+                    "scan_id": 10001,
                 }
             },
         )
@@ -1316,5 +1316,5 @@ async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
     call.put_in_progress()
     assert call.status == CallStatus.IN_PROGRESS
     await task_queue.fail_call(call)
-    assert call.scan_ids == ["10001"]
+    assert call.scan_ids == [10001]
     assert call.tiled_ids == ["tiled_id_1"]

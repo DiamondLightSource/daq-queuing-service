@@ -25,7 +25,7 @@ def mock_tiled_search(
             "experiment_definition": {"data": {"time_per_pdf": 10}},
             "sample_info": {"data": {"capillary": "air"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
-            "scan_id": "i15-1-10001",
+            "scan_id": 10001,
         }
     }
     result_2 = MagicMock()
@@ -35,7 +35,7 @@ def mock_tiled_search(
             "experiment_definition": {"data": {"time_per_pdf": 15}},
             "sample_info": {"data": {"capillary": "air"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
-            "scan_id": "i15-1-10000",
+            "scan_id": 10000,
         }
     }
 
@@ -129,7 +129,7 @@ def test_get_metadata_from_tiled_returns_expected_result(
                     "experiment_definition": {"data": {"time_per_pdf": 15}},
                     "sample_info": {"data": {"capillary": "air"}},
                     "data_session_directory": "/path/to/data/2026/cm12345-1",
-                    "scan_id": "i15-1-10000",
+                    "scan_id": 10000,
                 }
             },
         ),
@@ -141,7 +141,7 @@ def test_get_metadata_from_tiled_returns_expected_result(
                     "experiment_definition": {"data": {"time_per_pdf": 10}},
                     "sample_info": {"data": {"capillary": "air"}},
                     "data_session_directory": "/path/to/data/2026/cm12345-1",
-                    "scan_id": "i15-1-10001",
+                    "scan_id": 10001,
                 }
             },
         ),
