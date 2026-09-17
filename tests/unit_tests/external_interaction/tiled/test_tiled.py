@@ -120,3 +120,12 @@ def test_get_metadata_from_tiled_returns_expected_result(
             "scan_id": "i15-1-10000",
         }
     }
+
+
+def test_get_metadata_from_tiled_returns_none_if_no_result_found(
+    mock_tiled_search: tuple[MagicMock, MagicMock],
+):
+    client, search = mock_tiled_search
+    search.search = MagicMock(return_value={})
+    result = get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
+    assert result is None
