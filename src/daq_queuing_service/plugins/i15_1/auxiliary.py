@@ -1,0 +1,105 @@
+from enum import StrEnum
+from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict, computed_field
+
+from daq_queuing_service.plugins.i15_1.standards import StandardsPin
+from daq_queuing_service.task_queue.task import Experiment
+
+
+class AuxiliaryScanType(StrEnum):
+    AIR = "Air"
+    EMPTY_CAPILLARY = "Empty Capillary"
+    STANDARD_SAMPLE = "Standard Sample"
+
+
+AUXILIARY_SCAN_NAMES = [member.value for member in AuxiliaryScanType]
+
+
+def is_auxiliary_str(value: str) -> bool:
+    return value in AUXILIARY_SCAN_NAMES
+
+
+class AuxiliaryScan(BaseModel):
+    # Currently only room temperatures scans are supported
+    # https://github.com/DiamondLightSource/daq-queuing-service/issues/84
+    model_config = ConfigDict(frozen=True)
+    instrument_session: str
+    pin: StandardsPin | None
+    time_per_pdf: float
+
+    @computed_field
+    @property
+    def kind(self) -> AuxiliaryScanType:
+        if self.pin is None:
+            return AuxiliaryScanType.AIR
+        if self.pin.contents is None:
+            return AuxiliaryScanType.EMPTY_CAPILLARY
+        return AuxiliaryScanType.STANDARD_SAMPLE
+
+    def is_suitable(self, required_background: "AuxiliaryScan") -> bool:
+        """Determine if this background is suitable compared to an experiment's required
+        background.
+
+        Args:
+            required_background (AuxiliaryScan): The required background
+
+        Returns:
+            bool: True if suitable, False if not
+        """
+        return (
+            self.instrument_session == required_background.instrument_session
+            and self.pin == required_background.pin
+            and self.time_per_pdf >= required_background.time_per_pdf
+        )
+
+    def attempt_to_combine_with(
+        self, required_background: "AuxiliaryScan"
+    ) -> "AuxiliaryScan | None":
+        """Creates a background that combines the requirements of this background object
+        and a provided required background, if possible.
+
+        Args:
+            required_background (AuxiliaryScan): The required background
+
+        Returns:
+            AuxiliaryScan | None: The combined background, or None if one is not
+            possible.
+        """
+        if not self.instrument_session == required_background.instrument_session:
+            return
+        if not self.pin == required_background.pin:
+            return
+
+        return AuxiliaryScan(
+            instrument_session=self.instrument_session,
+            pin=self.pin,
+            time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
+        )
+
+    @classmethod
+    def from_experiment(cls, experiment: Experiment) -> "AuxiliaryScan":
+        assert is_auxiliary_str(experiment.name), (
+            f"This experiment is not a background scan: {experiment}"
+        )
+
+        if experiment.sample is None:
+            pin = None
+        else:
+            pin = StandardsPin(
+                capillary=experiment.sample.data["capillary"],
+                contents=experiment.sample.data["composition"],
+            )
+
+        return cls(
+            instrument_session=experiment.instrument_session,
+            pin=pin,
+            time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
+        )
+
+
+class TiledAuxiliary(AuxiliaryScan):
+    tiled_id: str
+    filename: str
+    filepath: Path
+    instrument_session_directory: Path

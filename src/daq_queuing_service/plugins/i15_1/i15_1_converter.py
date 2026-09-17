@@ -9,14 +9,18 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import Blueap
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
-from daq_queuing_service.plugins.i15_1.backgrounds import (
-    BACKGROUND_SCAN,
-    BackgroundInfo,
-    TiledBackground,
+from daq_queuing_service.plugins.i15_1.auxiliary import (
+    AuxiliaryScan,
+    AuxiliaryScanType,
+    TiledAuxiliary,
+    is_auxiliary_str,
 )
-from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    get_suitable_tiled_background,
+from daq_queuing_service.plugins.i15_1.standards import (
+    STANDARDS_PUCK_PLACEMENT,
+    StandardsPin,
+    StandardsPuck,
 )
+from daq_queuing_service.plugins.i15_1.tiled_interaction import get_suitable_tiled_scan
 from daq_queuing_service.task_queue.task import (
     Container,
     ContainerPosition,
@@ -31,24 +35,28 @@ from daq_queuing_service.task_queue.task import (
 class ScanType(StrEnum):
     DATA_COLLECTION = "Data Collection"
     CENTRING = "Centring"
-    BACKGROUND = BACKGROUND_SCAN
-    STANDARD_SAMPLE = "Standard Sample"
+    AIR = AuxiliaryScanType.AIR
+    EMPTY_CAPILLARY = AuxiliaryScanType.EMPTY_CAPILLARY
+    STANDARD_SAMPLE = AuxiliaryScanType.STANDARD_SAMPLE
 
 
-def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
+def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
     return [
-        (i, BackgroundInfo.from_experiment(task.experiment))
+        (i, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
-        and task.experiment.name == ScanType.BACKGROUND
+        and is_auxiliary_str(task.experiment.name)
     ]
 
 
 class I151Converter(Converter):
     def __init__(self):
-        # First key is the ID of the task using the background
-        # Second key is the tiled ID of the background
-        self._tiled_backgrounds: dict[str, dict[str, TiledBackground]] = {}
+        # First key is the ID of the task using the auxiliary scan
+        # Second key is the scan type of the auxiliary scan
+        self._tiled_auxiliary_scans: dict[
+            str, dict[AuxiliaryScanType, TiledAuxiliary]
+        ] = {}
+        self._standards_puck = StandardsPuck()
 
     @cached_property
     def _tiled_client(self) -> TiledContainer:
@@ -61,7 +69,7 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        return self._add_required_background_scans(current_task, queue)
+        return self._add_required_auxiliary_scans(current_task, queue)
 
     def construct_blueapi_calls(
         self,
@@ -96,12 +104,12 @@ class I151Converter(Converter):
         self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
-        position = experiment.sample.positionInContainer.position
-        puck = experiment.sample.container.positionInParent.position
 
         match experiment.name:
-            case ScanType.BACKGROUND:
-                scan_type = ScanType.BACKGROUND
+            case ScanType.AIR:
+                scan_type = ScanType.AIR
+            case ScanType.EMPTY_CAPILLARY:
+                scan_type = ScanType.EMPTY_CAPILLARY
             case ScanType.STANDARD_SAMPLE:
                 scan_type = ScanType.STANDARD_SAMPLE
             case _:
@@ -112,8 +120,8 @@ class I151Converter(Converter):
             "experiment_definition": experiment.experiment_definition,
             "scan_type": scan_type,
         }
-        if tiled_backgrounds := self._tiled_backgrounds.get(task_id):
-            collection_metadata["tiled_backgrounds"] = tiled_backgrounds
+        if tiled_auxiliary_scans := self._tiled_auxiliary_scans.get(task_id):
+            collection_metadata["auxiliary_scans"] = tiled_auxiliary_scans
 
         # Assume collections with lists of temperatures are blowers, see
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
@@ -147,8 +155,11 @@ class I151Converter(Converter):
                 instrument_session=experiment.instrument_session,
             )
 
-        if experiment.sample.data["capillary"] == "air":
-            return [data_collection]
+        if experiment.sample is None:
+            return [data_collection]  # Air scan
+
+        position = experiment.sample.positionInContainer.position
+        puck = experiment.sample.container.positionInParent.position
 
         return [
             TaskRequest(
@@ -179,10 +190,10 @@ class I151Converter(Converter):
             ),
         ]
 
-    def _add_required_background_scans(
+    def _add_required_auxiliary_scans(
         self, current_task: TaskWithPosition | None, tasks: list[Task]
     ) -> list[Task]:
-        """Adds background scan tasks to the queue. Backgrounds will be added directly
+        """Adds auxiliary scan tasks to the queue. They will be added directly
         in front of the first task in the queue that requires them.
 
         Args:
@@ -190,34 +201,39 @@ class I151Converter(Converter):
             tasks (list[Task]): Current list of tasks
 
         Returns:
-            list[Task]: New list of tasks including backgrounds
+            list[Task]: New list of tasks including auxiliary scans
         """
-        LOGGER.info("Adding required background scans")
-        self._tiled_backgrounds = {task.id: {} for task in tasks}
+        LOGGER.info("Adding required auxiliary scans")
+        self._tiled_auxiliary_scans = {task.id: {} for task in tasks}
 
         new_tasks: list[Task] = []
 
         for task in tasks:
             experiment = task.experiment
-            if (
-                isinstance(experiment, Experiment)
-                and experiment.name != ScanType.BACKGROUND
+            if isinstance(experiment, Experiment) and not is_auxiliary_str(
+                experiment.name
             ):
                 instrument_session = experiment.instrument_session
 
-                required_backgrounds = self._get_required_backgrounds(experiment)
+                required_auxiliary_scans = self._get_required_auxiliary_scans(
+                    experiment
+                )
 
-                for background in required_backgrounds:
-                    new_tasks = self._ensure_background_in_queue_or_tiled(
-                        background, current_task, new_tasks, task.id, instrument_session
+                for required_auxiliary in required_auxiliary_scans:
+                    new_tasks = self._ensure_auxiliary_in_queue_or_tiled(
+                        required_auxiliary,
+                        current_task,
+                        new_tasks,
+                        task.id,
+                        instrument_session,
                     )
 
             new_tasks.append(task)
         return new_tasks
 
-    def _ensure_background_in_queue_or_tiled(
+    def _ensure_auxiliary_in_queue_or_tiled(
         self,
-        required_background: BackgroundInfo,
+        required_auxiliary: AuxiliaryScan,
         current_task: TaskWithPosition | None,
         new_tasks: list[Task],
         task_id: str,
@@ -226,102 +242,128 @@ class I151Converter(Converter):
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
-            and current_task.experiment.name == ScanType.BACKGROUND
-            and BackgroundInfo.from_experiment(current_task.experiment).is_suitable(
-                required_background
+            and is_auxiliary_str(current_task.experiment.name)
+            and AuxiliaryScan.from_experiment(current_task.experiment).is_suitable(
+                required_auxiliary
             )
         ):
             return new_tasks
 
-        queued_backgrounds = _filter_backgrounds(new_tasks)
+        queued_auxiliary_scans = _filter_auxiliary_scans(new_tasks)
         if any(
-            queued_background.is_suitable(required_background)
-            for _, queued_background in queued_backgrounds
+            queued_auxiliary.is_suitable(required_auxiliary)
+            for _, queued_auxiliary in queued_auxiliary_scans
         ):
             return new_tasks
 
-        if tiled_background := get_suitable_tiled_background(
-            self._tiled_client, required_background
+        if tiled_scan := get_suitable_tiled_scan(
+            self._tiled_client, required_auxiliary
         ):
-            self._tiled_backgrounds[task_id][tiled_background.tiled_id] = (
-                tiled_background
-            )
+            self._tiled_auxiliary_scans[task_id][tiled_scan.kind] = tiled_scan
             return new_tasks
 
         LOGGER.info(
-            f"No existing suitable backgrounds found for {required_background}, "
+            f"No existing suitable auxiliary scans found for {required_auxiliary}, "
             + "modifying or adding one"
         )
-        return self._add_or_replace_background(
-            required_background,
+        return self._add_or_replace_auxiliary_scan(
+            required_auxiliary,
             new_tasks,
-            queued_backgrounds,
+            queued_auxiliary_scans,
             instrument_session,
         )
 
-    def _add_or_replace_background(
+    def _add_or_replace_auxiliary_scan(
         self,
-        required_background: BackgroundInfo,
+        required_auxiliary: AuxiliaryScan,
         new_tasks: list[Task],
-        queued_backgrounds: list[tuple[int, BackgroundInfo]],
+        queued_auxiliary_scans: list[tuple[int, AuxiliaryScan]],
         instrument_session: str,
     ) -> list[Task]:
-        combined_background = None
+        combined_auxiliary_scan = None
         index = None
 
-        for i, background in queued_backgrounds:
-            if combined_background := background.attempt_to_combine_with(
-                required_background
+        for i, auxiliary_scan in queued_auxiliary_scans:
+            if combined_auxiliary_scan := auxiliary_scan.attempt_to_combine_with(
+                required_auxiliary
             ):
                 index = i
                 break
 
-        bg_experiment = self._construct_background_experiment(
-            combined_background or required_background, instrument_session
+        aux_experiment = self._construct_auxiliary_experiment(
+            combined_auxiliary_scan or required_auxiliary, instrument_session
         )
         if index is None:
-            new_tasks.append(Task(experiment=bg_experiment))
+            new_tasks.append(Task(experiment=aux_experiment))
         else:
-            new_tasks[index] = Task(experiment=bg_experiment)
+            new_tasks[index] = Task(experiment=aux_experiment)
         return new_tasks
 
-    def _get_required_backgrounds(self, experiment: Experiment) -> list[BackgroundInfo]:
+    def _get_required_auxiliary_scans(
+        self, experiment: Experiment
+    ) -> list[AuxiliaryScan]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+        assert experiment.sample
         return [
-            BackgroundInfo(
+            AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
-                bg_type="air",
+                pin=None,
                 time_per_pdf=time_per_pdf,
             ),
-            BackgroundInfo(
+            AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
-                bg_type=experiment.sample.data["capillary"],
+                pin=StandardsPin(
+                    capillary=experiment.sample.data["capillary"], contents=None
+                ),
+                time_per_pdf=time_per_pdf,
+            ),
+            AuxiliaryScan(
+                instrument_session=experiment.instrument_session,
+                pin=StandardsPin(
+                    capillary=experiment.sample.data["capillary"], contents="Silicon"
+                ),
                 time_per_pdf=time_per_pdf,
             ),
         ]
 
-    def _construct_background_experiment(
-        self, background: BackgroundInfo, instrument_session: str
+    def _construct_auxiliary_experiment(
+        self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
-        LOGGER.debug(f"Constructing experiment for background: {background}")
-        container_position = ContainerPosition(position=1)
+        LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
+
         return Experiment(
-            name=ScanType.BACKGROUND,
+            name=auxiliary_scan.kind,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=Sample(
-                name=background.bg_type
-                if background.bg_type == "air"
-                else f"Empty {background.bg_type}",
-                id="",
-                data={"capillary": background.bg_type},
-                container=Container(id="", positionInParent=container_position),
-                positionInContainer=container_position,
-            ),
+            sample=self._construct_auxiliary_sample(auxiliary_scan.pin),
             experiment_definition=ExperimentDefinition(
-                name=ScanType.BACKGROUND,
+                name=f"Auxiliary {auxiliary_scan.kind} Scan",
                 id="",
-                data={"time_per_pdf": background.time_per_pdf},
+                data={"time_per_pdf": auxiliary_scan.time_per_pdf},
             ),
+        )
+
+    def _construct_auxiliary_sample(self, pin: StandardsPin | None):
+        if pin is None:
+            return
+
+        data = {"capillary": pin.capillary, "composition": pin.contents}
+        puck = Container(
+            id="",
+            positionInParent=ContainerPosition(position=STANDARDS_PUCK_PLACEMENT),
+        )
+        position = ContainerPosition(position=self._standards_puck.get_pin_number(pin))
+
+        if pin.contents is None:
+            name = f"Empty {pin.capillary}"
+        else:
+            name = f"{pin.contents} {pin.capillary}"
+
+        return Sample(
+            name=name,
+            data=data,
+            id="",
+            container=puck,
+            positionInContainer=position,
         )

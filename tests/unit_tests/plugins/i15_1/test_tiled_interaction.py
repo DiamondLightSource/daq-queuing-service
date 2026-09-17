@@ -2,15 +2,16 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from tiled.queries import Comparison, Eq, KeyPresent
+from tiled.queries import Comparison, Eq, In, KeyPresent
 
-from daq_queuing_service.plugins.i15_1.backgrounds import (
-    BackgroundInfo,
-    TiledBackground,
+from daq_queuing_service.plugins.i15_1.auxiliary import (
+    AuxiliaryScan,
+    TiledAuxiliary,
 )
+from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     TILED_STALE_TIME,
-    get_suitable_tiled_background,
+    get_suitable_tiled_scan,
 )
 
 
@@ -25,16 +26,17 @@ def mock_current_time():
 @pytest.fixture()
 def mock_tiled_searches(
     tiled_client: MagicMock,
-) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
 
     result_1.metadata = {
         "start": {
             "time": 1,
             "experiment_definition": {"data": {"time_per_pdf": 10}},
-            "sample_info": {"data": {"capillary": "air"}},
+            "sample_info": None,
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10000",
+            "scan_type": "Air",
         }
     }
     result_2 = MagicMock()
@@ -45,6 +47,7 @@ def mock_tiled_searches(
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10001",
+            "scan_type": "Empty Capillary",
         }
     }
     result_3 = MagicMock()
@@ -55,6 +58,7 @@ def mock_tiled_searches(
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10002",
+            "scan_type": "Empty Capillary",
         }
     }
     result_4 = MagicMock()
@@ -65,11 +69,12 @@ def mock_tiled_searches(
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10003",
+            "scan_type": "Empty Capillary",
         }
     }
 
-    search_result_7 = MagicMock()
-    search_result_7.search = MagicMock(
+    search_result_6 = MagicMock()
+    search_result_6.search = MagicMock(
         return_value={
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
@@ -78,8 +83,6 @@ def mock_tiled_searches(
         }
     )
 
-    search_result_6 = MagicMock()
-    search_result_6.search = MagicMock(return_value=search_result_7)
     search_result_5 = MagicMock()
     search_result_5.search = MagicMock(return_value=search_result_6)
     search_result_4 = MagicMock()
@@ -98,21 +101,18 @@ def mock_tiled_searches(
         search_result_4,
         search_result_5,
         search_result_6,
-        search_result_7,
     )
 
 
 def test_get_suitable_tiled_background_makes_expected_searches(
     mock_tiled_searches: tuple[
-        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
+        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
     ],
 ):
-    client, search_2, search_3, search_4, search_5, search_6, search_7 = (
-        mock_tiled_searches
-    )
-    get_suitable_tiled_background(
+    client, search_2, search_3, search_4, search_5, search_6 = mock_tiled_searches
+    get_suitable_tiled_scan(
         client,
-        BackgroundInfo(instrument_session="cm12345-1", bg_type="air", time_per_pdf=10),
+        AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
     )
     client.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_2.search.assert_called_once_with(
@@ -122,11 +122,10 @@ def test_get_suitable_tiled_background_makes_expected_searches(
     search_4.search.assert_called_once_with(
         Comparison("ge", "stop.time", 30 - TILED_STALE_TIME)
     )
-    search_5.search.assert_called_once_with(Eq("start.background", True))
-    search_6.search.assert_called_once_with(
-        KeyPresent("start.sample_info.data.capillary")
+    search_5.search.assert_called_once_with(
+        In(key="start.scan_type", value=["Air", "Empty Capillary", "Standard Sample"])
     )
-    search_7.search.assert_called_once_with(
+    search_6.search.assert_called_once_with(
         KeyPresent("start.experiment_definition.data.time_per_pdf")
     )
 
@@ -135,16 +134,18 @@ def test_get_background_tiled_returns_most_recent_valid_background(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_ = mock_tiled_searches
-    result = get_suitable_tiled_background(
+    result = get_suitable_tiled_scan(
         client,
-        BackgroundInfo(
-            instrument_session="cm12345-1", bg_type="fq1.0", time_per_pdf=10
+        AuxiliaryScan(
+            instrument_session="cm12345-1",
+            pin=StandardsPin(capillary="fq1.0", contents=None),
+            time_per_pdf=10,
         ),
     )
-    assert result == TiledBackground(
+    assert result == TiledAuxiliary(
         instrument_session="cm12345-1",
         tiled_id="tiled_id_2",
-        bg_type="fq1.0",
+        pin=StandardsPin(capillary="fq1.0", contents=None),
         time_per_pdf=11,
         filename="i15-1-10001.nxs",
         instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
@@ -158,11 +159,9 @@ def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_f
     client, *_, final_search = mock_tiled_searches
     final_search.search.return_value = {}
     assert (
-        get_suitable_tiled_background(
+        get_suitable_tiled_scan(
             client,
-            BackgroundInfo(
-                instrument_session="cm12345-1", bg_type="air", time_per_pdf=10
-            ),
+            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
         )
         is None
     )

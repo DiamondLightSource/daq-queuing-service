@@ -3,13 +3,15 @@ from pathlib import Path
 
 from cachetools import TTLCache, cached
 from tiled.client.container import Container
-from tiled.queries import Comparison, Eq, KeyPresent
+from tiled.queries import Comparison, Eq, In, KeyPresent
 
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.i15_1.backgrounds import (
-    BackgroundInfo,
-    TiledBackground,
+from daq_queuing_service.plugins.i15_1.auxiliary import (
+    AUXILIARY_SCAN_NAMES,
+    AuxiliaryScan,
+    TiledAuxiliary,
 )
+from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 
 # Ignoring the following rules as the tiled client is poorly typed and scares the linter
 # pyright: reportUnknownMemberType=false
@@ -17,7 +19,7 @@ from daq_queuing_service.plugins.i15_1.backgrounds import (
 # pyright: reportUnknownArgumentType=false
 # pyright: reportUnknownLambdaType=false
 
-cache: TTLCache[tuple[BackgroundInfo, str], str | None] = TTLCache(maxsize=100, ttl=1)
+cache: TTLCache[tuple[AuxiliaryScan, str], str | None] = TTLCache(maxsize=100, ttl=1)
 
 TILED_URL = "https://tiled.diamond.ac.uk"
 
@@ -25,13 +27,13 @@ TILED_URL = "https://tiled.diamond.ac.uk"
 TILED_STALE_TIME = 60 * 15
 
 
-def get_suitable_tiled_background(
+def get_suitable_tiled_scan(
     tiled_client: Container,
-    required_background: BackgroundInfo,
-) -> TiledBackground | None:
+    required_scan: AuxiliaryScan,
+) -> TiledAuxiliary | None:
 
     @cached(cache)
-    def _query_tiled(instrument_session: str) -> list[TiledBackground]:
+    def _query_tiled(instrument_session: str) -> list[TiledAuxiliary]:
 
         oldest_valid_time = time.time() - TILED_STALE_TIME
         result: Container = (
@@ -39,8 +41,7 @@ def get_suitable_tiled_background(
             .search(Eq("start.instrument_session", instrument_session))
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
-            .search(Eq("start.background", True))
-            .search(KeyPresent("start.sample_info.data.capillary"))
+            .search(In("start.scan_type", AUXILIARY_SCAN_NAMES))
             .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
         )
 
@@ -50,7 +51,7 @@ def get_suitable_tiled_background(
             reverse=True,
         )
 
-        backgrounds: list[TiledBackground] = []
+        auxiliary_scans: list[TiledAuxiliary] = []
 
         for item in items:
             tiled_id = item[0]
@@ -59,32 +60,52 @@ def get_suitable_tiled_background(
             instrument_session_directory = Path(start_doc["data_session_directory"])
             filepath = instrument_session_directory / filename
 
-            bg_type = start_doc["sample_info"]["data"]["capillary"]
+            sample = start_doc.get("sample_info")
+
+            if sample is None:
+                pin = None
+            else:
+                capillary = sample["data"].get("capillary")
+                if not capillary:
+                    LOGGER.warning(
+                        f"No capillary found in tiled scan {tiled_id}. Skipping."
+                    )
+                    continue
+                pin = StandardsPin(
+                    capillary=sample["data"]["capillary"],
+                    contents=sample["data"].get("composition"),
+                )
             time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
 
-            backgrounds.append(
-                TiledBackground(
-                    tiled_id=tiled_id,
-                    instrument_session=instrument_session,
-                    filename=filename,
-                    instrument_session_directory=instrument_session_directory,
-                    filepath=filepath,
-                    bg_type=bg_type,
-                    time_per_pdf=time_per_pdf,
-                )
+            auxiliary_scan = TiledAuxiliary(
+                tiled_id=tiled_id,
+                instrument_session=instrument_session,
+                filename=filename,
+                instrument_session_directory=instrument_session_directory,
+                filepath=filepath,
+                pin=pin,
+                time_per_pdf=time_per_pdf,
             )
+            if auxiliary_scan.kind != start_doc["scan_type"]:
+                LOGGER.warning(
+                    f"Inferred auxiliary type: {auxiliary_scan.kind} does not match "
+                    + f"scan type in metadata: {start_doc['scan_type']} for auxiliary "
+                    + f"scan {auxiliary_scan}. Skipping."
+                )
+                continue
+            auxiliary_scans.append(auxiliary_scan)
 
         LOGGER.debug(
-            f"Found {len(backgrounds)} background scans in tiled since "
+            f"Found {len(auxiliary_scans)} auxiliary scans in tiled since "
             + f"{TILED_STALE_TIME}s ago for visit {instrument_session}."
         )
-        return backgrounds
+        return auxiliary_scans
 
-    backgrounds = _query_tiled(required_background.instrument_session)
-    for background in backgrounds:
-        if background.is_suitable(required_background):
-            LOGGER.info(f"Found suitable background in tiled: {background.tiled_id}")
-            return background
+    auxiliary_scans = _query_tiled(required_scan.instrument_session)
+    for scan in auxiliary_scans:
+        if scan.is_suitable(required_scan):
+            LOGGER.info(f"Found suitable auxiliary scans in tiled: {scan.tiled_id}")
+            return scan
     LOGGER.info(
-        f"Found no suitable backgrounds in tiled matching: {required_background}."
+        f"Found no suitable auxiliary scans in tiled matching: {required_scan}."
     )
