@@ -76,7 +76,7 @@ def get_metadata_from_tiled(
 
 def get_tiled_and_scan_ids(tiled_client: Container, call: BlueapiCall):
     tiled_ids: list[str] = []
-    scan_ids: list[str] = []
+    scan_ids: list[int] = []
     scan_metadatas = get_metadata_from_tiled(
         tiled_client, call.task_request.instrument_session, call.blueapi_id or ""
     )
@@ -84,7 +84,7 @@ def get_tiled_and_scan_ids(tiled_client: Container, call: BlueapiCall):
     for item in scan_metadatas:
         tiled_id, metadata = item
         tiled_ids.append(tiled_id)
-        scan_ids.append(metadata["start"]["scan_id"])
+        scan_ids.append(int(metadata["start"]["scan_id"]))
 
     LOGGER.info(
         f"Found {len(tiled_ids)} scans in tiled for blueapi task id {call.blueapi_id}"
