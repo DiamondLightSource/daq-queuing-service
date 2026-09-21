@@ -88,8 +88,8 @@ class I151Converter(Converter):
         self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
-        # position = experiment.sample.positionInContainer.position
-        # puck = experiment.sample.container.positionInParent.position
+        position = experiment.sample.positionInContainer.position
+        puck = experiment.sample.container.positionInParent.position
 
         is_background: bool = experiment.name == BACKGROUND_SCAN
 
@@ -136,32 +136,32 @@ class I151Converter(Converter):
         # For air calibration scans, we need to not to robot load/unload.
         # https://github.com/DiamondLightSource/daq-queuing-service/issues/83
         return [
-            # TaskRequest(
-            #     name="robot_load",
-            #     params={"puck": puck, "position": position},
-            #     instrument_session=experiment.instrument_session,
-            # ),
-            # TaskRequest(
-            #     name="centre_sample",
-            #     params={
-            #         "start_z": -20,
-            #         "end_z": 0,
-            #         "steps": 20,
-            #         "exposure_time": 0.01,
-            #         "metadata": {
-            #             "sample": experiment.sample,
-            #             # This will include tiled background scan info
-            #             "experiment_definition": experiment.experiment_definition,
-            #         },
-            #     },
-            #     instrument_session=experiment.instrument_session,
-            # ),
+            TaskRequest(
+                name="robot_load",
+                params={"puck": puck, "position": position},
+                instrument_session=experiment.instrument_session,
+            ),
+            TaskRequest(
+                name="centre_sample",
+                params={
+                    "start_z": -20,
+                    "end_z": 0,
+                    "steps": 20,
+                    "exposure_time": 0.01,
+                    "metadata": {
+                        "sample": experiment.sample,
+                        # This will include tiled background scan info
+                        "experiment_definition": experiment.experiment_definition,
+                    },
+                },
+                instrument_session=experiment.instrument_session,
+            ),
             data_collection,
-            # TaskRequest(
-            #     name="robot_unload",
-            #     params={},
-            #     instrument_session=experiment.instrument_session,
-            # ),
+            TaskRequest(
+                name="robot_unload",
+                params={},
+                instrument_session=experiment.instrument_session,
+            ),
         ]
 
     def _add_required_background_scans(
