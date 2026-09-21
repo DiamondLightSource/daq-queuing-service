@@ -1289,10 +1289,49 @@ async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
     ]
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
+    call.blueapi_id = "1234"
     assert call.status == CallStatus.IN_PROGRESS
     await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
     assert call.scan_ids == [10000]
     assert call.tiled_ids == ["tiled_id"]
+
+
+async def test_given_multiple_scans_then_complete_call_adds_correct_ids(
+    task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
+):
+    patch_get_metadata_from_tiled.return_value = [
+        (
+            "tiled_id",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10000,
+                }
+            },
+        ),
+        (
+            "tiled_id_2",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10001,
+                }
+            },
+        ),
+    ]
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    call.blueapi_id = "1234"
+    assert call.status == CallStatus.IN_PROGRESS
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert call.scan_ids == [10000, 10001]
+    assert call.tiled_ids == ["tiled_id", "tiled_id_2"]
 
 
 async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
@@ -1314,6 +1353,7 @@ async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
     ]
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
+    call.blueapi_id = "1234"
     assert call.status == CallStatus.IN_PROGRESS
     await task_queue.fail_call(call)
     assert call.scan_ids == [10001]

@@ -77,8 +77,13 @@ def get_metadata_from_tiled(
 def get_tiled_and_scan_ids(tiled_client: Container, call: BlueapiCall):
     tiled_ids: list[str] = []
     scan_ids: list[int] = []
+
+    if not call.blueapi_id:
+        LOGGER.warning(f"No BlueAPI ID associated with {call}")
+        return tiled_ids, scan_ids
+
     scan_metadatas = get_metadata_from_tiled(
-        tiled_client, call.task_request.instrument_session, call.blueapi_id or ""
+        tiled_client, call.task_request.instrument_session, call.blueapi_id
     )
 
     for item in scan_metadatas:
