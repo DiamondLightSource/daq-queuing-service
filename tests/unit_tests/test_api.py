@@ -178,6 +178,8 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": 0,
@@ -213,6 +215,8 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": 1,
@@ -248,6 +252,8 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": 2,
@@ -290,6 +296,8 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": 0,
@@ -346,6 +354,8 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                     },
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": None,
@@ -402,6 +412,8 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
                 result=None,
                 errors=[],
                 blueapi_id=None,
+                tiled_ids=[],
+                scan_ids=[],
             )
         ],
         position=3,
@@ -683,6 +695,8 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": None,
@@ -718,6 +732,8 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": None,
@@ -832,6 +848,8 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": None,
@@ -874,6 +892,8 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
+                    "tiled_ids": [],
+                    "scan_ids": [],
                 }
             ],
             "position": None,
@@ -922,6 +942,8 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
                 "result": None,
                 "errors": [],
                 "blueapi_id": None,
+                "tiled_ids": [],
+                "scan_ids": [],
             }
         ],
         "position": 1,
@@ -969,6 +991,8 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
                 "result": None,
                 "errors": [],
                 "blueapi_id": None,
+                "tiled_ids": [],
+                "scan_ids": [],
             }
         ],
         "position": 1,
