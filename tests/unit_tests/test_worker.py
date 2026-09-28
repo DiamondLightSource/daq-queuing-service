@@ -321,8 +321,6 @@ async def test_if_call_not_put_in_progress_by_event_then_call_put_in_progress_an
 
     assert first_call.status == CallStatus.SUCCESS
     assert (
-        "Call (task_request=TaskRequest(name='test', params={}, instrument_session='')"
-        + " parent_task_id='0' status=<CallStatus.CLAIMED: 'Claimed'> time_started=None"
-        + " time_completed=None result=None errors=[] blueapi_id=None) status was not "
-        + "updated to in progress even though the blueapi task is now complete!"
+        "status was not updated to in progress even though the blueapi task is now "
+        + "complete!"
     ) in caplog.text

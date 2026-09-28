@@ -739,6 +739,20 @@
               }
             ],
             "title": "Blueapi Id"
+          },
+          "tiled_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tiled Ids"
+          },
+          "scan_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scan Ids"
           }
         },
         "type": "object",
@@ -750,7 +764,9 @@
           "time_completed",
           "result",
           "errors",
-          "blueapi_id"
+          "blueapi_id",
+          "tiled_ids",
+          "scan_ids"
         ],
         "title": "BlueapiCallResponse"
       },

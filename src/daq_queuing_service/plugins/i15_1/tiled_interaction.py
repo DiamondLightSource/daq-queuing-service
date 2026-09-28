@@ -28,8 +28,7 @@ TILED_STALE_TIME = 60 * 15
 
 
 def get_suitable_tiled_scan(
-    tiled_client: Container,
-    required_scan: AuxiliaryScan,
+    tiled_client: Container, required_scan: AuxiliaryScan
 ) -> TiledAuxiliary | None:
 
     @cached(cache)
