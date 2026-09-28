@@ -67,7 +67,7 @@ def get_suitable_tiled_scan(
                 capillary = sample["data"].get("capillary")
                 if not capillary:
                     LOGGER.warning(
-                        f"No capillary found in tiled scan {tiled_id}. Skipping."
+                        f"No capillary found for tiled scan '{tiled_id}'. Skipping."
                     )
                     continue
                 pin = StandardsPin(
@@ -87,9 +87,9 @@ def get_suitable_tiled_scan(
             )
             if auxiliary_scan.kind != start_doc["scan_type"]:
                 LOGGER.warning(
-                    f"Inferred auxiliary type: {auxiliary_scan.kind} does not match "
-                    + f"scan type in metadata: {start_doc['scan_type']} for auxiliary "
-                    + f"scan {auxiliary_scan}. Skipping."
+                    f"Inferred auxiliary type: '{auxiliary_scan.kind}' does not match "
+                    + f"scan type in metadata: '{start_doc['scan_type']}' for auxiliary"
+                    + f" scan '{tiled_id}'. Skipping."
                 )
                 continue
             auxiliary_scans.append(auxiliary_scan)

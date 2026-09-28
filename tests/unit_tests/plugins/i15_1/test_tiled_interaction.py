@@ -1,7 +1,9 @@
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest import LogCaptureFixture
 from tiled.queries import Comparison, Eq, In, KeyPresent
 
 from daq_queuing_service.plugins.i15_1.auxiliary import (
@@ -164,4 +166,58 @@ def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_f
             AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
         )
         is None
+    )
+
+
+def test_get_suitable_tiled_background_skips_tiled_scan_if_no_capillary_found_and_warns(
+    mock_tiled_searches: tuple[MagicMock, ...], caplog: LogCaptureFixture
+):
+    client, *_, final_search = mock_tiled_searches
+    result = MagicMock()
+    result.metadata = {
+        "start": {
+            "time": 10,
+            "experiment_definition": {"data": {"time_per_pdf": 11}},
+            "sample_info": {"data": {}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10001",
+            "scan_type": "Empty Capillary",
+        }
+    }
+    final_search.search.return_value = {"tiled_id_1": result}
+    with caplog.at_level(logging.WARNING):
+        tiled_scan = get_suitable_tiled_scan(
+            client,
+            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+        )
+    assert tiled_scan is None
+    assert "No capillary found for tiled scan 'tiled_id_1'" in caplog.text
+
+
+def test_get_suitable_tiled_background_skips_tiled_scan_if_scan_type_doesnt_match(
+    mock_tiled_searches: tuple[MagicMock, ...], caplog: LogCaptureFixture
+):
+    client, *_, final_search = mock_tiled_searches
+    result = MagicMock()
+    result.metadata = {
+        "start": {
+            "time": 10,
+            "experiment_definition": {"data": {"time_per_pdf": 11}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10001",
+            "scan_type": "Air",  # Can't be an air scan as a capillary is given
+        }
+    }
+    final_search.search.return_value = {"tiled_id_1": result}
+    with caplog.at_level(logging.WARNING):
+        tiled_scan = get_suitable_tiled_scan(
+            client,
+            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+        )
+    assert tiled_scan is None
+    assert (
+        "Inferred auxiliary type: 'Empty Capillary' does not match scan type in "
+        + "metadata: 'Air' for auxiliary scan 'tiled_id_1'."
+        in caplog.text
     )
