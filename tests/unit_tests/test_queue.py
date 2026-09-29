@@ -820,6 +820,35 @@ async def test_complete_call_must_receive_exact_same_object_as_was_claimed(
         )
 
 
+async def test_complete_call_does_not_pause_queue_if_plugin_decides(
+    task_queue: TaskQueue,
+):
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+
+
+async def test_complete_call_pauses_queue_if_plugin_decides(
+    task_queue: TaskQueue, converter: Converter
+):
+    converter.pause_on_complete_blueapi_call = MagicMock(return_value=True)
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert task_queue.state == QueueState(
+        paused=True, last_pause_reason=PauseReason.PLUGIN_REQUESTED
+    )
+
+
 async def test_fail_call_puts_task_in_history_and_updates_status_to_complete(
     task_queue: TaskQueue,
 ):
@@ -855,7 +884,7 @@ async def test_fail_call_with_errors_adds_errors_to_call(
     assert call.errors == ["This task failed"]
 
 
-async def test_fail_call_pauses_queue(task_queue: TaskQueue):
+async def test_fail_call_pauses_queue_if_plugin_decides(task_queue: TaskQueue):
     assert task_queue.state == QueueState(
         paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
     )
@@ -864,6 +893,21 @@ async def test_fail_call_pauses_queue(task_queue: TaskQueue):
     await task_queue.fail_call(call, [str(error)])
     assert task_queue.state == QueueState(
         paused=True, last_pause_reason=PauseReason.ERROR
+    )
+
+
+async def test_fail_call_does_not_pause_queue_if_plugin_decides(
+    task_queue: TaskQueue, converter: Converter
+):
+    converter.pause_on_fail_blueapi_call = MagicMock(return_value=False)
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    error = "This task failed"
+    await task_queue.fail_call(call, [str(error)])
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
     )
 
 
