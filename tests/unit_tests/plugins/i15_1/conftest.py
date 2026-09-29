@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 from daq_config_server.models.i15_1 import StandardsPin, StandardsPuck
 
@@ -38,3 +40,14 @@ def standards_puck():
             22: StandardsPin(capillary="bs1.0", contents="Tungsten/Boron mix"),
         }
     )
+
+
+@pytest.fixture(autouse=True)
+def mock_config_client(standards_puck: StandardsPuck):
+    mock_config_server = MagicMock()
+    mock_config_server.get_file_contents = MagicMock(return_value=standards_puck)
+    with patch(
+        "daq_config_server.client.ConfigClient.from_url",
+        return_value=mock_config_server,
+    ):
+        yield mock_config_server

@@ -61,12 +61,10 @@ version_file = "src/daq_queuing_service/_version.py"
 
 [tool.pyright]
 typeCheckingMode = "strict"
-reportMissingImports = false # Ignore missing stubs in imported modules
+reportMissingImports = false    # Ignore missing stubs in imported modules
 reportMissingTypeStubs = "none"
 
-executionEnvironments = [
-    { root = "tests", reportPrivateUsage = false }
-]
+executionEnvironments = [{ root = "tests", reportPrivateUsage = false }]
 
 [tool.pytest.ini_options]
 # Run pytest with all our checkers, and don't spam us with massive tracebacks on error
@@ -142,12 +140,7 @@ commands = [
 [tool.tox.env.generate-api-docs]
 description = "Compile rest-api.json file from source code. This is then referenced in docs."
 deps = "-e ."
-commands = [
-    [
-        "{envpython}",
-        "utility_scripts/generate_api_docs.py",
-    ],
-]
+commands = [["{envpython}", "utility_scripts/generate_api_docs.py"]]
 
 [tool.tox.env.docs]
 description = "Run docs build with clean environment"
@@ -155,7 +148,7 @@ commands = [
     [
         "tox",
         "-e",
-        "generate-api-docs"
+        "generate-api-docs",
     ],
     [
         "sphinx-build",
