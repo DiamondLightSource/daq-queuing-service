@@ -21,7 +21,8 @@ from daq_queuing_service.external_interaction.tiled.tiled import (
     get_tiled_client,
 )
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter import Converter, ConverterError
+from daq_queuing_service.plugins import QueuePlugin
+from daq_queuing_service.plugins.utils import PluginError
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     TaskIdInUseError,
@@ -116,7 +117,7 @@ QUEUE_EVENTS = Literal[
 
 
 class TaskQueue:
-    def __init__(self, converter: Converter, broadcaster: Broadcaster[QUEUE_EVENTS]):
+    def __init__(self, plugin: QueuePlugin, broadcaster: Broadcaster[QUEUE_EVENTS]):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -127,7 +128,7 @@ class TaskQueue:
         self._state: QueueState = QueueState(
             paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE
         )
-        self._converter = converter
+        self._plugin = plugin
         self._broadcaster = broadcaster
         self._lock = asyncio.Lock()
         self._modifying = Modifying(
@@ -159,7 +160,7 @@ class TaskQueue:
                 task.blueapi_calls = []
 
         try:
-            new_tasks = self._converter.pre_process(
+            new_tasks = self._plugin.pre_process(
                 self._get_running_task(),
                 [
                     self._tasks[task_id]
@@ -170,7 +171,7 @@ class TaskQueue:
                 self._queue_history,
             )
         except Exception as e:
-            raise ConverterError(e) from e
+            raise PluginError(e) from e
 
         # Update task_registry to match new tasks
         # Not needed as long as pre_process modifies in place
@@ -190,7 +191,7 @@ class TaskQueue:
 
         self._call_queue = [
             # Persist calls which aren't complete but who's parent task is in progress
-            # Once a task is in progress it is not provided to the converter
+            # Once a task is in progress it is not provided to the plugin for conversion
             # More work needed to allow for interleaved calls from different tasks,
             # and for in progress tasks to inform conversion
             call
@@ -202,13 +203,13 @@ class TaskQueue:
         ]
 
         try:
-            new_calls = self._converter.construct_blueapi_calls(
+            new_calls = self._plugin.construct_blueapi_calls(
                 [task for task in self._get_queue() if task.status == Status.QUEUED],
                 self._get_history(),
                 self._queue_history,
             )
         except Exception as e:
-            raise ConverterError(e) from e
+            raise PluginError(e) from e
 
         self._call_queue.extend(new_calls)
 

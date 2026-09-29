@@ -34,7 +34,7 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCallResponse,
     CallStatus,
 )
-from daq_queuing_service.plugins.converter import Converter
+from daq_queuing_service.plugins.base_plugin import QueuePlugin
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, PauseReason, TaskQueue
 from daq_queuing_service.task_queue.queue_utils import QueueError
 from daq_queuing_service.task_queue.task import (
@@ -67,7 +67,7 @@ def broadcaster() -> Broadcaster[QUEUE_EVENTS]:
 def app(
     task_queue_with_history: TaskQueue,
     broadcaster: Broadcaster[QUEUE_EVENTS],
-    converter: Converter,
+    queue_plugin: QueuePlugin,
 ) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
@@ -77,7 +77,7 @@ def app(
             task_queue_with_history,
             broadcaster,
             load_config(Path(TEST_CONFIG_PATH)),
-            converter,
+            queue_plugin,
         )
     )
     return app
@@ -446,14 +446,16 @@ async def test_add_tasks_to_queue_adds_user_to_task_object(
 
 
 async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_if_fails(
-    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+    test_client: TestClient,
+    task_queue_with_history: TaskQueue,
+    queue_plugin: QueuePlugin,
 ):
     class SomeError(Exception): ...
 
     def fail_validation(experiments: list[TaskRequest | Experiment]):
         raise SomeError("Validation failed because xyz")
 
-    converter.validate = fail_validation
+    queue_plugin.validate = fail_validation
 
     response = test_client.post(
         "/queue",
@@ -468,7 +470,9 @@ async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_i
 
 
 async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
-    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+    test_client: TestClient,
+    task_queue_with_history: TaskQueue,
+    queue_plugin: QueuePlugin,
 ):
     assert task_queue_with_history._queue == ["2", "3", "4"]
 
@@ -482,7 +486,7 @@ async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
     ):
         raise SomeError("Conversion failed because xyz")
 
-    converter.pre_process = fail_conversion
+    queue_plugin.pre_process = fail_conversion
 
     response = test_client.post(
         "/queue",
@@ -491,7 +495,7 @@ async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
 
     assert response.status_code == 422
     assert response.json() == {
-        "error": "converter_error",
+        "error": "plugin_error",
         "message": "SomeError: Conversion failed because xyz",
     }
     assert task_queue_with_history._queue == ["2", "3", "4"]
@@ -1060,9 +1064,9 @@ def test_any_queue_error_caught_by_error_handler(
 def test_get_config_returns_config(test_client: TestClient):
     response = test_client.get("/config")
     assert response.status_code == 200
-    assert response.json()["converter"] == {
-        "path": "daq_queuing_service.plugins.converter",
-        "name": "Converter",
+    assert response.json()["plugin"] == {
+        "path": "daq_queuing_service.plugins",
+        "name": "QueuePlugin",
     }
 
 

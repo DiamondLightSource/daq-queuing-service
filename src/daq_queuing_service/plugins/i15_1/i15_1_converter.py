@@ -7,7 +7,7 @@ from tiled.client.container import Container as TiledContainer
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter import Converter
+from daq_queuing_service.plugins import QueuePlugin
 from daq_queuing_service.plugins.i15_1.backgrounds import (
     BACKGROUND_SCAN,
     BackgroundInfo,
@@ -36,7 +36,7 @@ def _filter_backgrounds(tasks: list[Task]) -> list[tuple[int, BackgroundInfo]]:
     ]
 
 
-class I151Converter(Converter):
+class I151Plugin(QueuePlugin):
     def __init__(self):
         # First key is the ID of the task using the background
         # Second key is the tiled ID of the background
