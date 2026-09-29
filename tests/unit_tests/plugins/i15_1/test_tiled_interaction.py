@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from daq_config_server.models.i15_1.standards_puck import StandardsPin
 from pytest import LogCaptureFixture
 from tiled.queries import Comparison, Eq, In, KeyPresent
 
@@ -10,7 +11,6 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
     TILED_STALE_TIME,
     get_suitable_tiled_scan,

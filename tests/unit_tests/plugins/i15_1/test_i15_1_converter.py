@@ -6,6 +6,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
+from daq_config_server.models.i15_1.standards_puck import (
+    STANDARD_CAPILLARY,
+    STANDARD_SAMPLE,
+    StandardsPin,
+    StandardsPuck,
+)
 
 from daq_queuing_service.broadcaster import Broadcaster, serialise
 from daq_queuing_service.plugins.i15_1.auxiliary import (
@@ -14,12 +20,6 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     TiledAuxiliary,
 )
 from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter, ScanType
-from daq_queuing_service.plugins.i15_1.standards import (
-    STANDARD_CAPILLARY,
-    STANDARD_SAMPLE,
-    StandardsPin,
-    StandardsPuck,
-)
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Experiment,
@@ -107,6 +107,7 @@ def empty_capillary_task(
     instrument_session: str,
     time_per_pdf: float,
     capillary: STANDARD_CAPILLARY,
+    standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
     return {
         "experiment": {
@@ -123,7 +124,7 @@ def empty_capillary_task(
                     },
                 },
                 "positionInContainer": {
-                    "position": StandardsPuck().get_pin_number(
+                    "position": standards_puck.get_pin_number(
                         StandardsPin(capillary=capillary, contents=None)
                     ),
                 },
@@ -150,6 +151,7 @@ def standard_sample_task(
     time_per_pdf: float,
     capillary: STANDARD_CAPILLARY,
     contents: STANDARD_SAMPLE,
+    standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
     return {
         "experiment": {
@@ -166,7 +168,7 @@ def standard_sample_task(
                     },
                 },
                 "positionInContainer": {
-                    "position": StandardsPuck().get_pin_number(
+                    "position": standards_puck.get_pin_number(
                         StandardsPin(capillary=capillary, contents=contents)
                     ),
                 },
@@ -442,7 +444,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
 
 
 def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
-    background_not_found_in_tiled: MagicMock,
+    background_not_found_in_tiled: MagicMock, standards_puck: StandardsPuck
 ):
     converter = I151Converter()
     experiment = Experiment(
@@ -461,10 +463,10 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     assert len(tasks) == 4
     assert tasks[0].model_dump() == air_task(tasks[0].id, "cm12345-1", 100.0)
     assert tasks[1].model_dump() == empty_capillary_task(
-        tasks[1].id, "cm12345-1", 100.0, "fq1.0"
+        tasks[1].id, "cm12345-1", 100.0, "fq1.0", standards_puck
     )
     assert tasks[2].model_dump() == standard_sample_task(
-        tasks[2].id, "cm12345-1", 100.0, "fq1.0", "Silicon"
+        tasks[2].id, "cm12345-1", 100.0, "fq1.0", "Silicon", standards_puck
     )
     assert converter._tiled_auxiliary_scans == {"1": {}}
 
@@ -564,6 +566,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
     i15_1_converter: I151Converter,
     i15_1_tasks: list[Task],
     background_not_found_in_tiled: MagicMock,
+    standards_puck: StandardsPuck,
 ):
     i15_1_tasks[1].experiment.instrument_session = "different"
     i15_1_tasks[2].experiment.instrument_session = "also_different"
@@ -576,28 +579,28 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
     assert new_tasks[0].model_dump() == air_task(new_tasks[0].id, "cm12345-1", 25.0)
     assert new_tasks[1].model_dump() == empty_capillary_task(
-        new_tasks[1].id, "cm12345-1", 25.0, "fq1.0"
+        new_tasks[1].id, "cm12345-1", 25.0, "fq1.0", standards_puck
     )
     assert new_tasks[2].model_dump() == standard_sample_task(
-        new_tasks[2].id, "cm12345-1", 25.0, "fq1.0", "Silicon"
+        new_tasks[2].id, "cm12345-1", 25.0, "fq1.0", "Silicon", standards_puck
     )
 
     assert new_tasks[4].model_dump() == air_task(new_tasks[4].id, "different", 10.0)
     assert new_tasks[5].model_dump() == empty_capillary_task(
-        new_tasks[5].id, "different", 10.0, "fq1.0"
+        new_tasks[5].id, "different", 10.0, "fq1.0", standards_puck
     )
     assert new_tasks[6].model_dump() == standard_sample_task(
-        new_tasks[6].id, "different", 10.0, "fq1.0", "Silicon"
+        new_tasks[6].id, "different", 10.0, "fq1.0", "Silicon", standards_puck
     )
 
     assert new_tasks[8].model_dump() == air_task(
         new_tasks[8].id, "also_different", 10.0
     )
     assert new_tasks[9].model_dump() == empty_capillary_task(
-        new_tasks[9].id, "also_different", 10.0, "fq1.0"
+        new_tasks[9].id, "also_different", 10.0, "fq1.0", standards_puck
     )
     assert new_tasks[10].model_dump() == standard_sample_task(
-        new_tasks[10].id, "also_different", 10.0, "fq1.0", "Silicon"
+        new_tasks[10].id, "also_different", 10.0, "fq1.0", "Silicon", standards_puck
     )
 
 

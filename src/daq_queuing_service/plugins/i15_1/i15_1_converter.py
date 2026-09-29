@@ -3,6 +3,8 @@ from functools import cached_property
 from typing import Any
 
 from blueapi.service.model import TaskRequest
+from daq_config_server.client import ConfigClient
+from daq_config_server.models.i15_1.standards_puck import StandardsPin, StandardsPuck
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
@@ -15,11 +17,6 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     TiledAuxiliary,
     is_auxiliary_str,
 )
-from daq_queuing_service.plugins.i15_1.standards import (
-    STANDARDS_PUCK_PLACEMENT,
-    StandardsPin,
-    StandardsPuck,
-)
 from daq_queuing_service.plugins.i15_1.tiled_interaction import get_suitable_tiled_scan
 from daq_queuing_service.task_queue.task import (
     Container,
@@ -29,6 +26,12 @@ from daq_queuing_service.task_queue.task import (
     Sample,
     Task,
     TaskWithPosition,
+)
+
+STANDARDS_PUCK_PLACEMENT = 1
+CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
+STANDARDS_PUCK_CONFIG_PATH = (
+    "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
 
 
@@ -56,11 +59,17 @@ class I151Converter(Converter):
         self._tiled_auxiliary_scans: dict[
             str, dict[AuxiliaryScanType, TiledAuxiliary]
         ] = {}
-        self._standards_puck = StandardsPuck()
+        self._config_client = ConfigClient.from_url(CONFIG_SERVER_URL)
 
     @cached_property
     def _tiled_client(self) -> TiledContainer:
         return get_tiled_client()
+
+    @property
+    def _standards_puck(self) -> StandardsPuck:
+        return self._config_client.get_file_contents(
+            STANDARDS_PUCK_CONFIG_PATH, desired_return_type=StandardsPuck
+        )
 
     def pre_process(
         self,

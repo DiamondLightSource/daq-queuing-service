@@ -1,9 +1,9 @@
 from enum import StrEnum
 from pathlib import Path
 
+from daq_config_server.models.i15_1.standards_puck import StandardsPin
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 from daq_queuing_service.task_queue.task import Experiment
 
 

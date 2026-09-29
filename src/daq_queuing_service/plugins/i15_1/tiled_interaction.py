@@ -2,6 +2,7 @@ import time
 from pathlib import Path
 
 from cachetools import TTLCache, cached
+from daq_config_server.models.i15_1.standards_puck import StandardsPin
 from tiled.client.container import Container
 from tiled.queries import Comparison, Eq, In, KeyPresent
 
@@ -11,7 +12,6 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.standards import StandardsPin
 
 # Ignoring the following rules as the tiled client is poorly typed and scares the linter
 # pyright: reportUnknownMemberType=false
