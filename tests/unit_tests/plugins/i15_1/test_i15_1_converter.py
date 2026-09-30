@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
+from blueapi.worker.event import TaskError
 
 from daq_queuing_service.broadcaster import Broadcaster, serialise
 from daq_queuing_service.plugins.i15_1.backgrounds import (
@@ -698,7 +699,7 @@ async def test_background_scans_are_tagged_as_backgrounds(
     assert blueapi_calls[2].task_request.params["metadata"]["background"] is True
 
 
-def test_test_i15_1_tasks_can_be_serialised():
+def test_i15_1_tasks_can_be_serialised():
     converter = I151Converter()
     converter._tiled_backgrounds["id"] = {
         "tiled_id": TiledBackground(
@@ -726,3 +727,17 @@ def test_test_i15_1_tasks_can_be_serialised():
     tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
     serialised = serialise(tasks)
     json.dumps(serialised)
+
+
+def test_i15_1_converter_does_not_pause_queue_if_sample_not_found_error():
+    converter = I151Converter()
+    should_pause = converter.pause_on_fail_blueapi_call(
+        MagicMock(),
+        [
+            TaskError(
+                type="",
+                message="Robot load failed, no sample found at puck 1, position 15",
+            )
+        ],
+    )
+    assert should_pause is False
