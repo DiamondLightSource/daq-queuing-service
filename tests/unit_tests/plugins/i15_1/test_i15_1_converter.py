@@ -271,7 +271,6 @@ def test_centre_sample_uses_expected_params():
                 name=" ", id="", data={"time_per_pdf": 100}
             ),
             "sample": make_sample("test_8_1", ""),
-            "scan_type": ScanType.CENTRING,
         },
     }
 
@@ -326,12 +325,12 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
     assert tasks[2].name == "data_collection"
     assert tasks[2].params["full_collection_time"] == 100
     assert tasks[2].params["exposure_time_per_frame"] == 0.1
+    assert tasks[2].params["scan_type"] == ScanType.DATA_COLLECTION
     assert tasks[2].params["metadata"] == {
         "experiment_definition": ExperimentDefinition(
             name="", id="", data={"time_per_pdf": 100}
         ),
         "sample": make_sample("test_8_1", ""),
-        "scan_type": ScanType.DATA_COLLECTION,
     }
 
 
@@ -360,10 +359,10 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     assert tasks[2].params["ramp_rate_c_per_min"] == 10
     assert tasks[2].params["settle_time"] == 5
     assert tasks[2].params["temperatures_celsius"] == [100, 120]
+    assert tasks[2].params["scan_type"] == ScanType.DATA_COLLECTION
     assert tasks[2].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
-        "scan_type": ScanType.DATA_COLLECTION,
     }
 
 
@@ -407,7 +406,6 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
                 filename="",
             ),
         },
-        "scan_type": ScanType.DATA_COLLECTION,
     }
 
 
@@ -741,24 +739,20 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
     [
         (0, ScanType.AIR),
         # 1 is robot load
-        (2, ScanType.CENTRING),
+        # 2 is centring
         (3, ScanType.EMPTY_CAPILLARY),
         # 4 is robot unload
         # 5 is robot load
-        (6, ScanType.CENTRING),
+        # 6 is centring
         (7, ScanType.STANDARD_SAMPLE),
-        (10, ScanType.CENTRING),
         (11, ScanType.DATA_COLLECTION),
     ],
 )
-async def test_queued_scans_are_tagged_with_correct_scan_type_in_metadata(
+async def test_queued_data_collections_have_correct_scan_type_parameter(
     index: int, expected_scan_type: ScanType, queue_with_i15_1_plugin: TaskQueue
 ):
     blueapi_calls = await queue_with_i15_1_plugin.get_call_queue()
-    assert (
-        blueapi_calls[index].task_request.params["metadata"]["scan_type"]
-        == expected_scan_type
-    )
+    assert blueapi_calls[index].task_request.params["scan_type"] == expected_scan_type
 
 
 def test_test_i15_1_tasks_can_be_serialised():

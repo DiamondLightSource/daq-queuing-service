@@ -127,7 +127,6 @@ class I151Converter(Converter):
         collection_metadata: dict[str, Any] = {
             "sample": experiment.sample,
             "experiment_definition": experiment.experiment_definition,
-            "scan_type": scan_type,
         }
         if tiled_auxiliary_scans := self._tiled_auxiliary_scans.get(task_id):
             collection_metadata["auxiliary_scans"] = tiled_auxiliary_scans
@@ -150,6 +149,7 @@ class I151Converter(Converter):
                         "list_of_temperatures"
                     ],
                     "metadata": collection_metadata,
+                    "scan_type": scan_type,
                 },
                 instrument_session=experiment.instrument_session,
             )
@@ -159,6 +159,7 @@ class I151Converter(Converter):
                 params={
                     "full_collection_time": time_per_pdf,
                     "exposure_time_per_frame": 0.1,
+                    "scan_type": scan_type,
                     "metadata": collection_metadata,
                 },
                 instrument_session=experiment.instrument_session,
@@ -186,7 +187,6 @@ class I151Converter(Converter):
                     "metadata": {
                         "sample": experiment.sample,
                         "experiment_definition": experiment.experiment_definition,
-                        "scan_type": ScanType.CENTRING,
                     },
                 },
                 instrument_session=experiment.instrument_session,
