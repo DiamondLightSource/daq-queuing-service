@@ -13,15 +13,12 @@ class AuxiliaryScanType(StrEnum):
     STANDARD_SAMPLE = "Standard Sample"
 
 
-AUXILIARY_SCAN_NAMES = [member.value for member in AuxiliaryScanType]
-
-
 def is_auxiliary_str(value: str) -> bool:
-    return value in AUXILIARY_SCAN_NAMES
+    return value in list(AuxiliaryScanType)
 
 
 class AuxiliaryScan(BaseModel):
-    # Currently only room temperatures scans are supported
+    # Currently only single temperature scans are supported
     # https://github.com/DiamondLightSource/daq-queuing-service/issues/84
     model_config = ConfigDict(frozen=True)
     instrument_session: str

@@ -81,11 +81,23 @@ def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPos
     assert task1 == task2
 
 
+def create_task_dict(task_id: str, experiment: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "experiment": experiment,
+        "id": task_id,
+        "blueapi_calls": [],
+        "status": Status.QUEUED,
+        "kind": TaskKind.EXPERIMENT,
+        "user": None,
+    }
+
+
 def air_task(
     task_id: str, instrument_session: str, time_per_pdf: float
 ) -> dict[str, Any]:
-    return {
-        "experiment": {
+    return create_task_dict(
+        task_id,
+        {
             "name": "Air",
             "instrument_session": instrument_session,
             "sample": None,
@@ -95,12 +107,7 @@ def air_task(
                 "data": {"time_per_pdf": time_per_pdf},
             },
         },
-        "id": task_id,
-        "blueapi_calls": [],
-        "status": Status.QUEUED,
-        "kind": TaskKind.EXPERIMENT,
-        "user": None,
-    }
+    )
 
 
 def empty_capillary_task(
@@ -110,8 +117,9 @@ def empty_capillary_task(
     capillary: STANDARD_CAPILLARY,
     standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
-    return {
-        "experiment": {
+    return create_task_dict(
+        task_id,
+        {
             "name": "Empty Capillary",
             "instrument_session": instrument_session,
             "sample": {
@@ -138,12 +146,7 @@ def empty_capillary_task(
                 },
             },
         },
-        "id": task_id,
-        "blueapi_calls": [],
-        "status": Status.QUEUED,
-        "kind": TaskKind.EXPERIMENT,
-        "user": None,
-    }
+    )
 
 
 def standard_sample_task(
@@ -154,8 +157,9 @@ def standard_sample_task(
     contents: STANDARD_SAMPLE,
     standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
-    return {
-        "experiment": {
+    return create_task_dict(
+        task_id,
+        {
             "name": "Standard Sample",
             "instrument_session": instrument_session,
             "sample": {
@@ -182,12 +186,7 @@ def standard_sample_task(
                 },
             },
         },
-        "id": task_id,
-        "blueapi_calls": [],
-        "status": Status.QUEUED,
-        "kind": TaskKind.EXPERIMENT,
-        "user": None,
-    }
+    )
 
 
 @pytest.fixture

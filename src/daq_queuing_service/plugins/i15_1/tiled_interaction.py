@@ -8,8 +8,8 @@ from tiled.queries import Comparison, Eq, In, KeyPresent
 
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.i15_1.auxiliary import (
-    AUXILIARY_SCAN_NAMES,
     AuxiliaryScan,
+    AuxiliaryScanType,
     TiledAuxiliary,
 )
 
@@ -40,7 +40,7 @@ def get_suitable_tiled_scan(
             .search(Eq("start.instrument_session", instrument_session))
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
-            .search(In("start.scan_type", AUXILIARY_SCAN_NAMES))
+            .search(In("start.scan_type", list(AuxiliaryScanType)))
             .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
         )
 

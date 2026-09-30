@@ -59,7 +59,6 @@ def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]
 class I151Converter(Converter):
     def __init__(self):
         # First key is the ID of the task using the auxiliary scan
-        # Second key is the scan type of the auxiliary scan
         self._tiled_auxiliary_scans: dict[
             str, dict[AuxiliaryScanType, TiledAuxiliary]
         ] = {}
@@ -131,15 +130,10 @@ class I151Converter(Converter):
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
 
-        match experiment.name:
-            case ScanType.AIR:
-                scan_type = ScanType.AIR
-            case ScanType.EMPTY_CAPILLARY:
-                scan_type = ScanType.EMPTY_CAPILLARY
-            case ScanType.STANDARD_SAMPLE:
-                scan_type = ScanType.STANDARD_SAMPLE
-            case _:
-                scan_type = ScanType.DATA_COLLECTION
+        try:
+            scan_type = ScanType(experiment.name)
+        except ValueError:
+            scan_type = ScanType.DATA_COLLECTION
 
         collection_metadata: dict[str, Any] = {
             "sample": experiment.sample,
