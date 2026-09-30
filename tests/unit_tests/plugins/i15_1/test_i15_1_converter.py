@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
+from blueapi.worker.event import TaskError
 from daq_config_server.models.i15_1.standards_puck import (
     STANDARD_CAPILLARY,
     STANDARD_SAMPLE,
@@ -755,7 +756,7 @@ async def test_queued_data_collections_have_correct_scan_type_parameter(
     assert blueapi_calls[index].task_request.params["scan_type"] == expected_scan_type
 
 
-def test_test_i15_1_tasks_can_be_serialised():
+def test_i15_1_tasks_can_be_serialised():
     converter = I151Converter()
     converter._tiled_auxiliary_scans["id"] = {
         AuxiliaryScanType.EMPTY_CAPILLARY: TiledAuxiliary(
@@ -783,3 +784,17 @@ def test_test_i15_1_tasks_can_be_serialised():
     tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
     serialised = serialise(tasks)
     json.dumps(serialised)
+
+
+def test_i15_1_converter_does_not_pause_queue_if_sample_not_found_error():
+    converter = I151Converter()
+    should_pause = converter.pause_on_fail_blueapi_call(
+        MagicMock(),
+        [
+            TaskError(
+                type="",
+                message="Robot load failed, no sample found at puck 1, position 15",
+            )
+        ],
+    )
+    assert should_pause is False

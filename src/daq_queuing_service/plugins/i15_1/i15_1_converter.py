@@ -3,11 +3,15 @@ from functools import cached_property
 from typing import Any
 
 from blueapi.service.model import TaskRequest
+from blueapi.worker.event import TaskError
 from daq_config_server.client import ConfigClient
 from daq_config_server.models.i15_1.standards_puck import StandardsPin, StandardsPuck
 from tiled.client.container import Container as TiledContainer
 
-from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+)
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
@@ -108,6 +112,19 @@ class I151Converter(Converter):
                         ]
                     )
         return call_list
+
+    def pause_on_fail_blueapi_call(
+        self, call: BlueapiCallResponse, errors: list[str | TaskError] | None
+    ) -> bool:
+        for error in errors or []:
+            if isinstance(error, TaskError):
+                if "Robot load failed, no sample found at puck" in error.message:
+                    LOGGER.warning(
+                        "Robot load failed, no sample found. "
+                        + "Continuing with the rest of the queue"
+                    )
+                    return False
+        return True
 
     def _construct_blueapi_tasks_from_experiment(
         self, experiment: Experiment, task_id: str
