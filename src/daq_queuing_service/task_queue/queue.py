@@ -42,6 +42,7 @@ class PauseReason(StrEnum):
     USER_REQUESTED = "Pause requested by user"
     EMPTY_QUEUE = "Paused as queue completed"
     ERROR = "Paused as last task errored"
+    PLUGIN_REQUESTED = "Pause requested by plugin"
 
 
 class QueueState(BaseModel):
@@ -325,6 +326,7 @@ class TaskQueue:
             result (TaskResult): The result of the task from blueapi
         """
         tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+        should_pause = self._converter.pause_on_complete_blueapi_call(call, result)
 
         async with self._modifying:
             call.tiled_ids = tiled_ids
@@ -332,6 +334,8 @@ class TaskQueue:
             self._check_call_valid_to_be_returned(call)
             call.succeed(result)
             self._call_history.append(call)
+            if should_pause:
+                self._pause_queue(reason=PauseReason.PLUGIN_REQUESTED)
         LOGGER.info(f"Plan {call} has been completed successfully: {result}")
 
     async def fail_call(
@@ -344,16 +348,23 @@ class TaskQueue:
             errors (list[str  |  TaskError] | None, optional): A list of errors that
             occurred when trying to run the task. Defaults to None.
         """
+        should_pause = self._converter.pause_on_fail_blueapi_call(
+            call.to_response(), errors
+        )
         tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
-
+        LOGGER.error(f"Call {call} has failed with the following errors: {errors}")
         async with self._modifying:
             call.tiled_ids = tiled_ids
             call.scan_ids = scan_ids
-            self._pause_queue(PauseReason.ERROR)
+            if should_pause:
+                self._pause_queue(PauseReason.ERROR)
+            else:
+                LOGGER.warning(
+                    "Call failed but queue not paused due to plugin decision"
+                )
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)
             self._call_history.append(call)
-        LOGGER.error(f"Call {call} has failed with the following errors: {errors}")
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
         """Returns a task based on it's task ID
