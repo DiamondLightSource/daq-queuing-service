@@ -18,6 +18,11 @@ def is_auxiliary_str(value: str) -> bool:
 
 
 class AuxiliaryScan(BaseModel):
+    """Auxiliary scans are scans added automatically by the queue, such as background
+    scans and standard sample calibration scans. They are needed for analysis of user
+    sample data collections.
+    """
+
     # Currently only single temperature scans are supported
     # https://github.com/DiamondLightSource/daq-queuing-service/issues/84
     model_config = ConfigDict(frozen=True)
