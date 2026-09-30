@@ -133,7 +133,7 @@ def empty_capillary_task(
                     },
                 },
                 "positionInContainer": {
-                    "position": standards_puck.get_pin_number(
+                    "position": standards_puck.get_position_of_pin(
                         StandardsPin(capillary=capillary, contents=None)
                     ),
                 },
@@ -173,7 +173,7 @@ def standard_sample_task(
                     },
                 },
                 "positionInContainer": {
-                    "position": standards_puck.get_pin_number(
+                    "position": standards_puck.get_position_of_pin(
                         StandardsPin(capillary=capillary, contents=contents)
                     ),
                 },

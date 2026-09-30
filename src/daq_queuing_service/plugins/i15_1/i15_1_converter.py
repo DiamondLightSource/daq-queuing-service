@@ -373,7 +373,9 @@ class I151Converter(Converter):
             id="",
             positionInParent=ContainerPosition(position=STANDARDS_PUCK_PLACEMENT),
         )
-        position = ContainerPosition(position=self._standards_puck.get_pin_number(pin))
+        position = ContainerPosition(
+            position=self._standards_puck.get_position_of_pin(pin)
+        )
 
         if pin.contents is None:
             name = f"Empty {pin.capillary}"
