@@ -959,8 +959,8 @@ wheels = [
 
 [[package]]
 name = "daq-config-server"
-version = "1.5.6.dev1+g523a02bcd"
-source = { git = "https://github.com/DiamondLightSource/daq-config-server.git?rev=main#523a02bcd5ef83237de24c0b3ad3dd0d0795b2c5" }
+version = "1.5.6.dev2+g033a66680"
+source = { git = "https://github.com/DiamondLightSource/daq-config-server.git?rev=add_puck_position_to_model#033a666803a9a930c2f5f3f92fca31c53132a67f" }
 dependencies = [
     { name = "cachetools" },
     { name = "fastapi" },
@@ -1012,7 +1012,7 @@ dev = [
 requires-dist = [
     { name = "blueapi", specifier = ">=1.18.1" },
     { name = "cachetools", specifier = ">=7.0.5" },
-    { name = "daq-config-server", git = "https://github.com/DiamondLightSource/daq-config-server.git?rev=main" },
+    { name = "daq-config-server", git = "https://github.com/DiamondLightSource/daq-config-server.git?rev=add_puck_position_to_model" },
     { name = "fastapi", specifier = ">=0.136.0" },
     { name = "pydantic", specifier = ">=2.13.2" },
     { name = "tiled", extras = ["client"], specifier = ">=0.2.9" },

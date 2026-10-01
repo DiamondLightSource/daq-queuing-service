@@ -15,6 +15,7 @@ def clear_cache():
 @pytest.fixture
 def standards_puck():
     return StandardsPuck(
+        position_on_table=1,
         pins={
             1: StandardsPin(capillary="metal", contents=None),
             2: StandardsPin(capillary="bs1.0", contents="Silicon"),
@@ -38,7 +39,7 @@ def standards_puck():
             20: StandardsPin(capillary="fq2.0", contents=None),
             21: StandardsPin(capillary="bs1.0", contents="Ga/In"),
             22: StandardsPin(capillary="bs1.0", contents="Tungsten/Boron mix"),
-        }
+        },
     )
 
 

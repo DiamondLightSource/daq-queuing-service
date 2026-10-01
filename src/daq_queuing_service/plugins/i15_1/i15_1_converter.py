@@ -32,11 +32,11 @@ from daq_queuing_service.task_queue.task import (
     TaskWithPosition,
 )
 
-STANDARDS_PUCK_PLACEMENT = 1
 CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
 STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
+WAIT_FOR_BEAM = True
 
 
 class ScanType(StrEnum):
@@ -371,7 +371,9 @@ class I151Converter(Converter):
         data = {"capillary": pin.capillary, "composition": pin.contents}
         puck = Container(
             id="",
-            positionInParent=ContainerPosition(position=STANDARDS_PUCK_PLACEMENT),
+            positionInParent=ContainerPosition(
+                position=self._standards_puck.position_on_table
+            ),
         )
         position = ContainerPosition(
             position=self._standards_puck.get_position_of_pin(pin)
