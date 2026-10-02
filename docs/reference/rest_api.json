@@ -895,7 +895,14 @@
             "title": "Instrument Session"
           },
           "sample": {
-            "$ref": "#/components/schemas/Sample"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sample"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "experiment_definition": {
             "$ref": "#/components/schemas/ExperimentDefinition"
