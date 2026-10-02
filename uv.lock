@@ -959,8 +959,8 @@ wheels = [
 
 [[package]]
 name = "daq-config-server"
-version = "1.5.6.dev2+g033a66680"
-source = { git = "https://github.com/DiamondLightSource/daq-config-server.git?rev=add_puck_position_to_model#033a666803a9a930c2f5f3f92fca31c53132a67f" }
+version = "1.5.7"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
     { name = "fastapi" },
@@ -973,6 +973,10 @@ dependencies = [
     { name = "urllib3" },
     { name = "uvicorn" },
     { name = "xmltodict" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/bd/17e18b9c4a6e4313529bd176a4d4a336610476a5ce814cb6586445a1ac71/daq_config_server-1.5.7.tar.gz", hash = "sha256:093bfcc02e0070a24c7f0bebfcb910c32dcbb94677d7c07a54a0f190a7f9dc43", size = 239849, upload-time = "2026-10-02T12:41:16.078Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/fc/0590087559ea3a52b9e1f598d19dc48af0c5f8faedba3d08a2463f1f249a/daq_config_server-1.5.7-py3-none-any.whl", hash = "sha256:498be4b9b72c6f9a153bbeb89f59ebac0703bcc6df86ca0c9b211a10bf519e9c", size = 37869, upload-time = "2026-10-02T12:41:14.96Z" },
 ]
 
 [[package]]
@@ -1012,7 +1016,7 @@ dev = [
 requires-dist = [
     { name = "blueapi", specifier = ">=1.18.1" },
     { name = "cachetools", specifier = ">=7.0.5" },
-    { name = "daq-config-server", git = "https://github.com/DiamondLightSource/daq-config-server.git?rev=add_puck_position_to_model" },
+    { name = "daq-config-server", specifier = ">=1.5.7" },
     { name = "fastapi", specifier = ">=0.136.0" },
     { name = "pydantic", specifier = ">=2.13.2" },
     { name = "tiled", extras = ["client"], specifier = ">=0.2.9" },
