@@ -37,6 +37,8 @@ STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
 WAIT_FOR_BEAM = True
+DEFAULT_RAMP_RATE = 0  # As fast as possible
+DEFAULT_SETTLE_TIME = 10
 
 
 class ScanType(StrEnum):
@@ -146,7 +148,9 @@ class I151Converter(Converter):
         # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
 
-        if "list_of_temperatures" in experiment.experiment_definition.data.keys():
+        if list_of_temperatures := experiment.experiment_definition.data.get(
+            "list_of_temperatures"
+        ):
             data_collection = TaskRequest(
                 name="blower_collection",
                 params={
@@ -156,9 +160,7 @@ class I151Converter(Converter):
                         "ramp_rate"
                     ],
                     "settle_time": experiment.experiment_definition.data["settle_time"],
-                    "temperatures_celsius": experiment.experiment_definition.data[
-                        "list_of_temperatures"
-                    ],
+                    "temperatures_celsius": list_of_temperatures,
                     "metadata": collection_metadata,
                     "scan_type": scan_type,
                 },
@@ -337,6 +339,9 @@ class I151Converter(Converter):
                     capillary=experiment.sample.data["capillary"], contents=None
                 ),
                 time_per_pdf=time_per_pdf,
+                list_of_temperatures=experiment.experiment_definition.data.get(
+                    "list_of_temperatures"
+                ),
             ),
             AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
@@ -351,7 +356,15 @@ class I151Converter(Converter):
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
-
+        data: dict[str, Any] = {"time_per_pdf": auxiliary_scan.time_per_pdf}
+        if auxiliary_scan.list_of_temperatures:
+            data.update(
+                {
+                    "list_of_temperatures": auxiliary_scan.list_of_temperatures,
+                    "ramp_rate": DEFAULT_RAMP_RATE,
+                    "settle_time": DEFAULT_SETTLE_TIME,
+                }
+            )
         return Experiment(
             name=auxiliary_scan.kind,
             instrument_session=instrument_session,
@@ -360,7 +373,7 @@ class I151Converter(Converter):
             experiment_definition=ExperimentDefinition(
                 name=f"Auxiliary {auxiliary_scan.kind} Scan",
                 id="",
-                data={"time_per_pdf": auxiliary_scan.time_per_pdf},
+                data=data,
             ),
         )
 
