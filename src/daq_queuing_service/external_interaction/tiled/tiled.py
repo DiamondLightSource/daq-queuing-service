@@ -21,7 +21,7 @@ from daq_queuing_service.log import LOGGER
 
 TILED_URL = "https://tiled.diamond.ac.uk"
 
-cache: TTLCache[tuple[Any, str], str | None] = TTLCache(maxsize=100, ttl=1)
+cache = TTLCache(maxsize=100, ttl=1)
 
 
 def get_tiled_client(
