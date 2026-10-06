@@ -1,0 +1,52 @@
+    api:
+      url: https://localhost:8000
+    env:
+      metadata:
+         instrument: i15-1
+      sources:
+      - kind: deviceManager
+        module: dodal.beamlines.i15_1
+        mock: True
+      - kind: planFunctions
+        module: dodal.plans
+      - kind: planFunctions
+        module: dodal.plan_stubs
+      - kind: planFunctions
+        module: crystallography_bluesky.i15_1.plans
+      - kind: planFunctions
+        module: crystallography_bluesky.common.plans
+      events:
+        broadcast_status_events: false
+
+    stomp:
+      auth:
+        username: guest
+        password: guest
+      url: tcp://localhost:61613/
+      enabled: true
+
+    numtracker:
+      url: http://localhost:8406/graphql
+
+    tiled:
+      enabled: true
+      url: "http://localhost:8407/api/v1"
+      authentication:
+        client_id: "tiled-writer"
+        client_secret: "secret"
+
+    oidc:
+      issuer: "http://localhost:8081/realms/master"
+      client_id: "ixx-cli-blueapi"
+      client_audience: "ixx-blueapi"
+      logout_redirect_endpoint: "oauth2/sign_out"
+
+    scratch:
+      repositories:
+        - name: dodal
+          remote_url: https://github.com/DiamondLightSource/dodal.git
+        - name: ophyd-async
+          remote_url: https://github.com/bluesky/ophyd-async.git
+        - name: crystallography-bluesky
+          remote_url: https://github.com/DiamondLightSource/crystallography-bluesky.git
+          target_revision: main
