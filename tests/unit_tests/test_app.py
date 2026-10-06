@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
 from constants import TEST_CONFIG_PATH
+from daq_queuing_service.api.api import protected_routes, public_routes
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
@@ -31,8 +32,8 @@ def test_create_app_registers_exception_handlers():
     mock_register_exception_handlers.assert_called_once()
 
 
-@patch("daq_queuing_service.app.app.public_routes")
-@patch("daq_queuing_service.app.app.protected_routes")
+@patch("daq_queuing_service.app.app.public_routes", wraps=public_routes)
+@patch("daq_queuing_service.app.app.protected_routes", wraps=protected_routes)
 def test_create_app_adds_routers(
     mock_public_routes: MagicMock, mock_protected_routes: MagicMock
 ):
@@ -62,7 +63,7 @@ def test_worker_task_cancelled_on_shutdown():
     assert worker_task.cancelled()
 
 
-@patch("daq_queuing_service.app.app.protected_routes")
+@patch("daq_queuing_service.app.app.protected_routes", wraps=protected_routes)
 def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
     mock_protected_routes: MagicMock,
 ):
