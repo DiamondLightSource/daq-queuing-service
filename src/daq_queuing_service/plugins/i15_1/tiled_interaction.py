@@ -19,7 +19,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
 # pyright: reportUnknownArgumentType=false
 # pyright: reportUnknownLambdaType=false
 
-cache: TTLCache[tuple[AuxiliaryScan, str], str | None] = TTLCache(maxsize=100, ttl=1)
+cache = TTLCache(maxsize=100, ttl=1)
 
 TILED_URL = "https://tiled.diamond.ac.uk"
 
