@@ -6,7 +6,11 @@ jobs:
     environment: release
     steps:
       - name: Download dist artifact
+<<<<<<< before updating
         uses: actions/download-artifact@v7
+=======
+        uses: actions/download-artifact@v8
+>>>>>>> after updating
         with:
           name: dist
           path: dist
