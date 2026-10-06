@@ -193,6 +193,10 @@ def oidc_config():
             # This would usually make a real request, we don't want this in tests
             return {}
 
+        @cached_property
+        def jwks_uri(self) -> str:
+            return "https://"
+
     config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
     assert config.oidc is not None
     return MockOIDCConfig.model_validate(config.oidc.model_dump())
