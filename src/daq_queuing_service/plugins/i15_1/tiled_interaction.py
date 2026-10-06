@@ -75,6 +75,9 @@ def get_suitable_tiled_scan(
                     contents=sample["data"].get("composition"),
                 )
             time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
+            list_of_temperatures = start_doc["experiment_definition"]["data"].get(
+                "list_of_temperatures"
+            )
 
             auxiliary_scan = TiledAuxiliary(
                 tiled_id=tiled_id,
@@ -84,6 +87,7 @@ def get_suitable_tiled_scan(
                 filepath=filepath,
                 pin=pin,
                 time_per_pdf=time_per_pdf,
+                list_of_temperatures=list_of_temperatures,
             )
             if auxiliary_scan.kind != start_doc["scan_type"]:
                 LOGGER.warning(

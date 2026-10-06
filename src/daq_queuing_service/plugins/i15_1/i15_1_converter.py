@@ -326,6 +326,14 @@ class I151Converter(Converter):
     ) -> list[AuxiliaryScan]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+        list_of_temperatures = experiment.experiment_definition.data.get(
+            "list_of_temperatures"
+        )
+        if list_of_temperatures:
+            list_of_temperatures = AuxiliaryScan.get_background_temperatures(
+                list_of_temperatures
+            )
+
         assert experiment.sample
         return [
             AuxiliaryScan(

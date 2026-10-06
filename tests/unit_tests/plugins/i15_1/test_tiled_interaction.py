@@ -74,6 +74,24 @@ def mock_tiled_searches(
             "scan_type": "Empty Capillary",
         }
     }
+    result_5 = MagicMock()
+    result_5.metadata = {
+        "start": {
+            "time": 20,
+            "experiment_definition": {
+                "data": {
+                    "time_per_pdf": 15,
+                    "list_of_temperatures": [100, 200, 300],
+                    "ramp_rate": 0,
+                    "settle_time": 10,
+                }
+            },
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10004",
+            "scan_type": "Empty Capillary",
+        }
+    }
 
     search_result_6 = MagicMock()
     search_result_6.search = MagicMock(
@@ -82,6 +100,7 @@ def mock_tiled_searches(
             "tiled_id_2": result_2,
             "tiled_id_3": result_3,
             "tiled_id_4": result_4,
+            "tiled_id_5": result_5,
         }
     )
 
@@ -132,27 +151,53 @@ def test_get_suitable_tiled_background_makes_expected_searches(
     )
 
 
-def test_get_background_tiled_returns_most_recent_valid_background(
+@pytest.mark.parametrize(
+    "required_auxiliary, expected_result",
+    [
+        (
+            AuxiliaryScan(
+                instrument_session="cm12345-1",
+                pin=StandardsPin(capillary="fq1.0", contents=None),
+                time_per_pdf=10,
+            ),
+            TiledAuxiliary(
+                instrument_session="cm12345-1",
+                tiled_id="tiled_id_2",
+                pin=StandardsPin(capillary="fq1.0", contents=None),
+                time_per_pdf=11,
+                filename="i15-1-10001.nxs",
+                instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
+                filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
+            ),
+        ),
+        (
+            AuxiliaryScan(
+                instrument_session="cm12345-1",
+                pin=StandardsPin(capillary="fq1.0", contents=None),
+                time_per_pdf=10,
+                list_of_temperatures=[150, 250],
+            ),
+            TiledAuxiliary(
+                instrument_session="cm12345-1",
+                tiled_id="tiled_id_5",
+                pin=StandardsPin(capillary="fq1.0", contents=None),
+                time_per_pdf=15,
+                filename="i15-1-10004.nxs",
+                instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
+                filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10004.nxs"),
+                list_of_temperatures=[100, 200, 300],
+            ),
+        ),
+    ],
+)
+def test_get_background_tiled_returns_most_recent_suitable_background(
+    required_auxiliary: AuxiliaryScan,
+    expected_result: TiledAuxiliary,
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_ = mock_tiled_searches
-    result = get_suitable_tiled_scan(
-        client,
-        AuxiliaryScan(
-            instrument_session="cm12345-1",
-            pin=StandardsPin(capillary="fq1.0", contents=None),
-            time_per_pdf=10,
-        ),
-    )
-    assert result == TiledAuxiliary(
-        instrument_session="cm12345-1",
-        tiled_id="tiled_id_2",
-        pin=StandardsPin(capillary="fq1.0", contents=None),
-        time_per_pdf=11,
-        filename="i15-1-10001.nxs",
-        instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
-        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
-    )
+    result = get_suitable_tiled_scan(client, required_auxiliary)
+    assert result == expected_result
 
 
 def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_found(
