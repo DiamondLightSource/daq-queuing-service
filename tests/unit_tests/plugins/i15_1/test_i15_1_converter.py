@@ -20,7 +20,8 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter, ScanType
+from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Experiment,

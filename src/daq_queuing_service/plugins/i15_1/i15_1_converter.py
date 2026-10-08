@@ -1,6 +1,4 @@
-from enum import StrEnum
 from functools import cached_property
-from typing import Any
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
@@ -21,6 +19,13 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     TiledAuxiliary,
     is_auxiliary_str,
 )
+from daq_queuing_service.plugins.i15_1.plans import (
+    get_centre_sample,
+    get_data_collection,
+    get_robot_load,
+    get_robot_unload,
+    get_wait_for_beam,
+)
 from daq_queuing_service.plugins.i15_1.tiled_interaction import get_suitable_tiled_scan
 from daq_queuing_service.task_queue.task import (
     Container,
@@ -37,14 +42,7 @@ STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
 WAIT_FOR_BEAM = True
-
-
-class ScanType(StrEnum):
-    DATA_COLLECTION = "Data Collection"
-    CENTRING = "Centring"
-    AIR = AuxiliaryScanType.AIR
-    EMPTY_CAPILLARY = AuxiliaryScanType.EMPTY_CAPILLARY
-    STANDARD_SAMPLE = AuxiliaryScanType.STANDARD_SAMPLE
+ROBOT_LOAD = True
 
 
 def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
@@ -130,106 +128,36 @@ class I151Converter(Converter):
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
 
-        try:
-            scan_type = ScanType(experiment.name)
-        except ValueError:
-            scan_type = ScanType.DATA_COLLECTION
+        wait_for_beam = get_wait_for_beam(experiment.instrument_session)
 
-        collection_metadata: dict[str, Any] = {
-            "sample": experiment.sample,
-            "experiment_definition": experiment.experiment_definition,
-        }
-        if tiled_auxiliary_scans := self._tiled_auxiliary_scans.get(task_id):
-            collection_metadata["auxiliary_scans"] = tiled_auxiliary_scans
+        plans: list[TaskRequest] = []
 
-        # Assume collections with lists of temperatures are blowers, see
-        # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
-        time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
-
-        if "list_of_temperatures" in experiment.experiment_definition.data.keys():
-            data_collection = TaskRequest(
-                name="blower_collection",
-                params={
-                    "time_per_collection": time_per_pdf,
-                    "exposure_time_per_frame": 0.1,
-                    "ramp_rate_c_per_min": experiment.experiment_definition.data[
-                        "ramp_rate"
-                    ],
-                    "settle_time": experiment.experiment_definition.data["settle_time"],
-                    "temperatures_celsius": experiment.experiment_definition.data[
-                        "list_of_temperatures"
-                    ],
-                    "metadata": collection_metadata,
-                    "scan_type": scan_type,
-                },
-                instrument_session=experiment.instrument_session,
-            )
-        else:
-            data_collection = TaskRequest(
-                name="data_collection",
-                params={
-                    "full_collection_time": time_per_pdf,
-                    "exposure_time_per_frame": 0.1,
-                    "scan_type": scan_type,
-                    "metadata": collection_metadata,
-                },
-                instrument_session=experiment.instrument_session,
+        if experiment.sample and ROBOT_LOAD:
+            plans.append(
+                get_robot_load(experiment.sample, experiment.instrument_session)
             )
 
-        wait_for_beam = TaskRequest(
-            name="wait_for_beam",
-            params={},
-            instrument_session=experiment.instrument_session,
-        )
-
-        if experiment.sample is None:
-            # Air scan
-            if WAIT_FOR_BEAM:
-                return [wait_for_beam, data_collection]
-            return [data_collection]
-
-        position = experiment.sample.positionInContainer.position
-        puck = experiment.sample.container.positionInParent.position
-
-        plans = [
-            TaskRequest(
-                name="robot_load",
-                params={"puck": puck, "position": position},
-                instrument_session=experiment.instrument_session,
-            )
-        ]
         if WAIT_FOR_BEAM:
             plans.append(wait_for_beam)
+
+        if experiment.sample:
+            plans.append(
+                get_centre_sample(
+                    experiment.experiment_definition,
+                    experiment.sample,
+                    experiment.instrument_session,
+                )
+            )
+            if WAIT_FOR_BEAM:
+                plans.append(wait_for_beam)
 
         plans.append(
-            TaskRequest(
-                name="centre_sample",
-                params={
-                    "start_z": -20,
-                    "end_z": 0,
-                    "steps": 20,
-                    "exposure_time": 0.01,
-                    "metadata": {
-                        "sample": experiment.sample,
-                        "experiment_definition": experiment.experiment_definition,
-                    },
-                },
-                instrument_session=experiment.instrument_session,
-            )
+            get_data_collection(experiment, self._tiled_auxiliary_scans.get(task_id))
         )
-        if WAIT_FOR_BEAM:
-            plans.append(wait_for_beam)
 
-        plans.extend(
-            [
-                data_collection,
-                TaskRequest(
-                    name="robot_unload",
-                    params={},
-                    instrument_session=experiment.instrument_session,
-                ),
-            ]
-        )
+        if experiment.sample and ROBOT_LOAD:
+            plans.append(get_robot_unload(experiment.instrument_session))
+
         return plans
 
     def _add_required_auxiliary_scans(
