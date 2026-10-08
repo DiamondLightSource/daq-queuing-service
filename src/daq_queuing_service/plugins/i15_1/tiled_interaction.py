@@ -24,7 +24,7 @@ cache = TTLCache(maxsize=100, ttl=1)
 TILED_URL = "https://tiled.diamond.ac.uk"
 
 
-TILED_STALE_TIME = 60 * 15
+TILED_STALE_TIME = 60 * 60 * 24
 
 
 def get_suitable_tiled_scan(
