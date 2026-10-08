@@ -141,13 +141,7 @@ class I151Converter(Converter):
             plans.append(wait_for_beam)
 
         if experiment.sample:
-            plans.append(
-                get_centre_sample(
-                    experiment.experiment_definition,
-                    experiment.sample,
-                    experiment.instrument_session,
-                )
-            )
+            plans.append(get_centre_sample(experiment))
             if WAIT_FOR_BEAM:
                 plans.append(wait_for_beam)
 

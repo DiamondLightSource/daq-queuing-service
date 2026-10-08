@@ -7,7 +7,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.task_queue.task import Experiment, ExperimentDefinition, Sample
+from daq_queuing_service.task_queue.task import Experiment, Sample
 
 
 class ScanType(StrEnum):
@@ -43,9 +43,7 @@ def get_wait_for_beam(instrument_session: str) -> TaskRequest:
     )
 
 
-def get_centre_sample(
-    experiment_definition: ExperimentDefinition, sample: Sample, instrument_session: str
-) -> TaskRequest:
+def get_centre_sample(experiment: Experiment) -> TaskRequest:
     return TaskRequest(
         name="centre_sample",
         params={
@@ -54,11 +52,11 @@ def get_centre_sample(
             "steps": 20,
             "exposure_time": 0.01,
             "metadata": {
-                "sample": sample,
-                "experiment_definition": experiment_definition,
+                "sample": experiment.sample,
+                "experiment_definition": experiment.experiment_definition,
             },
         },
-        instrument_session=instrument_session,
+        instrument_session=experiment.instrument_session,
     )
 
 
