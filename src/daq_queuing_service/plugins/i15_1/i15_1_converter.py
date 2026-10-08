@@ -176,18 +176,32 @@ class I151Converter(Converter):
                 instrument_session=experiment.instrument_session,
             )
 
+        wait_for_beam = TaskRequest(
+            name="wait_for_beam",
+            params={},
+            instrument_session=experiment.instrument_session,
+        )
+
         if experiment.sample is None:
-            return [data_collection]  # Air scan
+            # Air scan
+            if WAIT_FOR_BEAM:
+                return [wait_for_beam, data_collection]
+            return [data_collection]
 
         position = experiment.sample.positionInContainer.position
         puck = experiment.sample.container.positionInParent.position
 
-        return [
+        plans = [
             TaskRequest(
                 name="robot_load",
                 params={"puck": puck, "position": position},
                 instrument_session=experiment.instrument_session,
-            ),
+            )
+        ]
+        if WAIT_FOR_BEAM:
+            plans.append(wait_for_beam)
+
+        plans.append(
             TaskRequest(
                 name="centre_sample",
                 params={
@@ -201,14 +215,22 @@ class I151Converter(Converter):
                     },
                 },
                 instrument_session=experiment.instrument_session,
-            ),
-            data_collection,
-            TaskRequest(
-                name="robot_unload",
-                params={},
-                instrument_session=experiment.instrument_session,
-            ),
-        ]
+            )
+        )
+        if WAIT_FOR_BEAM:
+            plans.append(wait_for_beam)
+
+        plans.extend(
+            [
+                data_collection,
+                TaskRequest(
+                    name="robot_unload",
+                    params={},
+                    instrument_session=experiment.instrument_session,
+                ),
+            ]
+        )
+        return plans
 
     def _add_required_auxiliary_scans(
         self, current_task: TaskWithPosition | None, tasks: list[Task]
