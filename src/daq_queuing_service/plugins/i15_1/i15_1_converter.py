@@ -128,31 +128,19 @@ class I151Converter(Converter):
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
 
-        wait_for_beam = get_wait_for_beam(experiment.instrument_session)
+        session = experiment.instrument_session
+        sample = experiment.sample
 
-        plans: list[TaskRequest] = []
+        plans: list[TaskRequest | None] = [
+            get_robot_load(sample, session) if sample and ROBOT_LOAD else None,
+            get_wait_for_beam(session) if WAIT_FOR_BEAM else None,
+            get_centre_sample(experiment) if sample else None,
+            get_wait_for_beam(session) if WAIT_FOR_BEAM and sample else None,
+            get_data_collection(experiment, self._tiled_auxiliary_scans.get(task_id)),
+            get_robot_unload(session) if sample and ROBOT_LOAD else None,
+        ]
 
-        if experiment.sample and ROBOT_LOAD:
-            plans.append(
-                get_robot_load(experiment.sample, experiment.instrument_session)
-            )
-
-        if WAIT_FOR_BEAM:
-            plans.append(wait_for_beam)
-
-        if experiment.sample:
-            plans.append(get_centre_sample(experiment))
-            if WAIT_FOR_BEAM:
-                plans.append(wait_for_beam)
-
-        plans.append(
-            get_data_collection(experiment, self._tiled_auxiliary_scans.get(task_id))
-        )
-
-        if experiment.sample and ROBOT_LOAD:
-            plans.append(get_robot_unload(experiment.instrument_session))
-
-        return plans
+        return [plan for plan in plans if plan is not None]
 
     def _add_required_auxiliary_scans(
         self, current_task: TaskWithPosition | None, tasks: list[Task]
