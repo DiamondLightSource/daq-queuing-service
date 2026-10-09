@@ -164,6 +164,7 @@ class I151Converter(Converter):
                 },
                 instrument_session=experiment.instrument_session,
             )
+            centre_end = 1
         else:
             data_collection = TaskRequest(
                 name="data_collection",
@@ -175,6 +176,7 @@ class I151Converter(Converter):
                 },
                 instrument_session=experiment.instrument_session,
             )
+            centre_end = -7
 
         if experiment.sample is None:
             return [data_collection]  # Air scan
@@ -192,7 +194,7 @@ class I151Converter(Converter):
                 name="centre_sample",
                 params={
                     "start_z": -20,
-                    "end_z": 7,
+                    "end_z": centre_end,
                     "steps": 27,
                     "exposure_time": 0.01,
                     "metadata": {
