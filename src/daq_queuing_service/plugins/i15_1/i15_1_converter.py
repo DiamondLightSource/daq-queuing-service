@@ -151,7 +151,7 @@ class I151Converter(Converter):
                 name="blower_collection",
                 params={
                     "time_per_collection": time_per_pdf,
-                    "exposure_time_per_frame": 0.1,
+                    "exposure_time_per_frame": 1,
                     "ramp_rate_c_per_min": experiment.experiment_definition.data[
                         "ramp_rate"
                     ],
@@ -169,7 +169,7 @@ class I151Converter(Converter):
                 name="data_collection",
                 params={
                     "full_collection_time": time_per_pdf,
-                    "exposure_time_per_frame": 0.1,
+                    "exposure_time_per_frame": 1,
                     "scan_type": scan_type,
                     "metadata": collection_metadata,
                 },
@@ -192,8 +192,8 @@ class I151Converter(Converter):
                 name="centre_sample",
                 params={
                     "start_z": -20,
-                    "end_z": 0,
-                    "steps": 20,
+                    "end_z": 7,
+                    "steps": 27,
                     "exposure_time": 0.01,
                     "metadata": {
                         "sample": experiment.sample,
