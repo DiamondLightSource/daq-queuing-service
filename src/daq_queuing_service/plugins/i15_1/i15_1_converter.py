@@ -176,7 +176,7 @@ class I151Converter(Converter):
                 },
                 instrument_session=experiment.instrument_session,
             )
-            centre_end = -7
+            centre_end = 7
 
         if experiment.sample is None:
             return [data_collection]  # Air scan
