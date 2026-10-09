@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -24,7 +25,7 @@ class AppConfig(BaseModel):
     converter: ConverterConfig
     oidc: OIDCConfig | None = None
     authorisation_whitelist: list[str] | None = None
-    log_level: int = 20  # INFO
+    log_level: int = logging.INFO
 
 
 def get_default_config_path() -> str:

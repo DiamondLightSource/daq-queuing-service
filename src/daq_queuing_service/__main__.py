@@ -1,6 +1,5 @@
 """Interface for ``python -m daq_queuing_service``."""
 
-import logging
 from argparse import ArgumentParser
 from collections.abc import Sequence
 from pathlib import Path
@@ -25,10 +24,10 @@ def main(args: Sequence[str] | None = None) -> None:
 
     parsed_args = parser.parse_args(args)
     config = load_config(parsed_args.config)
+    LOGGER.setLevel(config.log_level)
 
     from daq_queuing_service.app.app import create_app
 
-    LOGGER.setLevel(logging.INFO)
     app = create_app(config=config, dev=parsed_args.dev)
 
     uvicorn.run(

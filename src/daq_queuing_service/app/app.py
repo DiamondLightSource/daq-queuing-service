@@ -25,6 +25,7 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
 from daq_queuing_service.external_interaction.blueapi.get_client import (
     get_blueapi_client,
 )
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import get_converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
@@ -68,15 +69,22 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ):
         response = await call_next(request)
-
-        logging.debug(
+        LOGGER.debug(
             "%s %s -> %s",
             request.method,
             request.url.path,
             response.status_code,
         )
-
         return response
+
+    if dev:  # Allows local client/UI through CORS
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     dependencies: list[DependsType] = []
     whitelist_check = None
@@ -94,15 +102,6 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
 
         dependencies.append(Depends(get_current_user))
         dependencies.append(Depends(whitelist_check))
-
-    if dev:  # Allows local client/UI through CORS
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
 
     app.state.queue = TaskQueue(converter, broadcaster)
 
