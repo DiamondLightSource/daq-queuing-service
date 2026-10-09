@@ -263,8 +263,8 @@ def test_centre_sample_uses_expected_params():
     assert tasks[1].name == "centre_sample"
     assert tasks[1].params == {
         "start_z": -20,
-        "end_z": 0,
-        "steps": 20,
+        "end_z": 7,
+        "steps": 27,
         "exposure_time": 0.01,
         "metadata": {
             "experiment_definition": ExperimentDefinition(
@@ -324,7 +324,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "data_collection"
     assert tasks[2].params["full_collection_time"] == 100
-    assert tasks[2].params["exposure_time_per_frame"] == 0.1
+    assert tasks[2].params["exposure_time_per_frame"] == 1
     assert tasks[2].params["scan_type"] == ScanType.DATA_COLLECTION
     assert tasks[2].params["metadata"] == {
         "experiment_definition": ExperimentDefinition(
@@ -355,7 +355,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "blower_collection"
     assert tasks[2].params["time_per_collection"] == 100
-    assert tasks[2].params["exposure_time_per_frame"] == 0.1
+    assert tasks[2].params["exposure_time_per_frame"] == 1
     assert tasks[2].params["ramp_rate_c_per_min"] == 10
     assert tasks[2].params["settle_time"] == 5
     assert tasks[2].params["temperatures_celsius"] == [100, 120]
