@@ -1,12 +1,14 @@
 """Interface for ``python -m daq_queuing_service``."""
 
+import logging
 from argparse import ArgumentParser
 from collections.abc import Sequence
 from pathlib import Path
 
 import uvicorn
 
-from daq_queuing_service.app._config import get_default_config_path
+from daq_queuing_service.app._config import get_default_config_path, load_config
+from daq_queuing_service.log import LOGGER
 
 from . import __version__
 
@@ -22,12 +24,20 @@ def main(args: Sequence[str] | None = None) -> None:
     parser.add_argument("--config", type=Path, default=get_default_config_path())
 
     parsed_args = parser.parse_args(args)
+    config = load_config(parsed_args.config)
 
     from daq_queuing_service.app.app import create_app
 
-    app = create_app(config_path=parsed_args.config, dev=parsed_args.dev)
+    LOGGER.setLevel(logging.INFO)
+    app = create_app(config=config, dev=parsed_args.dev)
 
-    uvicorn.run(app, host="0.0.0.0", port=parsed_args.port, workers=1)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=parsed_args.port,
+        workers=1,
+        access_log=False,
+    )
 
 
 if __name__ == "__main__":
