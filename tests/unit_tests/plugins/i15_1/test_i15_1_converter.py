@@ -35,28 +35,35 @@ from ...conftest import make_sample
 
 
 @pytest.fixture
-def i15_1_tasks(tasks: list[Task]):
+def i15_1_tasks():
     time_per_pdfs = [5, 10, 10, 20, 25]
-    tasks = [
-        Task(
-            experiment=Experiment(
-                name=f"task_{i}",
-                instrument_session="cm12345-1",
-                experiment_definition=ExperimentDefinition(
-                    name="",
-                    id="",
-                    data={
-                        "list_of_temperatures": [100 * i, 100 * i + 20],
-                        "time_per_pdf": time_per_pdfs[i],
-                        "settle_time": 5,
-                        "ramp_rate": 10,
-                    },
-                ),
-                sample=make_sample(f"sample_{i}_2", id=str(i)),
+
+    tasks: list[Task] = []
+    for i in range(5):
+        data: dict[str, Any] = {"time_per_pdf": time_per_pdfs[i]}
+        if i != 3:
+            data.update(
+                {
+                    "list_of_temperatures": [100 * i, 100 * i + 20],
+                    "settle_time": 5,
+                    "ramp_rate": 10,
+                }
+            )
+        tasks.append(
+            Task(
+                experiment=Experiment(
+                    name=f"task_{i}",
+                    instrument_session="cm12345-1",
+                    experiment_definition=ExperimentDefinition(
+                        name="",
+                        id="",
+                        data=data,
+                    ),
+                    sample=make_sample(f"sample_{i}_2", id=str(i)),
+                )
             )
         )
-        for i in range(5)
-    ]
+
     return tasks
 
 
@@ -114,9 +121,19 @@ def empty_capillary_task(
     task_id: str,
     instrument_session: str,
     time_per_pdf: float,
+    list_of_temperatures: list[float] | None,
     capillary: STANDARD_CAPILLARY,
     standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
+    data: dict[str, Any] = {"time_per_pdf": time_per_pdf}
+    if list_of_temperatures is not None:
+        data.update(
+            {
+                "list_of_temperatures": list_of_temperatures,
+                "ramp_rate": 0,
+                "settle_time": 10,
+            }
+        )
     return create_task_dict(
         task_id,
         {
@@ -141,9 +158,7 @@ def empty_capillary_task(
             "experiment_definition": {
                 "name": "Auxiliary Empty Capillary Scan",
                 "id": "",
-                "data": {
-                    "time_per_pdf": time_per_pdf,
-                },
+                "data": data,
             },
         },
     )
@@ -181,9 +196,7 @@ def standard_sample_task(
             "experiment_definition": {
                 "name": "Auxiliary Standard Sample Scan",
                 "id": "",
-                "data": {
-                    "time_per_pdf": time_per_pdf,
-                },
+                "data": {"time_per_pdf": time_per_pdf},
             },
         },
     )
@@ -461,7 +474,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     assert len(tasks) == 4
     assert tasks[0].model_dump() == air_task(tasks[0].id, "cm12345-1", 100.0)
     assert tasks[1].model_dump() == empty_capillary_task(
-        tasks[1].id, "cm12345-1", 100.0, "fq1.0", standards_puck
+        tasks[1].id, "cm12345-1", 100.0, None, "fq1.0", standards_puck
     )
     assert tasks[2].model_dump() == standard_sample_task(
         tasks[2].id, "cm12345-1", 100.0, "fq1.0", "Silicon", standards_puck
@@ -539,7 +552,7 @@ def test_add_required_background_scans_combines_similar_background_requirements(
 
     assert len(i15_1_tasks) == 5
     new_tasks = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
-    assert len(new_tasks) == 8
+    assert len(new_tasks) == 9
     assert (
         isinstance(new_tasks[0].experiment, Experiment)
         and new_tasks[0].experiment.sample is None
@@ -554,10 +567,17 @@ def test_add_required_background_scans_combines_similar_background_requirements(
         and new_tasks[2].experiment.sample
         and new_tasks[2].experiment.sample.name == "Silicon fq1.0"
     )
+    assert (
+        isinstance(new_tasks[6].experiment, Experiment)
+        and new_tasks[6].experiment.sample
+        and new_tasks[6].experiment.sample.name == "Empty fq1.0"
+    )
     # Should have the maximum time_per_pdf of i15_1_tasks
     assert new_tasks[0].experiment.experiment_definition.data["time_per_pdf"] == 25
     assert new_tasks[1].experiment.experiment_definition.data["time_per_pdf"] == 25
     assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 25
+    # This one isn't a temperature experiment so needs a separate empty capillary
+    assert new_tasks[6].experiment.experiment_definition.data["time_per_pdf"] == 20
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_in_each(
@@ -573,11 +593,16 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
     new_tasks = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
 
-    assert len(new_tasks) == 14
+    assert len(new_tasks) == 15
 
     assert new_tasks[0].model_dump() == air_task(new_tasks[0].id, "cm12345-1", 25.0)
     assert new_tasks[1].model_dump() == empty_capillary_task(
-        new_tasks[1].id, "cm12345-1", 25.0, "fq1.0", standards_puck
+        new_tasks[1].id,
+        "cm12345-1",
+        25.0,
+        [0, 100, 200, 300, 400, 500],
+        "fq1.0",
+        standards_puck,
     )
     assert new_tasks[2].model_dump() == standard_sample_task(
         new_tasks[2].id, "cm12345-1", 25.0, "fq1.0", "Silicon", standards_puck
@@ -585,7 +610,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
     assert new_tasks[4].model_dump() == air_task(new_tasks[4].id, "different", 10.0)
     assert new_tasks[5].model_dump() == empty_capillary_task(
-        new_tasks[5].id, "different", 10.0, "fq1.0", standards_puck
+        new_tasks[5].id, "different", 10.0, [100, 120], "fq1.0", standards_puck
     )
     assert new_tasks[6].model_dump() == standard_sample_task(
         new_tasks[6].id, "different", 10.0, "fq1.0", "Silicon", standards_puck
@@ -595,10 +620,13 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
         new_tasks[8].id, "also_different", 10.0
     )
     assert new_tasks[9].model_dump() == empty_capillary_task(
-        new_tasks[9].id, "also_different", 10.0, "fq1.0", standards_puck
+        new_tasks[9].id, "also_different", 10.0, [200, 220], "fq1.0", standards_puck
     )
     assert new_tasks[10].model_dump() == standard_sample_task(
         new_tasks[10].id, "also_different", 10.0, "fq1.0", "Silicon", standards_puck
+    )
+    assert new_tasks[12].model_dump() == empty_capillary_task(
+        new_tasks[12].id, "cm12345-1", 20.0, None, "fq1.0", standards_puck
     )
 
 
