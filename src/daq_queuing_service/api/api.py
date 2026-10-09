@@ -166,7 +166,7 @@ def protected_routes(
         connection_id = uuid.uuid4().hex[:8]
         subscriber = broadcaster.subscribe()
 
-        LOGGER.info(
+        LOGGER.debug(
             f"SSE connection subscribed connection_id={connection_id}",
         )
 
@@ -181,7 +181,7 @@ def protected_routes(
 
             except asyncio.CancelledError:
                 # Client disconnected
-                LOGGER.info(
+                LOGGER.debug(
                     f"SSE connection cancelled connection_id={connection_id}",
                 )
             except Exception:

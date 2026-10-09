@@ -39,7 +39,7 @@ class ExperimentDefinition(BaseModel):
 class Experiment(BaseModel):
     name: str
     instrument_session: str
-    sample: Sample
+    sample: Sample | None
     experiment_definition: ExperimentDefinition
 
 

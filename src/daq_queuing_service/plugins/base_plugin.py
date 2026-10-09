@@ -1,6 +1,10 @@
 from blueapi.service.model import TaskRequest
+from blueapi.worker.event import TaskError, TaskResult
 
-from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+)
 from daq_queuing_service.task_queue.task import Experiment, Task, TaskWithPosition
 
 
@@ -79,6 +83,34 @@ class QueuePlugin:
             for task in queue
         ]
         return call_list
+
+    def pause_on_complete_blueapi_call(
+        self, call: BlueapiCall, result: TaskResult
+    ) -> bool:
+        """Decide whether to pause the queue after a blueapi call completes successfully
+
+        Args:
+            call (BlueapiCallResponse): The completed call
+            result (TaskResult): The result of the call from blueapi
+
+        Returns:
+            bool: True to pause the queue, False to leave it running.
+        """
+        return False
+
+    def pause_on_fail_blueapi_call(
+        self, call: BlueapiCallResponse, errors: list[str | TaskError] | None
+    ) -> bool:
+        """Decide whether to pause the queue after a blueapi call fails
+
+        Args:
+            call (BlueapiCallResponse): The failed call
+            errors (list[str  |  TaskError] | None): The errors that occurred
+
+        Returns:
+            bool: True to pause the queue, False to leave it running.
+        """
+        return True
 
     def _construct_blueapi_task_request(
         self,

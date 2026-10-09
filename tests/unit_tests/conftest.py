@@ -193,27 +193,31 @@ def oidc_config():
             # This would usually make a real request, we don't want this in tests
             return {}
 
+        @cached_property
+        def jwks_uri(self) -> str:
+            return "https://"
+
     config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
     assert config.oidc is not None
     return MockOIDCConfig.model_validate(config.oidc.model_dump())
 
 
 @pytest.fixture
-def use_config_with_auth(oidc_config: OIDCConfig):
+def config_with_auth(oidc_config: OIDCConfig):
 
     config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
     config.oidc = oidc_config
-    with patch("daq_queuing_service.app.app.load_config", return_value=config):
+    with patch("daq_queuing_service.__main__.load_config", return_value=config):
         yield config
 
 
 @pytest.fixture
-def app_with_auth(use_config_with_auth: AppConfig) -> FastAPI:
-    return create_app(Path(""))
+def app_with_auth(config_with_auth: AppConfig) -> FastAPI:
+    return create_app(config_with_auth)
 
 
 @pytest.fixture
-def app_with_authz(use_config_with_auth: AppConfig):
+def app_with_authz(config_with_auth: AppConfig):
     """Authentication always passes. Only user abc12345 is authorised"""
 
     def fake_get_current_user():
@@ -223,7 +227,7 @@ def app_with_authz(use_config_with_auth: AppConfig):
         "daq_queuing_service.app.app.build_get_current_user",
         MagicMock(return_value=fake_get_current_user),
     ):
-        app = create_app(Path(""))
+        app = create_app(config_with_auth)
         yield app
     return app
 

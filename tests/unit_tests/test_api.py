@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import httpx
+import httpx2
 import pytest
 from blueapi.client.rest import (
     BlueapiRestClient,
@@ -1124,7 +1124,7 @@ async def test_stream_events_streams_all_events_from_broadcaster(
 def test_endpoints_blocked_by_authentication_check_if_no_token_provided(
     endpoint: str, method: str, test_client_with_auth: TestClient
 ):
-    response: httpx.Response = getattr(test_client_with_auth, method)(endpoint)
+    response: httpx2.Response = getattr(test_client_with_auth, method)(endpoint)
     assert response.status_code == 401
     assert response.json() == {"detail": "Not authenticated"}
 
@@ -1136,7 +1136,7 @@ def test_endpoints_blocked_by_authentication_check_if_no_token_provided(
 def test_public_endpoints_not_blocked_by_auth(
     endpoint: str, method: str, test_client_with_auth: TestClient
 ):
-    response: httpx.Response = getattr(test_client_with_auth, method)(endpoint)
+    response: httpx2.Response = getattr(test_client_with_auth, method)(endpoint)
     assert response.status_code == 200
 
 
@@ -1163,7 +1163,7 @@ def test_public_endpoints_not_blocked_by_auth(
 def test_endpoints_blocked_by_authorisation_check_if_user_not_in_whitelist(
     endpoint: str, method: str, test_client_with_authz: TestClient
 ):
-    response: httpx.Response = getattr(test_client_with_authz, method)(endpoint)
+    response: httpx2.Response = getattr(test_client_with_authz, method)(endpoint)
     assert response.status_code == 403
     assert response.json() == {
         "detail": "Not authorised. You are not in the whitelist of authorised FedIDs"

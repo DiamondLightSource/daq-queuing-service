@@ -10,11 +10,13 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
     "blueapi>=1.18.1",
     "cachetools>=7.0.5",
+    "daq-config-server >= 1.5.7",
     "fastapi>=0.136.0",
     "pydantic>=2.13.2",
     "tiled[client]>=0.2.9",
@@ -26,7 +28,7 @@ requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
-    "copier",
+    "httpx2>=2.13.1",
     "myst-parser",
     "podman-compose>=1.5.0",
     "pre-commit",
@@ -60,12 +62,10 @@ version_file = "src/daq_queuing_service/_version.py"
 
 [tool.pyright]
 typeCheckingMode = "strict"
-reportMissingImports = false # Ignore missing stubs in imported modules
+reportMissingImports = false    # Ignore missing stubs in imported modules
 reportMissingTypeStubs = "none"
 
-executionEnvironments = [
-    { root = "tests", reportPrivateUsage = false }
-]
+executionEnvironments = [{ root = "tests", reportPrivateUsage = false }]
 
 [tool.pytest.ini_options]
 # Run pytest with all our checkers, and don't spam us with massive tracebacks on error
@@ -141,12 +141,7 @@ commands = [
 [tool.tox.env.generate-api-docs]
 description = "Compile rest-api.json file from source code. This is then referenced in docs."
 deps = "-e ."
-commands = [
-    [
-        "{envpython}",
-        "utility_scripts/generate_api_docs.py",
-    ],
-]
+commands = [["{envpython}", "utility_scripts/generate_api_docs.py"]]
 
 [tool.tox.env.docs]
 description = "Run docs build with clean environment"
@@ -154,7 +149,7 @@ commands = [
     [
         "tox",
         "-e",
-        "generate-api-docs"
+        "generate-api-docs",
     ],
     [
         "sphinx-build",
