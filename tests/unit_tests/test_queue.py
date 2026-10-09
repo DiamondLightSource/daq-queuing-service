@@ -13,7 +13,8 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCallResponse,
     CallStatus,
 )
-from daq_queuing_service.plugins.converter import Converter, ConverterError
+from daq_queuing_service.plugins import QueuePlugin
+from daq_queuing_service.plugins.utils import PluginError
 from daq_queuing_service.task_queue.queue import (
     PauseReason,
     QueueContents,
@@ -65,8 +66,8 @@ async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueu
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
 
 
-async def test_add_tasks_adds_to_call_queue(converter: Converter):
-    task_queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
+async def test_add_tasks_adds_to_call_queue(queue_plugin: QueuePlugin):
+    task_queue = TaskQueue(plugin=queue_plugin, broadcaster=Broadcaster())
     await task_queue.add_tasks([make_new_task("new"), make_new_task("new_2")])
     assert task_queue._call_queue == [
         BlueapiCall(
@@ -167,9 +168,9 @@ async def test_move_task_works_as_expected_and_returns_new_position(
     new_position: int,
     expected_order: list[int],
     expected_return_value: int,
-    converter: Converter,
+    queue_plugin: QueuePlugin,
 ):
-    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
+    queue = TaskQueue(plugin=queue_plugin, broadcaster=Broadcaster())
     tasks = [make_new_task(str(i)) for i in range(10)]
     await queue.add_tasks(tasks)
     task = str(task_to_move)
@@ -779,7 +780,7 @@ async def test_wait_until_call_available_waits_if_queue_paused(
 
 
 async def test_wait_until_call_available_waits_if_queue_empty():
-    task_queue = TaskQueue(Converter(), Broadcaster())
+    task_queue = TaskQueue(QueuePlugin(), Broadcaster())
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
@@ -835,9 +836,9 @@ async def test_complete_call_does_not_pause_queue_if_plugin_decides(
 
 
 async def test_complete_call_pauses_queue_if_plugin_decides(
-    task_queue: TaskQueue, converter: Converter
+    task_queue: TaskQueue, queue_plugin: QueuePlugin
 ):
-    converter.pause_on_complete_blueapi_call = MagicMock(return_value=True)
+    queue_plugin.pause_on_complete_blueapi_call = MagicMock(return_value=True)
     assert task_queue.state == QueueState(
         paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
     )
@@ -897,9 +898,9 @@ async def test_fail_call_pauses_queue_if_plugin_decides(task_queue: TaskQueue):
 
 
 async def test_fail_call_does_not_pause_queue_if_plugin_decides(
-    task_queue: TaskQueue, converter: Converter
+    task_queue: TaskQueue, queue_plugin: QueuePlugin
 ):
-    converter.pause_on_fail_blueapi_call = MagicMock(return_value=False)
+    queue_plugin.pause_on_fail_blueapi_call = MagicMock(return_value=False)
     assert task_queue.state == QueueState(
         paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
     )
@@ -1222,9 +1223,9 @@ async def test_if_error_during_conversion_then_error_handled_and_contents_restor
 
         raise ValueError("Conversion failed")
 
-    task_queue._converter.construct_blueapi_calls = convert
+    task_queue._plugin.construct_blueapi_calls = convert
 
-    with pytest.raises(ConverterError):
+    with pytest.raises(PluginError):
         await task_queue.move_task("0", 0)
 
     assert task_queue._queue == ["0", "1", "2", "3", "4"]
@@ -1241,11 +1242,11 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
     ):
         raise ValueError("Conversion failed")
 
-    task_queue._converter.construct_blueapi_calls = convert
+    task_queue._plugin.construct_blueapi_calls = convert
     task_queue._restore_latest_good_contents = MagicMock()
-    task_queue.__init__(task_queue._converter, task_queue._broadcaster)
+    task_queue.__init__(task_queue._plugin, task_queue._broadcaster)
 
-    with pytest.raises(ConverterError):
+    with pytest.raises(PluginError):
         await task_queue.add_tasks(MagicMock())
 
     task_queue._restore_latest_good_contents.assert_called_once()
@@ -1270,7 +1271,7 @@ async def test__sync_not_called_for_read_only_methods(
 
     # Need to reinitialise so that mocked _sync is injected into Modifying object
     contents = copy.copy(task_queue._last_good_contents)
-    task_queue.__init__(task_queue._converter, task_queue._broadcaster)
+    task_queue.__init__(task_queue._plugin, task_queue._broadcaster)
     task_queue._restore_from_contents(contents)
 
     await getattr(task_queue, method_name)(*args)
@@ -1298,11 +1299,12 @@ async def test_get_running_task_returns_none_if_no_tasks_in_queue(
     assert task_queue._get_running_task() is None
 
 
-async def test__sync_calls_converter_pre_process_with_expected_args(
-    task_queue_with_history: TaskQueue, converter: Converter
+async def test__sync_calls_plugin_pre_process_with_expected_args(
+    task_queue_with_history: TaskQueue,
+    queue_plugin: QueuePlugin,
 ):
     task_queue_with_history._modifying = MagicMock()
-    converter.pre_process = MagicMock()
+    queue_plugin.pre_process = MagicMock()
 
     first_task = task_queue_with_history._get_running_task()
     other_tasks = [
@@ -1313,7 +1315,9 @@ async def test__sync_calls_converter_pre_process_with_expected_args(
 
     task_queue_with_history._sync()
 
-    converter.pre_process.assert_called_once_with(first_task, other_tasks, history, [])
+    queue_plugin.pre_process.assert_called_once_with(
+        first_task, other_tasks, history, []
+    )
 
 
 async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(

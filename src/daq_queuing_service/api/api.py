@@ -16,7 +16,8 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCallResponse,
 )
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter import Converter, ValidateError
+from daq_queuing_service.plugins import QueuePlugin
+from daq_queuing_service.plugins.utils import ValidateError
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
     PauseReason,
@@ -79,7 +80,7 @@ def protected_routes(
     queue: TaskQueue,
     broadcaster: Broadcaster[QUEUE_EVENTS],
     config: AppConfig,
-    converter: Converter,
+    plugin: QueuePlugin,
 ) -> APIRouter:
     """Authentication is required to access these endpoints (if turned on in config).
     Additionally, for endpoints that depend on whitelist_check, you must be in the
@@ -109,7 +110,7 @@ def protected_routes(
         position: int | None = None,
     ) -> list[str]:
         try:
-            converter.validate(experiments)
+            plugin.validate(experiments)
         except Exception as e:
             raise ValidateError(*e.args) from e
 

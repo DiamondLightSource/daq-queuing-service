@@ -26,7 +26,7 @@ from daq_queuing_service.external_interaction.blueapi.get_client import (
     get_blueapi_client,
 )
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter import get_converter
+from daq_queuing_service.plugins import get_queue_plugin
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 
@@ -58,9 +58,9 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
 
     broadcaster: Broadcaster[QUEUE_EVENTS] = Broadcaster()
 
-    converter_path = config.converter.path
-    converter_name = config.converter.name
-    converter = get_converter(converter_path, converter_name)
+    plugin_path = config.plugin.path
+    plugin_name = config.plugin.name
+    plugin = get_queue_plugin(plugin_path, plugin_name)
 
     app = FastAPI(lifespan=lifespan)
 
@@ -103,7 +103,7 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
         dependencies.append(Depends(get_current_user))
         dependencies.append(Depends(whitelist_check))
 
-    app.state.queue = TaskQueue(converter, broadcaster)
+    app.state.queue = TaskQueue(plugin, broadcaster)
 
     blueapi_client = get_blueapi_client(config.blueapi)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
@@ -116,7 +116,7 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
     register_exception_handlers(app)
     app.include_router(public_routes(app.state.queue))
     app.include_router(
-        protected_routes(app.state.queue, broadcaster, config, converter),
+        protected_routes(app.state.queue, broadcaster, config, plugin),
         dependencies=dependencies,
     )
 

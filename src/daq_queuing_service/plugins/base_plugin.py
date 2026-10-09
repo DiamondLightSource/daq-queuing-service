@@ -1,5 +1,3 @@
-import importlib
-
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
 
@@ -10,16 +8,7 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
 from daq_queuing_service.task_queue.task import Experiment, Task, TaskWithPosition
 
 
-class ConverterError(Exception):
-    def __init__(self, original: Exception):
-        super().__init__(f"{type(original).__name__}: {original}")
-        self.original = original
-
-
-class ValidateError(Exception): ...
-
-
-class Converter:
+class QueuePlugin:
     def __init__(self): ...
 
     def validate(self, experiments: list[TaskRequest | Experiment]) -> None:
@@ -133,25 +122,5 @@ class Converter:
             case Experiment() as experiment:
                 raise NotImplementedError(
                     f"No conversion implemented for {type(experiment)}. "
-                    + "Try using a different converter"
+                    + "Try using a different plugin"
                 )
-
-
-def get_converter(path: str, name: str) -> Converter:
-    """Instantiates a converter based on a path and class name
-
-    Args:
-        path (str): Path to converter class. For example:
-            "daq_queuing_service.plugins.converter"
-        converter_name (str): Name of the converter class. For example:
-            "Converter"
-
-    Returns:
-        Converter: Converter instance
-    """
-    module = importlib.import_module(path)
-    converter_cls = getattr(module, name)
-    converter = converter_cls()
-    if not isinstance(converter, Converter):
-        raise TypeError(f"Converter is not of type Converter, it is {type(converter)}")
-    return converter

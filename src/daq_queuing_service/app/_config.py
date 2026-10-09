@@ -10,7 +10,7 @@ CONFIG_PATH = "/etc/config/config.yaml"
 TEST_CONFIG_PATH = "tests/test_data/test_config.yaml"
 
 
-class ConverterConfig(BaseModel):
+class PluginConfig(BaseModel):
     path: str
     name: str
 
@@ -22,7 +22,7 @@ class BlueapiConfig(BaseModel):
 
 class AppConfig(BaseModel):
     blueapi: BlueapiConfig
-    converter: ConverterConfig
+    plugin: PluginConfig
     oidc: OIDCConfig | None = None
     authorisation_whitelist: list[str] | None = None
     log_level: int = logging.INFO

@@ -2,9 +2,9 @@ import pytest
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
-from daq_queuing_service.plugins.converter import (
-    Converter,
-    get_converter,
+from daq_queuing_service.plugins import (
+    QueuePlugin,
+    get_queue_plugin,
 )
 from daq_queuing_service.task_queue.task import (
     Experiment,
@@ -16,19 +16,19 @@ from daq_queuing_service.task_queue.task import (
 from ..conftest import make_sample
 
 
-def test_get_converter_returns_converter_from_path_and_name():
-    converter = get_converter("daq_queuing_service.plugins.converter", "Converter")
-    assert isinstance(converter, Converter)
+def test_get_queue_plugin_returns_plugin_from_path_and_name():
+    plugin = get_queue_plugin("daq_queuing_service.plugins", "QueuePlugin")
+    assert isinstance(plugin, QueuePlugin)
 
 
-def test_get_converter_raises_error_if_imported_class_is_not_converter_type():
+def test_get_queue_plugin_raises_error_if_imported_class_is_not_queue_plugin_type():
     with pytest.raises(TypeError):
-        get_converter("daq_queuing_service.broadcaster", "Broadcaster")
+        get_queue_plugin("daq_queuing_service.broadcaster", "Broadcaster")
 
 
-def test_default_converter_raises_error_when_converting_ulims_experiment():
+def test_default_plugin_raises_error_when_converting_ulims_experiment():
     with pytest.raises(NotImplementedError):
-        Converter()._construct_blueapi_task_request(
+        QueuePlugin()._construct_blueapi_task_request(
             experiment=Experiment(
                 name="test_experiment",
                 instrument_session="cm12345-1",
@@ -42,16 +42,16 @@ def test_default_converter_raises_error_when_converting_ulims_experiment():
         )
 
 
-def test_default_converter_pre_process_does_not_modify_queue(tasks: list[Task]):
-    new_queue = Converter().pre_process(None, tasks, [], [])
+def test_default_plugin_pre_process_does_not_modify_queue(tasks: list[Task]):
+    new_queue = QueuePlugin().pre_process(None, tasks, [], [])
     assert new_queue == tasks
 
 
-def test_default_converter_construct_blueapi_calls_creates_one_blueapi_call_per_task(
+def test_default_plugin_construct_blueapi_calls_creates_one_blueapi_call_per_task(
     bluesky_tasks: list[Task],
 ):
     task_copies = [TaskWithPosition.from_task(task) for task in bluesky_tasks]
-    blueapi_calls = Converter().construct_blueapi_calls(task_copies, [], [])
+    blueapi_calls = QueuePlugin().construct_blueapi_calls(task_copies, [], [])
     for task, blueapi_call in zip(task_copies, blueapi_calls, strict=True):
         assert isinstance(task.experiment, TaskRequest)
         assert blueapi_call == BlueapiCall(
