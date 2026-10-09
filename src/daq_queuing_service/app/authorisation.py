@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException
 from starlette.status import HTTP_403_FORBIDDEN
 
 from daq_queuing_service.app.authentication import User
-from daq_queuing_service.worker.worker import LOGGER
+from daq_queuing_service.log import LOGGER
 
 
 def build_ensure_current_user_is_in_whitelist(
