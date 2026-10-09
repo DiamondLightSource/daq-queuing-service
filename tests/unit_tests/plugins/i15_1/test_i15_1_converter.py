@@ -20,7 +20,8 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter, ScanType
+from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Experiment,
@@ -58,6 +59,14 @@ def i15_1_tasks(tasks: list[Task]):
         for i in range(5)
     ]
     return tasks
+
+
+@pytest.fixture()
+def patch_wait_for_beam_constant():
+    with patch(
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.WAIT_FOR_BEAM", False
+    ) as patch_wait_for_beam:
+        yield patch_wait_for_beam
 
 
 def make_background_task(capillary: STANDARD_CAPILLARY, time_per_pdf: int) -> Task:
@@ -260,8 +269,8 @@ def test_centre_sample_uses_expected_params():
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[1].name == "centre_sample"
-    assert tasks[1].params == {
+    assert tasks[2].name == "centre_sample"
+    assert tasks[2].params == {
         "start_z": -20,
         "end_z": 0,
         "steps": 20,
@@ -285,7 +294,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert len(tasks) == 4
+    assert len(tasks) == 6
     for task in tasks:
         assert task.instrument_session == "cm12345-1"
 
@@ -309,7 +318,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         user=None,
     )
     call_list = I151Converter().construct_blueapi_calls([task], [], [])
-    assert len(call_list) == 4
+    assert len(call_list) == 6
 
 
 def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
@@ -322,11 +331,11 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[2].name == "data_collection"
-    assert tasks[2].params["full_collection_time"] == 100
-    assert tasks[2].params["exposure_time_per_frame"] == 0.1
-    assert tasks[2].params["scan_type"] == ScanType.DATA_COLLECTION
-    assert tasks[2].params["metadata"] == {
+    assert tasks[4].name == "data_collection"
+    assert tasks[4].params["full_collection_time"] == 100
+    assert tasks[4].params["exposure_time_per_frame"] == 0.1
+    assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
+    assert tasks[4].params["metadata"] == {
         "experiment_definition": ExperimentDefinition(
             name="", id="", data={"time_per_pdf": 100}
         ),
@@ -353,17 +362,70 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[2].name == "blower_collection"
-    assert tasks[2].params["time_per_collection"] == 100
-    assert tasks[2].params["exposure_time_per_frame"] == 0.1
-    assert tasks[2].params["ramp_rate_c_per_min"] == 10
-    assert tasks[2].params["settle_time"] == 5
-    assert tasks[2].params["temperatures_celsius"] == [100, 120]
-    assert tasks[2].params["scan_type"] == ScanType.DATA_COLLECTION
-    assert tasks[2].params["metadata"] == {
+    assert tasks[4].name == "blower_collection"
+    assert tasks[4].params["time_per_collection"] == 100
+    assert tasks[4].params["exposure_time_per_frame"] == 0.1
+    assert tasks[4].params["ramp_rate_c_per_min"] == 10
+    assert tasks[4].params["settle_time"] == 5
+    assert tasks[4].params["temperatures_celsius"] == [100, 120]
+    assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
+    assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
     }
+
+
+def test_experiemnt_with_no_sample_converts_to_air_scan():
+    experiment_definition = ExperimentDefinition(
+        name="",
+        id="",
+        data={"time_per_pdf": 100},
+    )
+
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=experiment_definition,
+        sample=None,
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    assert len(tasks) == 2
+    assert tasks[0].name == "wait_for_beam"
+    assert tasks[1].name == "data_collection"
+    assert tasks[1].params == {
+        "full_collection_time": 100,
+        "exposure_time_per_frame": 0.1,
+        "scan_type": ScanType.DATA_COLLECTION,
+        "metadata": {
+            "sample": None,
+            "experiment_definition": ExperimentDefinition(
+                name="", id="", data={"time_per_pdf": 100}
+            ),
+        },
+    }
+
+
+def test_wait_for_beam_plans_added_by_converter():
+    experiment_definition = ExperimentDefinition(
+        name="",
+        id="",
+        data={
+            "list_of_temperatures": [100, 120],
+            "time_per_pdf": 100,
+            "settle_time": 5,
+            "ramp_rate": 10,
+        },
+    )
+
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=experiment_definition,
+        sample=make_sample("test_8_1", ""),
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    for i in (1, 3):
+        assert tasks[i].name == "wait_for_beam"
 
 
 def test_tiled_backgrounds_added_to_metadata_if_present():
@@ -392,7 +454,7 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
         instrument_session="cm12345-1",
     )
     tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[2].params["metadata"] == {
+    assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
         "auxiliary_scans": {
@@ -438,7 +500,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     plan_task.kind = TaskKind.PLAN
     tasks = [good_task, bad_task, plan_task, good_task]
     call_list = I151Converter().construct_blueapi_calls(tasks, [], [])
-    assert len(call_list) == 9
+    assert len(call_list) == 13
 
 
 def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
@@ -749,7 +811,10 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(
-    index: int, expected_scan_type: ScanType, queue_with_i15_1_plugin: TaskQueue
+    index: int,
+    expected_scan_type: ScanType,
+    patch_wait_for_beam_constant: bool,
+    queue_with_i15_1_plugin: TaskQueue,
 ):
     blueapi_calls = await queue_with_i15_1_plugin.get_call_queue()
     assert blueapi_calls[index].task_request.params["scan_type"] == expected_scan_type
