@@ -863,3 +863,25 @@ def test_i15_1_converter_does_not_pause_queue_if_sample_not_found_error():
         ],
     )
     assert should_pause is False
+
+
+def test_no_auxiliary_scans_added_if_turned_off_in_queue_params(
+    background_not_found_in_tiled: MagicMock, queue_params: QueueParameters
+):
+    queue_params.add_auxiliary_scans = False
+    converter = I151Converter()
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=ExperimentDefinition(
+            name="run_full_collection", id="", data={"time_per_pdf": 100}
+        ),
+        sample=make_sample("test_8_1", ""),
+        instrument_session="cm12345-1",
+    )
+    task = Task(
+        experiment=experiment,
+        id="1",
+    )
+    new_tasks = converter.pre_process(None, [task], [], [])
+    assert len(new_tasks) == 1
+    assert new_tasks == [task]
