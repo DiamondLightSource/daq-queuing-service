@@ -3,8 +3,7 @@ from functools import cached_property
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
 from daq_config_server.client import ConfigClient
-from daq_config_server.models.i15_1 import StandardsPin, StandardsPuck
-from daq_config_server.models.i15_1.queue_parameters import QueueParameters
+from daq_config_server.models.i15_1 import QueueParameters, StandardsPin, StandardsPuck
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (

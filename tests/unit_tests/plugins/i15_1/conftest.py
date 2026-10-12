@@ -3,11 +3,12 @@ from unittest.mock import patch
 
 import pytest
 from daq_config_server.client import ConfigClient
-from daq_config_server.models.i15_1 import StandardsPin, StandardsPuck
-from daq_config_server.models.i15_1.queue_parameters import (
+from daq_config_server.models.i15_1 import (
     CentringParameters,
     DataCollectionParameters,
     QueueParameters,
+    StandardsPin,
+    StandardsPuck,
 )
 from daq_config_server.testing import MockServerResponse
 

@@ -2,7 +2,7 @@ from enum import StrEnum
 from typing import Any
 
 from blueapi.service.model import TaskRequest
-from daq_config_server.models.i15_1.queue_parameters import (
+from daq_config_server.models.i15_1 import (
     CentringParameters,
     DataCollectionParameters,
 )
