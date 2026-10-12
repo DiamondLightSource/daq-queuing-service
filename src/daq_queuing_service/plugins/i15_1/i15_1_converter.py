@@ -85,7 +85,9 @@ class I151Converter(Converter):
         call_history: list[BlueapiCall],
     ) -> list[Task]:
         self._config_client.reset_cache()
-        return self._add_required_auxiliary_scans(current_task, queue)
+        if self._queue_params.add_auxiliary_scans:
+            return self._add_required_auxiliary_scans(current_task, queue)
+        return queue
 
     def construct_blueapi_calls(
         self,
@@ -220,7 +222,9 @@ class I151Converter(Converter):
             return new_tasks
 
         if tiled_scan := get_suitable_tiled_scan(
-            self._tiled_client, required_auxiliary
+            self._tiled_client,
+            required_auxiliary,
+            self._queue_params.tiled_stale_time_s,
         ):
             self._tiled_auxiliary_scans[task_id][tiled_scan.kind] = tiled_scan
             return new_tasks

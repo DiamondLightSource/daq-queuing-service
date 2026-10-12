@@ -7,7 +7,7 @@ from pytest import LogCaptureFixture
 from tiled.queries import Eq
 
 from daq_queuing_service.external_interaction.tiled.tiled import (
-    TILED_URL,
+    DIAMOND_TILED_URL,
     get_metadata_from_tiled,
     get_tiled_client,
 )
@@ -55,7 +55,7 @@ def test_get_tiled_client_instantiates_client_from_uri():
     ) as mock_from_uri:
         tiled_client = get_tiled_client()
 
-    mock_from_uri.assert_called_once_with(TILED_URL, auth=None)
+    mock_from_uri.assert_called_once_with(DIAMOND_TILED_URL, auth=None)
     assert tiled_client is mock_from_uri.return_value
 
 
@@ -99,7 +99,7 @@ def test_get_tiled_client_adds_tiled_auth_with_client_id_and_secret_if_found(
         tiled_auth=mock_service_account_cls.return_value
     )
     mock_from_uri.assert_called_once_with(
-        TILED_URL,
+        DIAMOND_TILED_URL,
         auth=mock_tiled_auth_cls.return_value,
     )
 
