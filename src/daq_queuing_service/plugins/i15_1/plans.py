@@ -2,6 +2,10 @@ from enum import StrEnum
 from typing import Any
 
 from blueapi.service.model import TaskRequest
+from daq_config_server.models.i15_1.queue_parameters import (
+    CentringParameters,
+    DataCollectionParameters,
+)
 
 from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
@@ -43,14 +47,16 @@ def get_wait_for_beam(instrument_session: str) -> TaskRequest:
     )
 
 
-def get_centre_sample(experiment: Experiment) -> TaskRequest:
+def get_centre_sample(
+    centring_params: CentringParameters, experiment: Experiment
+) -> TaskRequest:
     return TaskRequest(
         name="centre_sample",
         params={
-            "start_z": -20,
-            "end_z": 0,
-            "steps": 20,
-            "exposure_time": 0.01,
+            "start_z": centring_params.start_z,
+            "end_z": centring_params.end_z,
+            "step_size": centring_params.step_size_mm,
+            "exposure_time": centring_params.exposure_time_s,
             "metadata": {
                 "sample": experiment.sample,
                 "experiment_definition": experiment.experiment_definition,
@@ -61,6 +67,7 @@ def get_centre_sample(experiment: Experiment) -> TaskRequest:
 
 
 def get_data_collection(
+    data_collection_params: DataCollectionParameters,
     experiment: Experiment,
     tiled_auxiliary_scans: dict[AuxiliaryScanType, TiledAuxiliary] | None,
 ):
@@ -80,7 +87,7 @@ def get_data_collection(
         scan_type = ScanType.DATA_COLLECTION
 
     common_params: dict[str, Any] = {
-        "exposure_time_per_frame": 0.1,
+        "exposure_time_per_frame": data_collection_params.exposure_time_s,
         "scan_type": scan_type,
         "metadata": collection_metadata,
     }

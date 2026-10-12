@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
+from daq_config_server.models.i15_1.queue_parameters import QueueParameters
 from daq_config_server.models.i15_1.standards_puck import (
     STANDARD_CAPILLARY,
     STANDARD_SAMPLE,
@@ -20,7 +21,10 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.plugins.i15_1.i15_1_converter import (
+    QUEUE_PARAMS_CONFIG_PATH,
+    I151Converter,
+)
 from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
@@ -62,11 +66,8 @@ def i15_1_tasks(tasks: list[Task]):
 
 
 @pytest.fixture()
-def patch_wait_for_beam_constant():
-    with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.WAIT_FOR_BEAM", False
-    ) as patch_wait_for_beam:
-        yield patch_wait_for_beam
+def patch_wait_for_beam_constant(mock_config: dict[str, Any]):
+    mock_config[QUEUE_PARAMS_CONFIG_PATH].do_wait_for_beam = False
 
 
 def make_background_task(capillary: STANDARD_CAPILLARY, time_per_pdf: int) -> Task:
@@ -259,7 +260,7 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     assert tasks[0].params["puck"] == 2
 
 
-def test_centre_sample_uses_expected_params():
+def test_centre_sample_uses_params_from_queue_params(queue_params: QueueParameters):
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
@@ -271,10 +272,10 @@ def test_centre_sample_uses_expected_params():
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "centre_sample"
     assert tasks[2].params == {
-        "start_z": -20,
-        "end_z": 0,
-        "steps": 20,
-        "exposure_time": 0.01,
+        "start_z": queue_params.centring_params.start_z,
+        "end_z": queue_params.centring_params.end_z,
+        "step_size": queue_params.centring_params.step_size_mm,
+        "exposure_time": queue_params.centring_params.exposure_time_s,
         "metadata": {
             "experiment_definition": ExperimentDefinition(
                 name=" ", id="", data={"time_per_pdf": 100}
@@ -333,7 +334,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[4].name == "data_collection"
     assert tasks[4].params["full_collection_time"] == 100
-    assert tasks[4].params["exposure_time_per_frame"] == 0.1
+    assert tasks[4].params["exposure_time_per_frame"] == 1.0
     assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
     assert tasks[4].params["metadata"] == {
         "experiment_definition": ExperimentDefinition(
@@ -364,7 +365,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[4].name == "blower_collection"
     assert tasks[4].params["time_per_collection"] == 100
-    assert tasks[4].params["exposure_time_per_frame"] == 0.1
+    assert tasks[4].params["exposure_time_per_frame"] == 1.0
     assert tasks[4].params["ramp_rate_c_per_min"] == 10
     assert tasks[4].params["settle_time"] == 5
     assert tasks[4].params["temperatures_celsius"] == [100, 120]
@@ -394,7 +395,7 @@ def test_experiemnt_with_no_sample_converts_to_air_scan():
     assert tasks[1].name == "data_collection"
     assert tasks[1].params == {
         "full_collection_time": 100,
-        "exposure_time_per_frame": 0.1,
+        "exposure_time_per_frame": 1.0,
         "scan_type": ScanType.DATA_COLLECTION,
         "metadata": {
             "sample": None,

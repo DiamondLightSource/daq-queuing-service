@@ -3,7 +3,8 @@ from functools import cached_property
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
 from daq_config_server.client import ConfigClient
-from daq_config_server.models.i15_1.standards_puck import StandardsPin, StandardsPuck
+from daq_config_server.models.i15_1 import StandardsPin, StandardsPuck
+from daq_config_server.models.i15_1.queue_parameters import QueueParameters
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
@@ -41,8 +42,7 @@ CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
 STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
-WAIT_FOR_BEAM = True
-ROBOT_LOAD = True
+QUEUE_PARAMS_CONFIG_PATH = "/dls_sw/i15-1/software/daq_configuration/queue_params.toml"
 
 
 def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
@@ -72,6 +72,12 @@ class I151Converter(Converter):
             STANDARDS_PUCK_CONFIG_PATH, desired_return_type=StandardsPuck
         )
 
+    @property
+    def _queue_params(self) -> QueueParameters:
+        return self._config_client.get_file_contents(
+            QUEUE_PARAMS_CONFIG_PATH, desired_return_type=QueueParameters
+        )
+
     def pre_process(
         self,
         current_task: TaskWithPosition | None,
@@ -79,6 +85,7 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
+        self._config_client.reset_cache()
         return self._add_required_auxiliary_scans(current_task, queue)
 
     def construct_blueapi_calls(
@@ -130,14 +137,19 @@ class I151Converter(Converter):
 
         session = experiment.instrument_session
         sample = experiment.sample
+        robot_load = self._queue_params.do_robot_load
+        wait_for_beam = self._queue_params.do_wait_for_beam
+        centring_params = self._queue_params.centring_params
+        data_collection_params = self._queue_params.data_collection_params
+        tiled_scans = self._tiled_auxiliary_scans.get(task_id)
 
         plans: list[TaskRequest | None] = [
-            get_robot_load(sample, session) if sample and ROBOT_LOAD else None,
-            get_wait_for_beam(session) if WAIT_FOR_BEAM else None,
-            get_centre_sample(experiment) if sample else None,
-            get_wait_for_beam(session) if WAIT_FOR_BEAM and sample else None,
-            get_data_collection(experiment, self._tiled_auxiliary_scans.get(task_id)),
-            get_robot_unload(session) if sample and ROBOT_LOAD else None,
+            get_robot_load(sample, session) if sample and robot_load else None,
+            get_wait_for_beam(session) if wait_for_beam else None,
+            get_centre_sample(centring_params, experiment) if sample else None,
+            get_wait_for_beam(session) if wait_for_beam and sample else None,
+            get_data_collection(data_collection_params, experiment, tiled_scans),
+            get_robot_unload(session) if sample and robot_load else None,
         ]
 
         return [plan for plan in plans if plan is not None]

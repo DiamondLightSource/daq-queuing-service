@@ -1,8 +1,20 @@
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
 import pytest
+from daq_config_server.client import ConfigClient
 from daq_config_server.models.i15_1 import StandardsPin, StandardsPuck
+from daq_config_server.models.i15_1.queue_parameters import (
+    CentringParameters,
+    DataCollectionParameters,
+    QueueParameters,
+)
+from daq_config_server.testing import MockServerResponse
 
+from daq_queuing_service.plugins.i15_1.i15_1_converter import (
+    QUEUE_PARAMS_CONFIG_PATH,
+    STANDARDS_PUCK_CONFIG_PATH,
+)
 from daq_queuing_service.plugins.i15_1.tiled_interaction import cache
 
 
@@ -13,7 +25,7 @@ def clear_cache():
 
 
 @pytest.fixture
-def standards_puck():
+def standards_puck() -> StandardsPuck:
     return StandardsPuck(
         position_on_table=1,
         pins={
@@ -43,12 +55,33 @@ def standards_puck():
     )
 
 
+@pytest.fixture
+def queue_params() -> QueueParameters:
+    return QueueParameters(
+        do_wait_for_beam=True,
+        do_centring=True,
+        do_robot_load=True,
+        tiled_stale_time_s=604800,
+        centring_params=CentringParameters(
+            start_z=-20, end_z=7, step_size_mm=0.1, exposure_time_s=0.1
+        ),
+        data_collection_params=DataCollectionParameters(exposure_time_s=1),
+    )
+
+
+@pytest.fixture
+def mock_config(standards_puck: StandardsPuck, queue_params: QueueParameters):
+    return {
+        STANDARDS_PUCK_CONFIG_PATH: standards_puck,
+        QUEUE_PARAMS_CONFIG_PATH: queue_params,
+    }
+
+
 @pytest.fixture(autouse=True)
-def mock_config_client(standards_puck: StandardsPuck):
-    mock_config_server = MagicMock()
-    mock_config_server.get_file_contents = MagicMock(return_value=standards_puck)
+def mock_config_client(mock_config: dict[str, Any]):
+    config_client = ConfigClient(server_response=MockServerResponse(mock_config))
     with patch(
         "daq_config_server.client.ConfigClient.from_url",
-        return_value=mock_config_server,
+        return_value=config_client,
     ):
-        yield mock_config_server
+        yield config_client
