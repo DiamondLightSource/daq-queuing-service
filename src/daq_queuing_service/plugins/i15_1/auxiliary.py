@@ -13,8 +13,8 @@ class AuxiliaryScanType(StrEnum):
     STANDARD_SAMPLE = "Standard Sample"
 
 
-def is_auxiliary_str(value: str) -> bool:
-    return value in list(AuxiliaryScanType)
+def is_auxiliary_experiment(experiment: Experiment) -> bool:
+    return experiment.experiment_definition.name in list(AuxiliaryScanType)
 
 
 class AuxiliaryScan(BaseModel):
@@ -81,7 +81,7 @@ class AuxiliaryScan(BaseModel):
 
     @classmethod
     def from_experiment(cls, experiment: Experiment) -> "AuxiliaryScan":
-        assert is_auxiliary_str(experiment.name), (
+        assert is_auxiliary_experiment(experiment), (
             f"This experiment is not a background scan: {experiment}"
         )
 
