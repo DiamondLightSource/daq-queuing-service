@@ -17,5 +17,4 @@ HANDLER.setFormatter(
 )
 LOGGER = logging.getLogger("Queue")
 LOGGER.addHandler(HANDLER)
-LOGGER.setLevel(logging.DEBUG)
 LOGGER.propagate = False
