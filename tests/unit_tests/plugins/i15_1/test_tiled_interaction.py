@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from daq_config_server.models.i15_1 import QueueParameters
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
 from pytest import LogCaptureFixture
 from tiled.queries import Comparison, Eq, In, KeyPresent
@@ -12,7 +13,6 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     TiledAuxiliary,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
-    TILED_STALE_TIME,
     get_suitable_tiled_scan,
 )
 
@@ -129,11 +129,13 @@ def test_get_suitable_tiled_background_makes_expected_searches(
     mock_tiled_searches: tuple[
         MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
     ],
+    queue_params: QueueParameters,
 ):
     client, search_2, search_3, search_4, search_5, search_6 = mock_tiled_searches
     get_suitable_tiled_scan(
         client,
         AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+        queue_params.tiled_stale_time_s,
     )
     client.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
     search_2.search.assert_called_once_with(
@@ -141,7 +143,7 @@ def test_get_suitable_tiled_background_makes_expected_searches(
     )
     search_3.search.assert_called_once_with(Eq("stop.exit_status", "success"))
     search_4.search.assert_called_once_with(
-        Comparison("ge", "stop.time", 30 - TILED_STALE_TIME)
+        Comparison("ge", "stop.time", 30 - queue_params.tiled_stale_time_s)
     )
     search_5.search.assert_called_once_with(
         In(key="start.scan_type", value=["Air", "Empty Capillary", "Standard Sample"])
@@ -196,7 +198,7 @@ def test_get_background_tiled_returns_most_recent_suitable_background(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
     client, *_ = mock_tiled_searches
-    result = get_suitable_tiled_scan(client, required_auxiliary)
+    result = get_suitable_tiled_scan(client, required_auxiliary, 1000000)
     assert result == expected_result
 
 
@@ -209,6 +211,7 @@ def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_f
         get_suitable_tiled_scan(
             client,
             AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            1000000,
         )
         is None
     )
@@ -234,6 +237,7 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_no_capillary_found_an
         tiled_scan = get_suitable_tiled_scan(
             client,
             AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            1000000,
         )
     assert tiled_scan is None
     assert "No capillary found for tiled scan 'tiled_id_1'" in caplog.text
@@ -259,6 +263,7 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_scan_type_doesnt_matc
         tiled_scan = get_suitable_tiled_scan(
             client,
             AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            1000000,
         )
     assert tiled_scan is None
     assert (

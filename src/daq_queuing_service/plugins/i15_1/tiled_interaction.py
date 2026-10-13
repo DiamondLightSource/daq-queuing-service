@@ -21,20 +21,15 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
 
 cache = TTLCache(maxsize=100, ttl=1)
 
-TILED_URL = "https://tiled.diamond.ac.uk"
-
-
-TILED_STALE_TIME = 60 * 15
-
 
 def get_suitable_tiled_scan(
-    tiled_client: Container, required_scan: AuxiliaryScan
+    tiled_client: Container, required_scan: AuxiliaryScan, stale_time_s: int
 ) -> TiledAuxiliary | None:
 
     @cached(cache)
     def _query_tiled(instrument_session: str) -> list[TiledAuxiliary]:
 
-        oldest_valid_time = time.time() - TILED_STALE_TIME
+        oldest_valid_time = time.time() - stale_time_s
         result: Container = (
             tiled_client.search(Eq("start.instrument", "i15-1"))
             .search(Eq("start.instrument_session", instrument_session))
@@ -100,7 +95,7 @@ def get_suitable_tiled_scan(
 
         LOGGER.debug(
             f"Found {len(auxiliary_scans)} auxiliary scans in tiled since "
-            + f"{TILED_STALE_TIME}s ago for visit {instrument_session}."
+            + f"{stale_time_s}s ago for visit {instrument_session}."
         )
         return auxiliary_scans
 
