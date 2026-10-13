@@ -3,7 +3,7 @@ from functools import cached_property
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
 from daq_config_server.client import ConfigClient
-from daq_config_server.models.i15_1.standards_puck import StandardsPin, StandardsPuck
+from daq_config_server.models.i15_1 import QueueParameters, StandardsPin, StandardsPuck
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
@@ -41,8 +41,7 @@ CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
 STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
-WAIT_FOR_BEAM = True
-ROBOT_LOAD = True
+QUEUE_PARAMS_CONFIG_PATH = "/dls_sw/i15-1/software/daq_configuration/queue_params.toml"
 
 
 def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
@@ -72,6 +71,12 @@ class I151Converter(Converter):
             STANDARDS_PUCK_CONFIG_PATH, desired_return_type=StandardsPuck
         )
 
+    @property
+    def _queue_params(self) -> QueueParameters:
+        return self._config_client.get_file_contents(
+            QUEUE_PARAMS_CONFIG_PATH, desired_return_type=QueueParameters
+        )
+
     def pre_process(
         self,
         current_task: TaskWithPosition | None,
@@ -79,7 +84,10 @@ class I151Converter(Converter):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        return self._add_required_auxiliary_scans(current_task, queue)
+        self._config_client.reset_cache()
+        if self._queue_params.add_auxiliary_scans:
+            return self._add_required_auxiliary_scans(current_task, queue)
+        return queue
 
     def construct_blueapi_calls(
         self,
@@ -130,25 +138,28 @@ class I151Converter(Converter):
 
         session = experiment.instrument_session
         sample = experiment.sample
+        centring_params = self._queue_params.centring_params
+        data_collection_params = self._queue_params.data_collection_params
+        tiled_scans = self._tiled_auxiliary_scans.get(task_id)
 
         plans: list[TaskRequest] = []
 
-        if sample and ROBOT_LOAD:
+        if sample and self._queue_params.do_robot_load:
             plans.append(get_robot_load(sample, session))
 
-        if WAIT_FOR_BEAM:
+        if self._queue_params.do_wait_for_beam:
             plans.append(get_wait_for_beam(session))
 
-        if sample:
-            plans.append(get_centre_sample(experiment))
-            if WAIT_FOR_BEAM:
+        if sample and self._queue_params.do_centring:
+            plans.append(get_centre_sample(centring_params, experiment))
+            if self._queue_params.do_wait_for_beam:
                 plans.append(get_wait_for_beam(session))
 
         plans.append(
-            get_data_collection(experiment, self._tiled_auxiliary_scans.get(task_id))
+            get_data_collection(data_collection_params, experiment, tiled_scans)
         )
 
-        if sample and ROBOT_LOAD:
+        if sample and self._queue_params.do_robot_load:
             plans.append(get_robot_unload(session))
 
         return plans
@@ -220,7 +231,9 @@ class I151Converter(Converter):
             return new_tasks
 
         if tiled_scan := get_suitable_tiled_scan(
-            self._tiled_client, required_auxiliary
+            self._tiled_client,
+            required_auxiliary,
+            self._queue_params.tiled_stale_time_s,
         ):
             self._tiled_auxiliary_scans[task_id][tiled_scan.kind] = tiled_scan
             return new_tasks

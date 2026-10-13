@@ -19,12 +19,13 @@ from daq_queuing_service.log import LOGGER
 # pyright: reportUnknownLambdaType=false
 
 
-TILED_URL = "https://tiled.diamond.ac.uk"
+DIAMOND_TILED_URL = "https://tiled.diamond.ac.uk"
 
 cache = TTLCache(maxsize=100, ttl=1)
 
 
 def get_tiled_client(
+    tiled_url: str = DIAMOND_TILED_URL,
     secret_variable_name: str = "UDC_SECRET",
     client_id_variable_name: str = "UDC_CLIENT_ID",
 ) -> Container:
@@ -50,7 +51,7 @@ def get_tiled_client(
         LOGGER.warning("Tiled auth will not be used.")
         tiled_auth = None
 
-    return from_uri(TILED_URL, auth=tiled_auth)
+    return from_uri(tiled_url, auth=tiled_auth)
 
 
 def get_metadata_from_tiled(
