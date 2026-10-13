@@ -1,3 +1,4 @@
+import math
 from enum import StrEnum
 from typing import Any
 
@@ -50,12 +51,20 @@ def get_wait_for_beam(instrument_session: str) -> TaskRequest:
 def get_centre_sample(
     centring_params: CentringParameters, experiment: Experiment
 ) -> TaskRequest:
+    # Once the plan interface changes to use step_size, this must be changed too
+    # https://github.com/DiamondLightSource/crystallography-bluesky/issues/182
+    steps = math.ceil(
+        abs(
+            (centring_params.end_z - centring_params.start_z)
+            / centring_params.step_size_mm
+        )
+    )
     return TaskRequest(
         name="centre_sample",
         params={
             "start_z": centring_params.start_z,
             "end_z": centring_params.end_z,
-            "step_size": centring_params.step_size_mm,
+            "steps": steps,
             "exposure_time": centring_params.exposure_time_per_frame_s,
             "metadata": {
                 "sample": experiment.sample,

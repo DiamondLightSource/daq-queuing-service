@@ -268,7 +268,7 @@ def test_centre_sample_uses_params_from_queue_params(queue_params: QueueParamete
     assert tasks[2].params == {
         "start_z": queue_params.centring_params.start_z,
         "end_z": queue_params.centring_params.end_z,
-        "step_size": queue_params.centring_params.step_size_mm,
+        "steps": 270,
         "exposure_time": queue_params.centring_params.exposure_time_per_frame_s,
         "metadata": {
             "experiment_definition": ExperimentDefinition(
