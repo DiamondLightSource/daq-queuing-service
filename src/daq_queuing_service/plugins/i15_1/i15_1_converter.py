@@ -384,7 +384,6 @@ class I151Converter(Converter):
         return Experiment(
             name=experiment_name,
             instrument_session=instrument_session,
-            # Need to get sample info for test samples (air, empty capillary etc)
             sample=sample,
             experiment_definition=ExperimentDefinition(
                 name=auxiliary_scan.kind,
