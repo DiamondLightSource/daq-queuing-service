@@ -112,7 +112,7 @@ def air_task(
             "instrument_session": instrument_session,
             "sample": None,
             "experiment_definition": {
-                "name": "Auxiliary Air Scan",
+                "name": "Air",
                 "id": "",
                 "data": {"time_per_pdf": time_per_pdf},
             },
@@ -130,7 +130,7 @@ def empty_capillary_task(
     return create_task_dict(
         task_id,
         {
-            "name": "Empty Capillary",
+            "name": f"Empty {capillary} - Empty Capillary",
             "instrument_session": instrument_session,
             "sample": {
                 "name": f"Empty {capillary}",
@@ -149,7 +149,7 @@ def empty_capillary_task(
                 },
             },
             "experiment_definition": {
-                "name": "Auxiliary Empty Capillary Scan",
+                "name": "Empty Capillary",
                 "id": "",
                 "data": {
                     "time_per_pdf": time_per_pdf,
@@ -170,7 +170,7 @@ def standard_sample_task(
     return create_task_dict(
         task_id,
         {
-            "name": "Standard Sample",
+            "name": f"{contents} {capillary} - Standard Sample",
             "instrument_session": instrument_session,
             "sample": {
                 "name": f"{contents} {capillary}",
@@ -189,7 +189,7 @@ def standard_sample_task(
                 },
             },
             "experiment_definition": {
-                "name": "Auxiliary Standard Sample Scan",
+                "name": "Standard Sample",
                 "id": "",
                 "data": {
                     "time_per_pdf": time_per_pdf,
@@ -743,7 +743,8 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
     )
     current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25))
     # Current task is suitable but not a background
-    current_task.experiment.name = "Not a background"
+    assert isinstance(current_task.experiment, Experiment)
+    current_task.experiment.experiment_definition.name = "Not a background"
     new_tasks = [make_background_task("fq1.0", 10)]
     result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
         background, current_task, new_tasks, "task_id", "cm12345-1"

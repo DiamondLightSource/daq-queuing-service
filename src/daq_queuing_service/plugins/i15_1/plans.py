@@ -82,7 +82,7 @@ def get_data_collection(
         collection_metadata["auxiliary_scans"] = tiled_auxiliary_scans
 
     try:
-        scan_type = ScanType(experiment.name)
+        scan_type = ScanType(experiment.experiment_definition.name)
     except ValueError:
         scan_type = ScanType.DATA_COLLECTION
 

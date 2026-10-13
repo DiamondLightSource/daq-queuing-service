@@ -17,7 +17,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     AuxiliaryScanType,
     TiledAuxiliary,
-    is_auxiliary_str,
+    is_auxiliary_experiment,
 )
 from daq_queuing_service.plugins.i15_1.plans import (
     get_centre_sample,
@@ -49,7 +49,7 @@ def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]
         (i, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
-        and is_auxiliary_str(task.experiment.name)
+        and is_auxiliary_experiment(task.experiment)
     ]
 
 
@@ -138,22 +138,31 @@ class I151Converter(Converter):
 
         session = experiment.instrument_session
         sample = experiment.sample
-        robot_load = self._queue_params.do_robot_load
-        wait_for_beam = self._queue_params.do_wait_for_beam
         centring_params = self._queue_params.centring_params
         data_collection_params = self._queue_params.data_collection_params
         tiled_scans = self._tiled_auxiliary_scans.get(task_id)
 
-        plans: list[TaskRequest | None] = [
-            get_robot_load(sample, session) if sample and robot_load else None,
-            get_wait_for_beam(session) if wait_for_beam else None,
-            get_centre_sample(centring_params, experiment) if sample else None,
-            get_wait_for_beam(session) if wait_for_beam and sample else None,
-            get_data_collection(data_collection_params, experiment, tiled_scans),
-            get_robot_unload(session) if sample and robot_load else None,
-        ]
+        plans: list[TaskRequest] = []
 
-        return [plan for plan in plans if plan is not None]
+        if sample and self._queue_params.do_robot_load:
+            plans.append(get_robot_load(sample, session))
+
+        if self._queue_params.do_wait_for_beam:
+            plans.append(get_wait_for_beam(session))
+
+        if sample and self._queue_params.do_centring:
+            plans.append(get_centre_sample(centring_params, experiment))
+            if self._queue_params.do_wait_for_beam:
+                plans.append(get_wait_for_beam(session))
+
+        plans.append(
+            get_data_collection(data_collection_params, experiment, tiled_scans)
+        )
+
+        if sample and self._queue_params.do_robot_load:
+            plans.append(get_robot_unload(session))
+
+        return plans
 
     def _add_required_auxiliary_scans(
         self, current_task: TaskWithPosition | None, tasks: list[Task]
@@ -175,8 +184,8 @@ class I151Converter(Converter):
 
         for task in tasks:
             experiment = task.experiment
-            if isinstance(experiment, Experiment) and not is_auxiliary_str(
-                experiment.name
+            if isinstance(experiment, Experiment) and not is_auxiliary_experiment(
+                experiment
             ):
                 instrument_session = experiment.instrument_session
 
@@ -207,7 +216,7 @@ class I151Converter(Converter):
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
-            and is_auxiliary_str(current_task.experiment.name)
+            and is_auxiliary_experiment(current_task.experiment)
             and AuxiliaryScan.from_experiment(current_task.experiment).is_suitable(
                 required_auxiliary
             )
@@ -299,13 +308,20 @@ class I151Converter(Converter):
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
 
+        sample = self._construct_auxiliary_sample(auxiliary_scan.pin)
+        experiment_name = (
+            f"{sample.name} - {auxiliary_scan.kind}"
+            if sample
+            else f"{auxiliary_scan.kind}"
+        )
+
         return Experiment(
-            name=auxiliary_scan.kind,
+            name=experiment_name,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=self._construct_auxiliary_sample(auxiliary_scan.pin),
+            sample=sample,
             experiment_definition=ExperimentDefinition(
-                name=f"Auxiliary {auxiliary_scan.kind} Scan",
+                name=auxiliary_scan.kind,
                 id="",
                 data={"time_per_pdf": auxiliary_scan.time_per_pdf},
             ),
