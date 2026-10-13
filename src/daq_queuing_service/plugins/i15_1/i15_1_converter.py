@@ -19,7 +19,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     AuxiliaryScanType,
     TiledAuxiliary,
-    is_auxiliary_str,
+    is_auxiliary_experiment,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import get_suitable_tiled_scan
 from daq_queuing_service.task_queue.task import (
@@ -54,7 +54,7 @@ def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]
         (i, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
-        and is_auxiliary_str(task.experiment.name)
+        and is_auxiliary_experiment(task.experiment)
     ]
 
 
@@ -133,7 +133,7 @@ class I151Converter(Converter):
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
 
         try:
-            scan_type = ScanType(experiment.name)
+            scan_type = ScanType(experiment.experiment_definition.name)
         except ValueError:
             scan_type = ScanType.DATA_COLLECTION
 
@@ -232,8 +232,8 @@ class I151Converter(Converter):
 
         for task in tasks:
             experiment = task.experiment
-            if isinstance(experiment, Experiment) and not is_auxiliary_str(
-                experiment.name
+            if isinstance(experiment, Experiment) and not is_auxiliary_experiment(
+                experiment
             ):
                 instrument_session = experiment.instrument_session
 
@@ -264,7 +264,7 @@ class I151Converter(Converter):
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
-            and is_auxiliary_str(current_task.experiment.name)
+            and is_auxiliary_experiment(current_task.experiment)
             and AuxiliaryScan.from_experiment(current_task.experiment).is_suitable(
                 required_auxiliary
             )
@@ -373,13 +373,21 @@ class I151Converter(Converter):
                     "settle_time": DEFAULT_SETTLE_TIME,
                 }
             )
+
+        sample = self._construct_auxiliary_sample(auxiliary_scan.pin)
+        experiment_name = (
+            f"{sample.name} - {auxiliary_scan.kind}"
+            if sample
+            else f"{auxiliary_scan.kind}"
+        )
+
         return Experiment(
-            name=auxiliary_scan.kind,
+            name=experiment_name,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=self._construct_auxiliary_sample(auxiliary_scan.pin),
+            sample=sample,
             experiment_definition=ExperimentDefinition(
-                name=f"Auxiliary {auxiliary_scan.kind} Scan",
+                name=auxiliary_scan.kind,
                 id="",
                 data=data,
             ),
