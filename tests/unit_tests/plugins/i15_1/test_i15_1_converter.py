@@ -22,7 +22,6 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     TiledAuxiliary,
 )
 from daq_queuing_service.plugins.i15_1.i15_1_converter import (
-    QUEUE_PARAMS_CONFIG_PATH,
     I151Converter,
 )
 from daq_queuing_service.plugins.i15_1.plans import ScanType
@@ -40,7 +39,7 @@ from ...conftest import make_sample
 
 
 @pytest.fixture
-def i15_1_tasks(tasks: list[Task]):
+def i15_1_tasks():
     time_per_pdfs = [5, 10, 10, 20, 25]
     tasks = [
         Task(
@@ -63,11 +62,6 @@ def i15_1_tasks(tasks: list[Task]):
         for i in range(5)
     ]
     return tasks
-
-
-@pytest.fixture()
-def patch_wait_for_beam_constant(mock_config: dict[str, Any]):
-    mock_config[QUEUE_PARAMS_CONFIG_PATH].do_wait_for_beam = False
 
 
 def make_background_task(capillary: STANDARD_CAPILLARY, time_per_pdf: int) -> Task:
@@ -800,23 +794,24 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
 
 @pytest.mark.parametrize(
     "index, expected_scan_type",
-    [
-        (0, ScanType.AIR),
-        # 1 is robot load
-        # 2 is centring
-        (3, ScanType.EMPTY_CAPILLARY),
-        # 4 is robot unload
-        # 5 is robot load
-        # 6 is centring
-        (7, ScanType.STANDARD_SAMPLE),
-        (11, ScanType.DATA_COLLECTION),
+    [  # 0 is wait_for_beam
+        (1, ScanType.AIR),
+        # 2 is robot load
+        # 3 is wait_for_beam
+        # 4 is centring
+        # 5 is wait_for_beam
+        (6, ScanType.EMPTY_CAPILLARY),
+        # 7 is robot unload
+        # 8 is robot load
+        # 9 is wait_for_beam
+        # 10 is centring
+        # 11 is wait_for_beam
+        (12, ScanType.STANDARD_SAMPLE),
+        (18, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(
-    index: int,
-    expected_scan_type: ScanType,
-    patch_wait_for_beam_constant: bool,
-    queue_with_i15_1_plugin: TaskQueue,
+    index: int, expected_scan_type: ScanType, queue_with_i15_1_plugin: TaskQueue
 ):
     blueapi_calls = await queue_with_i15_1_plugin.get_call_queue()
     assert blueapi_calls[index].task_request.params["scan_type"] == expected_scan_type
@@ -867,22 +862,53 @@ def test_i15_1_converter_does_not_pause_queue_if_sample_not_found_error():
 
 
 def test_no_auxiliary_scans_added_if_turned_off_in_queue_params(
-    background_not_found_in_tiled: MagicMock, queue_params: QueueParameters
+    i15_1_tasks: list[Task],
+    background_not_found_in_tiled: MagicMock,
+    queue_params: QueueParameters,
 ):
     queue_params.add_auxiliary_scans = False
-    converter = I151Converter()
-    experiment = Experiment(
-        name="test_experiment",
-        experiment_definition=ExperimentDefinition(
-            name="run_full_collection", id="", data={"time_per_pdf": 100}
-        ),
-        sample=make_sample("test_8_1", ""),
-        instrument_session="cm12345-1",
-    )
-    task = Task(
-        experiment=experiment,
-        id="1",
-    )
-    new_tasks = converter.pre_process(None, [task], [], [])
+    task = i15_1_tasks[0]
+    new_tasks = I151Converter().pre_process(None, [task], [], [])
     assert len(new_tasks) == 1
     assert new_tasks == [task]
+
+
+def test_no_robot_load_queued_if_turned_off_in_queue_params(
+    i15_1_tasks: list[Task], queue_params: QueueParameters
+):
+    queue_params.add_auxiliary_scans = False
+    queue_params.do_robot_load = False
+
+    blueapi_calls = I151Converter().construct_blueapi_calls(
+        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+    )
+    assert not any(call.task_request.name == "robot_load" for call in blueapi_calls)
+    assert not any(call.task_request.name == "robot_unload" for call in blueapi_calls)
+
+
+def test_no_centring_queued_if_turned_off_in_queue_params(
+    i15_1_tasks: list[Task], queue_params: QueueParameters
+):
+    queue_params.add_auxiliary_scans = False
+    queue_params.do_centring = False
+
+    blueapi_calls = I151Converter().construct_blueapi_calls(
+        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+    )
+    assert not any(call.task_request.name == "centre_sample" for call in blueapi_calls)
+    wait_for_beams = [
+        call for call in blueapi_calls if call.task_request.name == "wait_for_beam"
+    ]
+    assert len(wait_for_beams) == 1  # Just before data collection
+
+
+def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
+    i15_1_tasks: list[Task], queue_params: QueueParameters
+):
+    queue_params.add_auxiliary_scans = False
+    queue_params.do_wait_for_beam = False
+
+    blueapi_calls = I151Converter().construct_blueapi_calls(
+        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+    )
+    assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)

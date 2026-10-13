@@ -72,7 +72,9 @@ def queue_params() -> QueueParameters:
 
 
 @pytest.fixture
-def mock_config(standards_puck: StandardsPuck, queue_params: QueueParameters):
+def mock_config(
+    standards_puck: StandardsPuck, queue_params: QueueParameters
+) -> dict[str, Any]:
     return {
         STANDARDS_PUCK_CONFIG_PATH: standards_puck,
         QUEUE_PARAMS_CONFIG_PATH: queue_params,
