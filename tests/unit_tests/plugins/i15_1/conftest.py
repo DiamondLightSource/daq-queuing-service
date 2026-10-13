@@ -65,9 +65,9 @@ def queue_params() -> QueueParameters:
         add_auxiliary_scans=True,
         tiled_stale_time_s=604800,
         centring_params=CentringParameters(
-            start_z=-20, end_z=7, step_size_mm=0.1, exposure_time_s=0.1
+            start_z=-20, end_z=7, step_size_mm=0.1, exposure_time_per_frame_s=0.1
         ),
-        data_collection_params=DataCollectionParameters(exposure_time_s=1),
+        data_collection_params=DataCollectionParameters(exposure_time_per_frame_s=1),
     )
 
 

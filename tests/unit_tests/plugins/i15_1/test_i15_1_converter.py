@@ -275,7 +275,7 @@ def test_centre_sample_uses_params_from_queue_params(queue_params: QueueParamete
         "start_z": queue_params.centring_params.start_z,
         "end_z": queue_params.centring_params.end_z,
         "step_size": queue_params.centring_params.step_size_mm,
-        "exposure_time": queue_params.centring_params.exposure_time_s,
+        "exposure_time": queue_params.centring_params.exposure_time_per_frame_s,
         "metadata": {
             "experiment_definition": ExperimentDefinition(
                 name=" ", id="", data={"time_per_pdf": 100}

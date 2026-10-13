@@ -16,7 +16,7 @@ description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
     "blueapi>=1.18.1",
     "cachetools>=7.0.5",
-    "daq-config-server @ git+https://github.com/DiamondLightSource/daq-config-server@d6b7c89c0a50c015ba379eff3a1055673def41ee",
+    "daq-config-server @ git+https://github.com/DiamondLightSource/daq-config-server@8c0fae72744349ec22e3ddef2434991d3017e5d3",
     "fastapi>=0.136.0",
     "pydantic>=2.13.2",
     "tiled[client]>=0.2.9",

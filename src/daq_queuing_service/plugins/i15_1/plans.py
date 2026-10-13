@@ -56,7 +56,7 @@ def get_centre_sample(
             "start_z": centring_params.start_z,
             "end_z": centring_params.end_z,
             "step_size": centring_params.step_size_mm,
-            "exposure_time": centring_params.exposure_time_s,
+            "exposure_time": centring_params.exposure_time_per_frame_s,
             "metadata": {
                 "sample": experiment.sample,
                 "experiment_definition": experiment.experiment_definition,
@@ -87,7 +87,7 @@ def get_data_collection(
         scan_type = ScanType.DATA_COLLECTION
 
     common_params: dict[str, Any] = {
-        "exposure_time_per_frame": data_collection_params.exposure_time_s,
+        "exposure_time_per_frame": data_collection_params.exposure_time_per_frame_s,
         "scan_type": scan_type,
         "metadata": collection_metadata,
     }
