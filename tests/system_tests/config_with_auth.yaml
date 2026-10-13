@@ -1,6 +1,6 @@
-converter:
-  path: "daq_queuing_service.plugins.converter"
-  name: "Converter"
+plugin:
+  path: "daq_queuing_service.plugins"
+  name: "QueuePlugin"
 blueapi:
   api:
     url: "http://localhost:8000"

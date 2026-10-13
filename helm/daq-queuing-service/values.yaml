@@ -56,9 +56,9 @@ config:
       auth:
         username: guest
         password: guest
-  converter:
-    path: "daq_queuing_service.plugins.converter"
-    name: "Converter"
+  plugin:
+    path: "daq_queuing_service.plugins"
+    name: "QueuePlugin"
   uvicorn:
     workers: 1
   # Send logs to the dodal graylog stream for now until a more suitable stream exists

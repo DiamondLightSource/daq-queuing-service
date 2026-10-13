@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter import ConverterError, ValidateError
+from daq_queuing_service.plugins.utils import PluginError, ValidateError
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
     QueueError,
@@ -66,6 +66,6 @@ def register_exception_handlers(app: FastAPI):
     )
 
     app.add_exception_handler(
-        ConverterError,
-        make_exception_handler(422, "converter_error"),
+        PluginError,
+        make_exception_handler(422, "plugin_error"),
     )

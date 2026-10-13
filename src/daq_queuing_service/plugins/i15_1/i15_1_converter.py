@@ -14,7 +14,7 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter import Converter
+from daq_queuing_service.plugins import QueuePlugin
 from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     AuxiliaryScanType,
@@ -56,7 +56,7 @@ def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]
     ]
 
 
-class I151Converter(Converter):
+class I151Plugin(QueuePlugin):
     def __init__(self):
         # First key is the ID of the task using the auxiliary scan
         self._tiled_auxiliary_scans: dict[

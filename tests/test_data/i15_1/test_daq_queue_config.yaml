@@ -1,6 +1,6 @@
-converter:
+plugin:
   path: "daq_queuing_service.plugins.i15_1.i15_1_converter"
-  name: "I151Converter"
+  name: "I151Plugin"
 blueapi:
   api:
     url: "http://localhost:8000"
