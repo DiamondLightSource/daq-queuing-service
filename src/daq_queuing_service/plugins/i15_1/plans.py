@@ -75,6 +75,12 @@ def get_centre_sample(
     )
 
 
+def experiment_is_blower(experiment: Experiment):
+    # Assume collections with lists of temperatures are blowers, see
+    # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
+    return "list_of_temperatures" in experiment.experiment_definition.data.keys()
+
+
 def get_data_collection(
     data_collection_params: DataCollectionParameters,
     experiment: Experiment,
@@ -101,9 +107,7 @@ def get_data_collection(
         "metadata": collection_metadata,
     }
 
-    # Assume collections with lists of temperatures are blowers, see
-    # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
-    if "list_of_temperatures" in experiment_definition.data.keys():
+    if experiment_is_blower(experiment):
         data_collection = TaskRequest(
             name="blower_collection",
             params=common_params
