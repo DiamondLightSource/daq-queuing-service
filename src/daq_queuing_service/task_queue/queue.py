@@ -196,8 +196,7 @@ class TaskQueue:
             # and for in progress tasks to inform conversion
             call
             for call in self._call_queue
-            if call.parent_task_id
-            and call.parent_task_id in self._queue
+            if call.parent_task_id in self._queue
             and self._tasks[call.parent_task_id].status == Status.IN_PROGRESS
             and call.status not in (CallStatus.SUCCESS, CallStatus.ERROR)
         ]
@@ -329,15 +328,16 @@ class TaskQueue:
             call.to_response(), result
         )
         tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+        LOGGER.info(f"Plan {call} has completed successfully: {result}")
         async with self._modifying:
             call.tiled_ids = tiled_ids
             call.scan_ids = scan_ids
+            if should_pause:
+                self._pause_queue(reason=PauseReason.PLUGIN_REQUESTED)
             self._check_call_valid_to_be_returned(call)
             call.succeed(result)
             self._call_history.append(call)
-            if should_pause:
-                self._pause_queue(reason=PauseReason.PLUGIN_REQUESTED)
-        LOGGER.info(f"Plan {call} has been completed successfully: {result}")
+            self._process_running_task(self._tasks[call.parent_task_id])
 
     async def fail_call(
         self, call: BlueapiCall, errors: list[str | TaskError] | None = None
@@ -366,7 +366,6 @@ class TaskQueue:
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)
             self._call_history.append(call)
-            self._process_running_task(self._tasks[call.parent_task_id])
 
     def _process_running_task(self, running_task: Task):
         done_calls = [

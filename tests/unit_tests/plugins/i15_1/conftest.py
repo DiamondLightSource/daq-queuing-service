@@ -97,7 +97,8 @@ def mock_config_client(mock_config: dict[str, Any]):
         yield config_client
 
 
-def analysis_result() -> AnalysisResult:
+@pytest.fixture
+def centring_result() -> AnalysisResult:
     return AnalysisResult(
         request_id=UUID("7d71e99e-f6f6-4e93-a1e4-ac91f8804006"),
         status="completed",
