@@ -325,9 +325,10 @@ class TaskQueue:
             task (Task): Task to be completed
             result (TaskResult): The result of the task from blueapi
         """
+        should_pause = self._converter.pause_on_complete_blueapi_call(
+            call.to_response(), result
+        )
         tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
-        should_pause = self._converter.pause_on_complete_blueapi_call(call, result)
-
         async with self._modifying:
             call.tiled_ids = tiled_ids
             call.scan_ids = scan_ids
@@ -365,6 +366,24 @@ class TaskQueue:
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)
             self._call_history.append(call)
+            self._process_running_task(self._tasks[call.parent_task_id])
+
+    def _process_running_task(self, running_task: Task):
+        done_calls = [
+            call
+            for call in running_task.blueapi_calls
+            if call.status in [CallStatus.SUCCESS, CallStatus.ERROR]
+        ]
+        next_calls = [
+            call
+            for call in running_task.blueapi_calls
+            if call.status not in [CallStatus.SUCCESS, CallStatus.ERROR]
+        ]
+        next_calls = self._converter.process_running_task(
+            [call.to_response() for call in done_calls],
+            next_calls,
+        )
+        running_task.blueapi_calls = done_calls + next_calls
 
     async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
         """Returns a task based on it's task ID
