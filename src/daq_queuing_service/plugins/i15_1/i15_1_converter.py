@@ -1,11 +1,9 @@
-from enum import StrEnum
 from functools import cached_property
-from typing import Any
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
 from daq_config_server.client import ConfigClient
-from daq_config_server.models.i15_1.standards_puck import StandardsPin, StandardsPuck
+from daq_config_server.models.i15_1 import QueueParameters, StandardsPin, StandardsPuck
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
@@ -19,7 +17,15 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     AuxiliaryScanType,
     TiledAuxiliary,
-    is_auxiliary_str,
+    is_auxiliary_experiment,
+)
+from daq_queuing_service.plugins.i15_1.plans import (
+    experiment_is_blower,
+    get_centre_sample,
+    get_data_collection,
+    get_robot_load,
+    get_robot_unload,
+    get_wait_for_beam,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import get_suitable_tiled_scan
 from daq_queuing_service.task_queue.task import (
@@ -36,15 +42,7 @@ CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
 STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
-WAIT_FOR_BEAM = True
-
-
-class ScanType(StrEnum):
-    DATA_COLLECTION = "Data Collection"
-    CENTRING = "Centring"
-    AIR = AuxiliaryScanType.AIR
-    EMPTY_CAPILLARY = AuxiliaryScanType.EMPTY_CAPILLARY
-    STANDARD_SAMPLE = AuxiliaryScanType.STANDARD_SAMPLE
+QUEUE_PARAMS_CONFIG_PATH = "/dls_sw/i15-1/software/daq_configuration/queue_params.toml"
 
 
 def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
@@ -52,7 +50,7 @@ def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]
         (i, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
-        and is_auxiliary_str(task.experiment.name)
+        and is_auxiliary_experiment(task.experiment)
     ]
 
 
@@ -74,6 +72,12 @@ class I151Plugin(QueuePlugin):
             STANDARDS_PUCK_CONFIG_PATH, desired_return_type=StandardsPuck
         )
 
+    @property
+    def _queue_params(self) -> QueueParameters:
+        return self._config_client.get_file_contents(
+            QUEUE_PARAMS_CONFIG_PATH, desired_return_type=QueueParameters
+        )
+
     def pre_process(
         self,
         current_task: TaskWithPosition | None,
@@ -81,7 +85,10 @@ class I151Plugin(QueuePlugin):
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
-        return self._add_required_auxiliary_scans(current_task, queue)
+        self._config_client.reset_cache()
+        if self._queue_params.add_auxiliary_scans:
+            return self._add_required_auxiliary_scans(current_task, queue)
+        return queue
 
     def construct_blueapi_calls(
         self,
@@ -130,85 +137,36 @@ class I151Plugin(QueuePlugin):
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
 
-        try:
-            scan_type = ScanType(experiment.name)
-        except ValueError:
-            scan_type = ScanType.DATA_COLLECTION
-
-        collection_metadata: dict[str, Any] = {
-            "sample": experiment.sample,
-            "experiment_definition": experiment.experiment_definition,
-        }
-        if tiled_auxiliary_scans := self._tiled_auxiliary_scans.get(task_id):
-            collection_metadata["auxiliary_scans"] = tiled_auxiliary_scans
-
-        # Assume collections with lists of temperatures are blowers, see
-        # https://github.com/DiamondLightSource/crystallography-bluesky/issues/125
-        time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
-
-        if "list_of_temperatures" in experiment.experiment_definition.data.keys():
-            data_collection = TaskRequest(
-                name="blower_collection",
-                params={
-                    "time_per_collection": time_per_pdf,
-                    "exposure_time_per_frame": 0.1,
-                    "ramp_rate_c_per_min": experiment.experiment_definition.data[
-                        "ramp_rate"
-                    ],
-                    "settle_time": experiment.experiment_definition.data["settle_time"],
-                    "temperatures_celsius": experiment.experiment_definition.data[
-                        "list_of_temperatures"
-                    ],
-                    "metadata": collection_metadata,
-                    "scan_type": scan_type,
-                },
-                instrument_session=experiment.instrument_session,
-            )
+        session = experiment.instrument_session
+        sample = experiment.sample
+        if experiment_is_blower(experiment):
+            centring_params = self._queue_params.blower_centring_params
         else:
-            data_collection = TaskRequest(
-                name="data_collection",
-                params={
-                    "full_collection_time": time_per_pdf,
-                    "exposure_time_per_frame": 0.1,
-                    "scan_type": scan_type,
-                    "metadata": collection_metadata,
-                },
-                instrument_session=experiment.instrument_session,
-            )
+            centring_params = self._queue_params.room_temperature_centring_params
+        data_collection_params = self._queue_params.data_collection_params
+        tiled_scans = self._tiled_auxiliary_scans.get(task_id)
 
-        if experiment.sample is None:
-            return [data_collection]  # Air scan
+        plans: list[TaskRequest] = []
 
-        position = experiment.sample.positionInContainer.position
-        puck = experiment.sample.container.positionInParent.position
+        if sample and self._queue_params.do_robot_load:
+            plans.append(get_robot_load(sample, session))
 
-        return [
-            TaskRequest(
-                name="robot_load",
-                params={"puck": puck, "position": position},
-                instrument_session=experiment.instrument_session,
-            ),
-            TaskRequest(
-                name="centre_sample",
-                params={
-                    "start_z": -20,
-                    "end_z": 0,
-                    "steps": 20,
-                    "exposure_time": 0.01,
-                    "metadata": {
-                        "sample": experiment.sample,
-                        "experiment_definition": experiment.experiment_definition,
-                    },
-                },
-                instrument_session=experiment.instrument_session,
-            ),
-            data_collection,
-            TaskRequest(
-                name="robot_unload",
-                params={},
-                instrument_session=experiment.instrument_session,
-            ),
-        ]
+        if self._queue_params.do_wait_for_beam:
+            plans.append(get_wait_for_beam(session))
+
+        if sample and self._queue_params.do_centring:
+            plans.append(get_centre_sample(centring_params, experiment))
+            if self._queue_params.do_wait_for_beam:
+                plans.append(get_wait_for_beam(session))
+
+        plans.append(
+            get_data_collection(data_collection_params, experiment, tiled_scans)
+        )
+
+        if sample and self._queue_params.do_robot_load:
+            plans.append(get_robot_unload(session))
+
+        return plans
 
     def _add_required_auxiliary_scans(
         self, current_task: TaskWithPosition | None, tasks: list[Task]
@@ -230,8 +188,8 @@ class I151Plugin(QueuePlugin):
 
         for task in tasks:
             experiment = task.experiment
-            if isinstance(experiment, Experiment) and not is_auxiliary_str(
-                experiment.name
+            if isinstance(experiment, Experiment) and not is_auxiliary_experiment(
+                experiment
             ):
                 instrument_session = experiment.instrument_session
 
@@ -262,7 +220,7 @@ class I151Plugin(QueuePlugin):
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
-            and is_auxiliary_str(current_task.experiment.name)
+            and is_auxiliary_experiment(current_task.experiment)
             and AuxiliaryScan.from_experiment(current_task.experiment).is_suitable(
                 required_auxiliary
             )
@@ -277,7 +235,9 @@ class I151Plugin(QueuePlugin):
             return new_tasks
 
         if tiled_scan := get_suitable_tiled_scan(
-            self._tiled_client, required_auxiliary
+            self._tiled_client,
+            required_auxiliary,
+            self._queue_params.tiled_stale_time_s,
         ):
             self._tiled_auxiliary_scans[task_id][tiled_scan.kind] = tiled_scan
             return new_tasks
@@ -352,13 +312,20 @@ class I151Plugin(QueuePlugin):
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
 
+        sample = self._construct_auxiliary_sample(auxiliary_scan.pin)
+        experiment_name = (
+            f"{sample.name} - {auxiliary_scan.kind}"
+            if sample
+            else f"{auxiliary_scan.kind}"
+        )
+
         return Experiment(
-            name=auxiliary_scan.kind,
+            name=experiment_name,
             instrument_session=instrument_session,
             # Need to get sample info for test samples (air, empty capillary etc)
-            sample=self._construct_auxiliary_sample(auxiliary_scan.pin),
+            sample=sample,
             experiment_definition=ExperimentDefinition(
-                name=f"Auxiliary {auxiliary_scan.kind} Scan",
+                name=auxiliary_scan.kind,
                 id="",
                 data={"time_per_pdf": auxiliary_scan.time_per_pdf},
             ),

@@ -84,12 +84,12 @@ class QueueWorker:
         assert task_status.result
         match task_status.result:
             case TaskResult():
-                LOGGER.debug(
+                LOGGER.info(
                     f"Call {call} completed successfully:  {task_status.result}"
                 )
                 await self._queue.complete_call(call, task_status.result)
             case TaskError():
-                LOGGER.debug(f"Call {call} failed: {task_status.result}. Pausing queue")
+                LOGGER.info(f"Call {call} failed: {task_status.result}. Pausing queue")
                 await self._queue.fail_call(call, [task_status.result])
 
     @staticmethod

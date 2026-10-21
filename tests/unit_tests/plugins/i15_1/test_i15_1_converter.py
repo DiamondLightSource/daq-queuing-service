@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
+from daq_config_server.models.i15_1.queue_parameters import QueueParameters
 from daq_config_server.models.i15_1.standards_puck import (
     STANDARD_CAPILLARY,
     STANDARD_SAMPLE,
@@ -20,7 +21,8 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Plugin, ScanType
+from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Plugin
+from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Experiment,
@@ -35,7 +37,7 @@ from ...conftest import make_sample
 
 
 @pytest.fixture
-def i15_1_tasks(tasks: list[Task]):
+def i15_1_tasks():
     time_per_pdfs = [5, 10, 10, 20, 25]
     tasks = [
         Task(
@@ -100,7 +102,7 @@ def air_task(
             "instrument_session": instrument_session,
             "sample": None,
             "experiment_definition": {
-                "name": "Auxiliary Air Scan",
+                "name": "Air",
                 "id": "",
                 "data": {"time_per_pdf": time_per_pdf},
             },
@@ -118,7 +120,7 @@ def empty_capillary_task(
     return create_task_dict(
         task_id,
         {
-            "name": "Empty Capillary",
+            "name": f"Empty {capillary} - Empty Capillary",
             "instrument_session": instrument_session,
             "sample": {
                 "name": f"Empty {capillary}",
@@ -137,7 +139,7 @@ def empty_capillary_task(
                 },
             },
             "experiment_definition": {
-                "name": "Auxiliary Empty Capillary Scan",
+                "name": "Empty Capillary",
                 "id": "",
                 "data": {
                     "time_per_pdf": time_per_pdf,
@@ -158,7 +160,7 @@ def standard_sample_task(
     return create_task_dict(
         task_id,
         {
-            "name": "Standard Sample",
+            "name": f"{contents} {capillary} - Standard Sample",
             "instrument_session": instrument_session,
             "sample": {
                 "name": f"{contents} {capillary}",
@@ -177,7 +179,7 @@ def standard_sample_task(
                 },
             },
             "experiment_definition": {
-                "name": "Auxiliary Standard Sample Scan",
+                "name": "Standard Sample",
                 "id": "",
                 "data": {
                     "time_per_pdf": time_per_pdf,
@@ -248,7 +250,9 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     assert tasks[0].params["puck"] == 2
 
 
-def test_centre_sample_uses_expected_params():
+def test_centre_sample_at_room_temperature_uses_correct_params_from_queue_params(
+    queue_params: QueueParameters,
+):
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
@@ -257,16 +261,58 @@ def test_centre_sample_uses_expected_params():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
+    centring_params = queue_params.room_temperature_centring_params
     tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[1].name == "centre_sample"
-    assert tasks[1].params == {
-        "start_z": -20,
-        "end_z": 0,
-        "steps": 20,
-        "exposure_time": 0.01,
+    assert tasks[2].name == "centre_sample"
+    assert tasks[2].params == {
+        "start_z": centring_params.start_z,
+        "end_z": centring_params.end_z,
+        "steps": 270,
+        "exposure_time": centring_params.exposure_time_per_frame_s,
         "metadata": {
             "experiment_definition": ExperimentDefinition(
                 name=" ", id="", data={"time_per_pdf": 100}
+            ),
+            "sample": make_sample("test_8_1", ""),
+        },
+    }
+
+
+def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
+    queue_params: QueueParameters,
+):
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=ExperimentDefinition(
+            name=" ",
+            id="",
+            data={
+                "list_of_temperatures": [100, 120],
+                "time_per_pdf": 100,
+                "settle_time": 5,
+                "ramp_rate": 10,
+            },
+        ),
+        sample=make_sample("test_8_1", ""),
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    assert tasks[2].name == "centre_sample"
+    assert tasks[2].params == {
+        "start_z": queue_params.blower_centring_params.start_z,
+        "end_z": queue_params.blower_centring_params.end_z,
+        "steps": 150,
+        "exposure_time": queue_params.blower_centring_params.exposure_time_per_frame_s,
+        "metadata": {
+            "experiment_definition": ExperimentDefinition(
+                name=" ",
+                id="",
+                data={
+                    "list_of_temperatures": [100, 120],
+                    "time_per_pdf": 100,
+                    "settle_time": 5,
+                    "ramp_rate": 10,
+                },
             ),
             "sample": make_sample("test_8_1", ""),
         },
@@ -283,7 +329,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         instrument_session="cm12345-1",
     )
     tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert len(tasks) == 4
+    assert len(tasks) == 6
     for task in tasks:
         assert task.instrument_session == "cm12345-1"
 
@@ -307,7 +353,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         user=None,
     )
     call_list = I151Plugin().construct_blueapi_calls([task], [], [])
-    assert len(call_list) == 4
+    assert len(call_list) == 6
 
 
 def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
@@ -320,11 +366,11 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         instrument_session="cm12345-1",
     )
     tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[2].name == "data_collection"
-    assert tasks[2].params["full_collection_time"] == 100
-    assert tasks[2].params["exposure_time_per_frame"] == 0.1
-    assert tasks[2].params["scan_type"] == ScanType.DATA_COLLECTION
-    assert tasks[2].params["metadata"] == {
+    assert tasks[4].name == "data_collection"
+    assert tasks[4].params["full_collection_time"] == 100
+    assert tasks[4].params["exposure_time_per_frame"] == 1.0
+    assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
+    assert tasks[4].params["metadata"] == {
         "experiment_definition": ExperimentDefinition(
             name="", id="", data={"time_per_pdf": 100}
         ),
@@ -351,17 +397,70 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
         instrument_session="cm12345-1",
     )
     tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[2].name == "blower_collection"
-    assert tasks[2].params["time_per_collection"] == 100
-    assert tasks[2].params["exposure_time_per_frame"] == 0.1
-    assert tasks[2].params["ramp_rate_c_per_min"] == 10
-    assert tasks[2].params["settle_time"] == 5
-    assert tasks[2].params["temperatures_celsius"] == [100, 120]
-    assert tasks[2].params["scan_type"] == ScanType.DATA_COLLECTION
-    assert tasks[2].params["metadata"] == {
+    assert tasks[4].name == "blower_collection"
+    assert tasks[4].params["time_per_collection"] == 100
+    assert tasks[4].params["exposure_time_per_frame"] == 1.0
+    assert tasks[4].params["ramp_rate_c_per_min"] == 10
+    assert tasks[4].params["settle_time"] == 5
+    assert tasks[4].params["temperatures_celsius"] == [100, 120]
+    assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
+    assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
     }
+
+
+def test_experiment_with_no_sample_converts_to_air_scan():
+    experiment_definition = ExperimentDefinition(
+        name="",
+        id="",
+        data={"time_per_pdf": 100},
+    )
+
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=experiment_definition,
+        sample=None,
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    assert len(tasks) == 2
+    assert tasks[0].name == "wait_for_beam"
+    assert tasks[1].name == "data_collection"
+    assert tasks[1].params == {
+        "full_collection_time": 100,
+        "exposure_time_per_frame": 1.0,
+        "scan_type": ScanType.DATA_COLLECTION,
+        "metadata": {
+            "sample": None,
+            "experiment_definition": ExperimentDefinition(
+                name="", id="", data={"time_per_pdf": 100}
+            ),
+        },
+    }
+
+
+def test_wait_for_beam_plans_added_by_converter():
+    experiment_definition = ExperimentDefinition(
+        name="",
+        id="",
+        data={
+            "list_of_temperatures": [100, 120],
+            "time_per_pdf": 100,
+            "settle_time": 5,
+            "ramp_rate": 10,
+        },
+    )
+
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=experiment_definition,
+        sample=make_sample("test_8_1", ""),
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    for i in (1, 3):
+        assert tasks[i].name == "wait_for_beam"
 
 
 def test_tiled_backgrounds_added_to_metadata_if_present():
@@ -390,7 +489,7 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
         instrument_session="cm12345-1",
     )
     tasks = plugin._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert tasks[2].params["metadata"] == {
+    assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
         "auxiliary_scans": {
@@ -436,7 +535,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     plan_task.kind = TaskKind.PLAN
     tasks = [good_task, bad_task, plan_task, good_task]
     call_list = I151Plugin().construct_blueapi_calls(tasks, [], [])
-    assert len(call_list) == 9
+    assert len(call_list) == 13
 
 
 def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
@@ -678,7 +777,8 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
     )
     current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25))
     # Current task is suitable but not a background
-    current_task.experiment.name = "Not a background"
+    assert isinstance(current_task.experiment, Experiment)
+    current_task.experiment.experiment_definition.name = "Not a background"
     new_tasks = [make_background_task("fq1.0", 10)]
     result = i15_1_plugin._ensure_auxiliary_in_queue_or_tiled(
         background, current_task, new_tasks, "task_id", "cm12345-1"
@@ -734,16 +834,20 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
 
 @pytest.mark.parametrize(
     "index, expected_scan_type",
-    [
-        (0, ScanType.AIR),
-        # 1 is robot load
-        # 2 is centring
-        (3, ScanType.EMPTY_CAPILLARY),
-        # 4 is robot unload
-        # 5 is robot load
-        # 6 is centring
-        (7, ScanType.STANDARD_SAMPLE),
-        (11, ScanType.DATA_COLLECTION),
+    [  # 0 is wait_for_beam
+        (1, ScanType.AIR),
+        # 2 is robot load
+        # 3 is wait_for_beam
+        # 4 is centring
+        # 5 is wait_for_beam
+        (6, ScanType.EMPTY_CAPILLARY),
+        # 7 is robot unload
+        # 8 is robot load
+        # 9 is wait_for_beam
+        # 10 is centring
+        # 11 is wait_for_beam
+        (12, ScanType.STANDARD_SAMPLE),
+        (18, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(
@@ -795,3 +899,56 @@ def test_i15_1_plugin_does_not_pause_queue_if_sample_not_found_error():
         ],
     )
     assert should_pause is False
+
+
+def test_no_auxiliary_scans_added_if_turned_off_in_queue_params(
+    i15_1_tasks: list[Task],
+    background_not_found_in_tiled: MagicMock,
+    queue_params: QueueParameters,
+):
+    queue_params.add_auxiliary_scans = False
+    task = i15_1_tasks[0]
+    new_tasks = I151Converter().pre_process(None, [task], [], [])
+    assert len(new_tasks) == 1
+    assert new_tasks == [task]
+
+
+def test_no_robot_load_queued_if_turned_off_in_queue_params(
+    i15_1_tasks: list[Task], queue_params: QueueParameters
+):
+    queue_params.add_auxiliary_scans = False
+    queue_params.do_robot_load = False
+
+    blueapi_calls = I151Converter().construct_blueapi_calls(
+        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+    )
+    assert not any(call.task_request.name == "robot_load" for call in blueapi_calls)
+    assert not any(call.task_request.name == "robot_unload" for call in blueapi_calls)
+
+
+def test_no_centring_queued_if_turned_off_in_queue_params(
+    i15_1_tasks: list[Task], queue_params: QueueParameters
+):
+    queue_params.add_auxiliary_scans = False
+    queue_params.do_centring = False
+
+    blueapi_calls = I151Converter().construct_blueapi_calls(
+        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+    )
+    assert not any(call.task_request.name == "centre_sample" for call in blueapi_calls)
+    wait_for_beams = [
+        call for call in blueapi_calls if call.task_request.name == "wait_for_beam"
+    ]
+    assert len(wait_for_beams) == 1  # Just before data collection
+
+
+def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
+    i15_1_tasks: list[Task], queue_params: QueueParameters
+):
+    queue_params.add_auxiliary_scans = False
+    queue_params.do_wait_for_beam = False
+
+    blueapi_calls = I151Converter().construct_blueapi_calls(
+        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+    )
+    assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)
