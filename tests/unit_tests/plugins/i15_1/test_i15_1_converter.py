@@ -296,7 +296,7 @@ def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "centre_sample"
     assert tasks[2].params == {
         "start_z": queue_params.blower_centring_params.start_z,
@@ -423,7 +423,7 @@ def test_experiment_with_no_sample_converts_to_air_scan():
         sample=None,
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert len(tasks) == 2
     assert tasks[0].name == "wait_for_beam"
     assert tasks[1].name == "data_collection"
@@ -458,7 +458,7 @@ def test_wait_for_beam_plans_added_by_converter():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     for i in (1, 3):
         assert tasks[i].name == "wait_for_beam"
 
@@ -908,7 +908,7 @@ def test_no_auxiliary_scans_added_if_turned_off_in_queue_params(
 ):
     queue_params.add_auxiliary_scans = False
     task = i15_1_tasks[0]
-    new_tasks = I151Converter().pre_process(None, [task], [], [])
+    new_tasks = I151Plugin().pre_process(None, [task], [], [])
     assert len(new_tasks) == 1
     assert new_tasks == [task]
 
@@ -919,7 +919,7 @@ def test_no_robot_load_queued_if_turned_off_in_queue_params(
     queue_params.add_auxiliary_scans = False
     queue_params.do_robot_load = False
 
-    blueapi_calls = I151Converter().construct_blueapi_calls(
+    blueapi_calls = I151Plugin().construct_blueapi_calls(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "robot_load" for call in blueapi_calls)
@@ -932,7 +932,7 @@ def test_no_centring_queued_if_turned_off_in_queue_params(
     queue_params.add_auxiliary_scans = False
     queue_params.do_centring = False
 
-    blueapi_calls = I151Converter().construct_blueapi_calls(
+    blueapi_calls = I151Plugin().construct_blueapi_calls(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "centre_sample" for call in blueapi_calls)
@@ -948,7 +948,7 @@ def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
     queue_params.add_auxiliary_scans = False
     queue_params.do_wait_for_beam = False
 
-    blueapi_calls = I151Converter().construct_blueapi_calls(
+    blueapi_calls = I151Plugin().construct_blueapi_calls(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)
