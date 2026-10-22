@@ -534,7 +534,9 @@ class TaskQueue:
         )
         self._state = QueueState(paused=True, last_pause_reason=reason)
         self._broadcaster.broadcast(Event(type="state_update", data=self._state))
-        LOGGER.info(f"Paused queue due to {reason}")
+        LOGGER.info(
+            f"Paused queue due to {reason}", extra={"event_type": "notification"}
+        )
 
     async def pause_queue(self, reason: PauseReason) -> QueueState:
         """Pause the queue if running.
