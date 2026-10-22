@@ -37,6 +37,7 @@ jobs:
           # Need load and tags so we can test it below
           load: true
           tags: tag_for_testing
+          pull: true
 
       - name: Test cli works in cached runtime image
         run: docker run --rm tag_for_testing --version
