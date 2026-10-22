@@ -45,7 +45,6 @@ dev = [
     "sphinxcontrib-openapi>=0.9.0",
     "tox-uv",
     "types-mock",
-    "uv>=0.13.4",
 ]
 
 [project.scripts]
@@ -57,6 +56,11 @@ GitHub = "https://github.com/DiamondLightSource/daq-queuing-service"
 [[project.authors]] # Further authors may be added by duplicating this section
 email = "jacob.williamson@diamond.ac.uk"
 name = "Jacob Williamson"
+
+[tool.uv]
+# https://github.com/astral-sh/uv/security/advisories/GHSA-hq85-5cpj-mr62
+required-version = ">=0.13.5"
+constraint-dependencies = ["certifi>=v2026.10.19", "starlette>=1.1.0"]
 
 [tool.setuptools_scm]
 version_file = "src/daq_queuing_service/_version.py"
