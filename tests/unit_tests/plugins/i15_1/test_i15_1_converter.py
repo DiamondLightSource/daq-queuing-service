@@ -265,7 +265,9 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
     assert tasks[0].params["puck"] == 2
 
 
-def test_centre_sample_uses_params_from_queue_params(queue_params: QueueParameters):
+def test_centre_sample_at_room_temperature_uses_correct_params_from_queue_params(
+    queue_params: QueueParameters,
+):
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
@@ -274,16 +276,58 @@ def test_centre_sample_uses_params_from_queue_params(queue_params: QueueParamete
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
+    centring_params = queue_params.room_temperature_centring_params
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "centre_sample"
     assert tasks[2].params == {
-        "start_z": queue_params.centring_params.start_z,
-        "end_z": queue_params.centring_params.end_z,
+        "start_z": centring_params.start_z,
+        "end_z": centring_params.end_z,
         "steps": 270,
-        "exposure_time": queue_params.centring_params.exposure_time_per_frame_s,
+        "exposure_time": centring_params.exposure_time_per_frame_s,
         "metadata": {
             "experiment_definition": ExperimentDefinition(
                 name=" ", id="", data={"time_per_pdf": 100}
+            ),
+            "sample": make_sample("test_8_1", ""),
+        },
+    }
+
+
+def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
+    queue_params: QueueParameters,
+):
+    experiment = Experiment(
+        name="test_experiment",
+        experiment_definition=ExperimentDefinition(
+            name=" ",
+            id="",
+            data={
+                "list_of_temperatures": [100, 120],
+                "time_per_pdf": 100,
+                "settle_time": 5,
+                "ramp_rate": 10,
+            },
+        ),
+        sample=make_sample("test_8_1", ""),
+        instrument_session="cm12345-1",
+    )
+    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    assert tasks[2].name == "centre_sample"
+    assert tasks[2].params == {
+        "start_z": queue_params.blower_centring_params.start_z,
+        "end_z": queue_params.blower_centring_params.end_z,
+        "steps": 150,
+        "exposure_time": queue_params.blower_centring_params.exposure_time_per_frame_s,
+        "metadata": {
+            "experiment_definition": ExperimentDefinition(
+                name=" ",
+                id="",
+                data={
+                    "list_of_temperatures": [100, 120],
+                    "time_per_pdf": 100,
+                    "settle_time": 5,
+                    "ramp_rate": 10,
+                },
             ),
             "sample": make_sample("test_8_1", ""),
         },
@@ -381,7 +425,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     }
 
 
-def test_experiemnt_with_no_sample_converts_to_air_scan():
+def test_experiment_with_no_sample_converts_to_air_scan():
     experiment_definition = ExperimentDefinition(
         name="",
         id="",

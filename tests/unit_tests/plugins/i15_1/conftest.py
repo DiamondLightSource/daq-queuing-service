@@ -64,8 +64,11 @@ def queue_params() -> QueueParameters:
         do_robot_load=True,
         add_auxiliary_scans=True,
         tiled_stale_time_s=604800,
-        centring_params=CentringParameters(
+        room_temperature_centring_params=CentringParameters(
             start_z=-20, end_z=7, step_size_mm=0.1, exposure_time_per_frame_s=0.1
+        ),
+        blower_centring_params=CentringParameters(
+            start_z=-10.0, end_z=5.0, step_size_mm=0.1, exposure_time_per_frame_s=0.1
         ),
         data_collection_params=DataCollectionParameters(exposure_time_per_frame_s=1),
     )

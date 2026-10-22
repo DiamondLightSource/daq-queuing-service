@@ -16,7 +16,7 @@ description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
     "blueapi>=1.18.1",
     "cachetools>=7.0.5",
-    "daq-config-server @ git+https://github.com/DiamondLightSource/daq-config-server@8c0fae72744349ec22e3ddef2434991d3017e5d3",
+    "daq-config-server @ git+https://github.com/DiamondLightSource/daq-config-server@917e0005770f761b0435bdd447b2760fb2b7152d",
     "fastapi>=0.136.0",
     "pydantic>=2.13.2",
     "tiled[client]>=0.2.9",
@@ -56,6 +56,11 @@ GitHub = "https://github.com/DiamondLightSource/daq-queuing-service"
 [[project.authors]] # Further authors may be added by duplicating this section
 email = "jacob.williamson@diamond.ac.uk"
 name = "Jacob Williamson"
+
+[tool.uv]
+# https://github.com/astral-sh/uv/security/advisories/GHSA-hq85-5cpj-mr62
+required-version = ">=0.13.5"
+constraint-dependencies = ["certifi>=v2026.10.19", "starlette>=1.1.0"]
 
 [tool.setuptools_scm]
 version_file = "src/daq_queuing_service/_version.py"

@@ -21,6 +21,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     is_auxiliary_experiment,
 )
 from daq_queuing_service.plugins.i15_1.plans import (
+    experiment_is_blower,
     get_centre_sample,
     get_data_collection,
     get_robot_load,
@@ -141,7 +142,10 @@ class I151Converter(Converter):
 
         session = experiment.instrument_session
         sample = experiment.sample
-        centring_params = self._queue_params.centring_params
+        if experiment_is_blower(experiment):
+            centring_params = self._queue_params.blower_centring_params
+        else:
+            centring_params = self._queue_params.room_temperature_centring_params
         data_collection_params = self._queue_params.data_collection_params
         tiled_scans = self._tiled_auxiliary_scans.get(task_id)
 
