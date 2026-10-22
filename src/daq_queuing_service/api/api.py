@@ -58,7 +58,7 @@ def public_routes(queue: TaskQueue) -> APIRouter:
     router = APIRouter()
 
     @router.get("/")
-    def read_root(request: Request):
+    def read_root(request: Request) -> str:
         base_url = str(request.base_url)
         return (
             f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
