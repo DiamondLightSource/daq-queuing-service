@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, computed_field
 
 from daq_queuing_service.task_queue.task import Experiment
 
+DEFAULT_TEMPERATURE_STEP = 100
+
 
 class AuxiliaryScanType(StrEnum):
     AIR = "Air"
@@ -29,6 +31,7 @@ class AuxiliaryScan(BaseModel):
     instrument_session: str
     pin: StandardsPin | None
     time_per_pdf: float
+    list_of_temperatures: list[int] | None = None
 
     @computed_field
     @property
@@ -39,7 +42,11 @@ class AuxiliaryScan(BaseModel):
             return AuxiliaryScanType.EMPTY_CAPILLARY
         return AuxiliaryScanType.STANDARD_SAMPLE
 
-    def is_suitable(self, required_background: "AuxiliaryScan") -> bool:
+    def is_suitable(
+        self,
+        required_background: "AuxiliaryScan",
+        temperature_step: int = DEFAULT_TEMPERATURE_STEP,
+    ) -> bool:
         """Determine if this background is suitable compared to an experiment's required
         background.
 
@@ -49,6 +56,30 @@ class AuxiliaryScan(BaseModel):
         Returns:
             bool: True if suitable, False if not
         """
+        if required_background.list_of_temperatures:
+            if not self.list_of_temperatures:
+                return False
+
+            if max(required_background.list_of_temperatures) > max(
+                self.list_of_temperatures
+            ) or min(required_background.list_of_temperatures) < min(
+                self.list_of_temperatures
+            ):
+                return False
+
+            if not all(
+                # All required temperatures should be within 50C
+                any(
+                    abs(temp1 - temp2) <= temperature_step / 2
+                    for temp1 in self.list_of_temperatures
+                )
+                for temp2 in required_background.list_of_temperatures
+            ):
+                return False
+        else:
+            if self.list_of_temperatures:
+                return False
+
         return (
             self.instrument_session == required_background.instrument_session
             and self.pin == required_background.pin
@@ -56,7 +87,9 @@ class AuxiliaryScan(BaseModel):
         )
 
     def attempt_to_combine_with(
-        self, required_background: "AuxiliaryScan"
+        self,
+        required_background: "AuxiliaryScan",
+        temperature_step: int = DEFAULT_TEMPERATURE_STEP,
     ) -> "AuxiliaryScan | None":
         """Creates a background that combines the requirements of this background object
         and a provided required background, if possible.
@@ -73,11 +106,28 @@ class AuxiliaryScan(BaseModel):
         if not self.pin == required_background.pin:
             return
 
-        return AuxiliaryScan(
+        if bool(self.list_of_temperatures) is not bool(
+            required_background.list_of_temperatures
+        ):
+            # Backgrounds cannot be matched if one is room temp and one is not
+            return
+
+        if required_background.list_of_temperatures and self.list_of_temperatures:
+            list_of_temperatures = self.get_background_temperatures(
+                required_background.list_of_temperatures + self.list_of_temperatures,
+                temperature_step=temperature_step,
+            )
+        else:
+            list_of_temperatures = None
+
+        result = AuxiliaryScan(
             instrument_session=self.instrument_session,
             pin=self.pin,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
+            list_of_temperatures=list_of_temperatures,
         )
+        assert result.is_suitable(required_background)
+        return result
 
     @classmethod
     def from_experiment(cls, experiment: Experiment) -> "AuxiliaryScan":
@@ -97,6 +147,22 @@ class AuxiliaryScan(BaseModel):
             instrument_session=experiment.instrument_session,
             pin=pin,
             time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
+            list_of_temperatures=experiment.experiment_definition.data.get(
+                "list_of_temperatures"
+            ),
+        )
+
+    @staticmethod
+    def get_background_temperatures(
+        list_of_temperatures: list[int],
+        temperature_step: int = DEFAULT_TEMPERATURE_STEP,
+    ):
+        return list(
+            range(
+                min(list_of_temperatures),
+                max(list_of_temperatures) + temperature_step,
+                temperature_step,
+            )
         )
 
 

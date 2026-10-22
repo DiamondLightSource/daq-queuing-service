@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Any
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
@@ -43,6 +44,8 @@ STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
 QUEUE_PARAMS_CONFIG_PATH = "/dls_sw/i15-1/software/daq_configuration/queue_params.toml"
+DEFAULT_RAMP_RATE = 0  # As fast as possible
+DEFAULT_SETTLE_TIME = 10
 
 
 def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
@@ -284,6 +287,14 @@ class I151Converter(Converter):
     ) -> list[AuxiliaryScan]:
         # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+        list_of_temperatures = experiment.experiment_definition.data.get(
+            "list_of_temperatures"
+        )
+        if list_of_temperatures:
+            list_of_temperatures = AuxiliaryScan.get_background_temperatures(
+                list_of_temperatures
+            )
+
         assert experiment.sample
         return [
             AuxiliaryScan(
@@ -297,6 +308,9 @@ class I151Converter(Converter):
                     capillary=experiment.sample.data["capillary"], contents=None
                 ),
                 time_per_pdf=time_per_pdf,
+                list_of_temperatures=experiment.experiment_definition.data.get(
+                    "list_of_temperatures"
+                ),
             ),
             AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
@@ -311,6 +325,15 @@ class I151Converter(Converter):
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
+        data: dict[str, Any] = {"time_per_pdf": auxiliary_scan.time_per_pdf}
+        if auxiliary_scan.list_of_temperatures:
+            data.update(
+                {
+                    "list_of_temperatures": auxiliary_scan.list_of_temperatures,
+                    "ramp_rate": DEFAULT_RAMP_RATE,
+                    "settle_time": DEFAULT_SETTLE_TIME,
+                }
+            )
 
         sample = self._construct_auxiliary_sample(auxiliary_scan.pin)
         experiment_name = (
@@ -322,12 +345,11 @@ class I151Converter(Converter):
         return Experiment(
             name=experiment_name,
             instrument_session=instrument_session,
-            # Need to get sample info for test samples (air, empty capillary etc)
             sample=sample,
             experiment_definition=ExperimentDefinition(
                 name=auxiliary_scan.kind,
                 id="",
-                data={"time_per_pdf": auxiliary_scan.time_per_pdf},
+                data=data,
             ),
         )
 
