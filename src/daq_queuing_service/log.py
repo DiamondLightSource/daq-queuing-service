@@ -1,6 +1,7 @@
 import logging
 
 import colorlog
+from graypy import GELFTCPHandler
 
 HANDLER = colorlog.StreamHandler()
 HANDLER.setFormatter(
@@ -15,6 +16,25 @@ HANDLER.setFormatter(
         },
     )
 )
+GRAYLOG_HANDLER = GELFTCPHandler(
+    "graylog-log-target.diamond.ac.uk",
+    # https://gitlab.diamond.ac.uk/sscc-docs/developer-guide/-/merge_requests/295/diffs
+    12231,  # dodal port - should make dedicated one for the queue
+)
+
 LOGGER = logging.getLogger("Queue")
-LOGGER.addHandler(HANDLER)
-LOGGER.propagate = False
+
+
+def setup_logger(
+    log_level: int = logging.INFO, graylog: bool = True, propagate: bool = False
+):
+    LOGGER.handlers.clear()
+    LOGGER.addHandler(HANDLER)
+    if graylog:
+        LOGGER.addHandler(GRAYLOG_HANDLER)
+
+    LOGGER.setLevel(log_level)
+    for handler in LOGGER.handlers:
+        handler.setLevel(log_level)
+
+    LOGGER.propagate = propagate

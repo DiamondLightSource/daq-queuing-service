@@ -7,7 +7,7 @@ from pathlib import Path
 import uvicorn
 
 from daq_queuing_service.app._config import get_default_config_path, load_config
-from daq_queuing_service.log import LOGGER
+from daq_queuing_service.log import setup_logger
 
 from . import __version__
 
@@ -24,11 +24,13 @@ def main(args: Sequence[str] | None = None) -> None:
 
     parsed_args = parser.parse_args(args)
     config = load_config(parsed_args.config)
-    LOGGER.setLevel(config.log_level)
+    dev = parsed_args.dev
+
+    setup_logger(log_level=config.log_level, graylog=not dev)
 
     from daq_queuing_service.app.app import create_app
 
-    app = create_app(config=config, dev=parsed_args.dev)
+    app = create_app(config=config, dev=dev)
 
     uvicorn.run(
         app,
