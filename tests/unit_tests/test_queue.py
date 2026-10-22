@@ -1,17 +1,18 @@
 import asyncio
 import copy
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import (
+from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
     CallStatus,
 )
-from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.plugins.converter import Converter, ConverterError
 from daq_queuing_service.task_queue.queue import (
     PauseReason,
@@ -31,11 +32,12 @@ from daq_queuing_service.task_queue.queue_utils import (
 from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
-    Sample,
     Status,
     Task,
     TaskKind,
 )
+
+from .conftest import make_sample
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -51,7 +53,7 @@ def make_new_task(id_str: str):
                 id=id_str,
                 data={},
             ),
-            sample=Sample(name="test_sample", id=id_str, data={}),
+            sample=make_sample("test_sample", id_str),
         ),
     )
 
@@ -286,7 +288,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="2", data={}
                 ),
-                sample=Sample(name="test_8_2", id="2", data={}),
+                sample=make_sample("test_8_2", "2"),
             ),
             id="2",
             status=Status.IN_PROGRESS,
@@ -300,10 +302,13 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     errors=[],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=0,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -312,7 +317,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="3", data={}
                 ),
-                sample=Sample(name="test_8_3", id="3", data={}),
+                sample=make_sample("test_8_3", "3"),
             ),
             id="3",
             status=Status.QUEUED,
@@ -326,10 +331,13 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     errors=[],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=1,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -338,7 +346,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="4", data={}
                 ),
-                sample=Sample(name="test_8_4", id="4", data={}),
+                sample=make_sample("test_8_4", "4"),
             ),
             id="4",
             status=Status.QUEUED,
@@ -352,10 +360,13 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     errors=[],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=2,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
     ]
 
@@ -373,7 +384,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="0", data={}
                 ),
-                sample=Sample(name="test_8_0", id="0", data={}),
+                sample=make_sample("test_8_0", "0"),
             ),
             id="0",
             status=Status.ERROR,
@@ -393,10 +404,13 @@ async def test_get_history_only_returns_tasks_in_history(
                     ],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -405,7 +419,7 @@ async def test_get_history_only_returns_tasks_in_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="1", data={}
                 ),
-                sample=Sample(name="test_8_1", id="1", data={}),
+                sample=make_sample("test_8_1", "1"),
             ),
             id="1",
             status=Status.COMPLETE,
@@ -419,10 +433,13 @@ async def test_get_history_only_returns_tasks_in_history(
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
     ]
 
@@ -441,7 +458,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="0", data={}
                 ),
-                sample=Sample(name="test_8_0", id="0", data={}),
+                sample=make_sample("test_8_0", "0"),
             ),
             id="0",
             status=Status.ERROR,
@@ -461,10 +478,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     ],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -473,7 +493,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="1", data={}
                 ),
-                sample=Sample(name="test_8_1", id="1", data={}),
+                sample=make_sample("test_8_1", "1"),
             ),
             id="1",
             status=Status.COMPLETE,
@@ -487,10 +507,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -499,7 +522,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="2", data={}
                 ),
-                sample=Sample(name="test_8_2", id="2", data={}),
+                sample=make_sample("test_8_2", "2"),
             ),
             id="2",
             status=Status.IN_PROGRESS,
@@ -513,10 +536,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=0,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -525,7 +551,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="3", data={}
                 ),
-                sample=Sample(name="test_8_3", id="3", data={}),
+                sample=make_sample("test_8_3", "3"),
             ),
             id="3",
             status=Status.QUEUED,
@@ -539,10 +565,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=1,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -551,7 +580,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                 experiment_definition=ExperimentDefinition(
                     name="test", id="4", data={}
                 ),
-                sample=Sample(name="test_8_4", id="4", data={}),
+                sample=make_sample("test_8_4", "4"),
             ),
             id="4",
             status=Status.QUEUED,
@@ -565,10 +594,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     errors=[],
                     result=None,
                     blueapi_id=None,
+                    tiled_ids=[],
+                    scan_ids=[],
                 )
             ],
             position=2,
             kind=TaskKind.EXPERIMENT,
+            user=None,
         ),
     ]
 
@@ -788,6 +820,35 @@ async def test_complete_call_must_receive_exact_same_object_as_was_claimed(
         )
 
 
+async def test_complete_call_does_not_pause_queue_if_plugin_decides(
+    task_queue: TaskQueue,
+):
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+
+
+async def test_complete_call_pauses_queue_if_plugin_decides(
+    task_queue: TaskQueue, converter: Converter
+):
+    converter.pause_on_complete_blueapi_call = MagicMock(return_value=True)
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert task_queue.state == QueueState(
+        paused=True, last_pause_reason=PauseReason.PLUGIN_REQUESTED
+    )
+
+
 async def test_fail_call_puts_task_in_history_and_updates_status_to_complete(
     task_queue: TaskQueue,
 ):
@@ -823,7 +884,7 @@ async def test_fail_call_with_errors_adds_errors_to_call(
     assert call.errors == ["This task failed"]
 
 
-async def test_fail_call_pauses_queue(task_queue: TaskQueue):
+async def test_fail_call_pauses_queue_if_plugin_decides(task_queue: TaskQueue):
     assert task_queue.state == QueueState(
         paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
     )
@@ -832,6 +893,21 @@ async def test_fail_call_pauses_queue(task_queue: TaskQueue):
     await task_queue.fail_call(call, [str(error)])
     assert task_queue.state == QueueState(
         paused=True, last_pause_reason=PauseReason.ERROR
+    )
+
+
+async def test_fail_call_does_not_pause_queue_if_plugin_decides(
+    task_queue: TaskQueue, converter: Converter
+):
+    converter.pause_on_fail_blueapi_call = MagicMock(return_value=False)
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+    )
+    call = await task_queue.get_next_call_once_available()
+    error = "This task failed"
+    await task_queue.fail_call(call, [str(error)])
+    assert task_queue.state == QueueState(
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
     )
 
 
@@ -867,6 +943,8 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             result=None,
             errors=[],
             blueapi_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -877,6 +955,8 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             result=None,
             errors=[],
             blueapi_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -887,6 +967,8 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             result=None,
             errors=[],
             blueapi_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
     ]
 
@@ -909,6 +991,8 @@ async def test_get_call_history_returns_calls_in_call_history(
                 )
             ],
             blueapi_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -919,6 +1003,8 @@ async def test_get_call_history_returns_calls_in_call_history(
             result=TaskResult(outcome="success", result=None, type="NoneType"),
             errors=[],
             blueapi_id=None,
+            tiled_ids=[],
+            scan_ids=[],
         ),
     ]
 
@@ -1040,11 +1126,13 @@ def test__copy_contents_creates_copies(task_queue: TaskQueue):
     assert isinstance(contents["tasks"]["4"].experiment, Experiment)
     a_task = task_queue._tasks["4"]
     assert isinstance(a_task.experiment, Experiment)
-
-    assert a_task.experiment.sample.name == "test_8_4"
+    assert a_task.experiment.sample and a_task.experiment.sample.name == "test_8_4"
     a_task.experiment.sample.name = "changed_name"
 
-    assert contents["tasks"]["4"].experiment.sample.name == "test_8_4"
+    assert (
+        contents["tasks"]["4"].experiment.sample
+        and contents["tasks"]["4"].experiment.sample.name == "test_8_4"
+    )
 
 
 def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
@@ -1099,14 +1187,23 @@ def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
     assert task_queue._call_history == new_call_history
 
 
-async def test__last_good_contents_updated_when_modifying_lock_entered(
+async def test__last_good_contents_updated_when_modifying_lock_exited(
     task_queue: TaskQueue,
 ):
-    task_queue._queue = ["should be copied"]
+    task_queue._queue = []
 
     async with task_queue._modifying:
-        task_queue._queue = []
+        task_queue._add_tasks(
+            [
+                Task(
+                    id="should be copied",
+                    experiment=TaskRequest(name="", instrument_session=""),
+                )
+            ],
+            position=0,
+        )
 
+    task_queue._queue = []
     assert task_queue._last_good_contents["queue"] == ["should be copied"]
     assert task_queue._queue == []
 
@@ -1128,7 +1225,7 @@ async def test_if_error_during_conversion_then_error_handled_and_contents_restor
     task_queue._converter.construct_blueapi_calls = convert
 
     with pytest.raises(ConverterError):
-        await task_queue.get_queue()
+        await task_queue.move_task("0", 0)
 
     assert task_queue._queue == ["0", "1", "2", "3", "4"]
     assert list(task_queue._tasks.keys()) == ["0", "1", "2", "3", "4"]
@@ -1149,6 +1246,161 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
     task_queue.__init__(task_queue._converter, task_queue._broadcaster)
 
     with pytest.raises(ConverterError):
-        await task_queue.get_queue()
+        await task_queue.add_tasks(MagicMock())
 
     task_queue._restore_latest_good_contents.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "method_name, args",
+    [
+        ("get_queue", []),
+        ("get_tasks", []),
+        ("get_history", []),
+        ("get_task_by_id", ["0"]),
+        ("get_task_by_position", [0]),
+        ("get_call_queue", []),
+        ("get_call_history", []),
+    ],
+)
+async def test__sync_not_called_for_read_only_methods(
+    task_queue: TaskQueue, method_name: str, args: list[Any]
+):
+    task_queue._sync = MagicMock()
+
+    # Need to reinitialise so that mocked _sync is injected into Modifying object
+    contents = copy.copy(task_queue._last_good_contents)
+    task_queue.__init__(task_queue._converter, task_queue._broadcaster)
+    task_queue._restore_from_contents(contents)
+
+    await getattr(task_queue, method_name)(*args)
+
+    task_queue._sync.assert_not_called()
+
+
+def test_get_running_task_returns_first_task_if_in_progress(
+    task_queue_in_progress: TaskQueue,
+):
+    current_task = task_queue_in_progress._get_running_task()
+    assert current_task and current_task.status == Status.IN_PROGRESS
+
+
+def test_get_running_task_returns_none_if_no_task_in_progress(
+    task_queue: TaskQueue,
+):
+    assert task_queue._get_running_task() is None
+
+
+async def test_get_running_task_returns_none_if_no_tasks_in_queue(
+    task_queue: TaskQueue,
+):
+    await task_queue.cancel_all_tasks()
+    assert task_queue._get_running_task() is None
+
+
+async def test__sync_calls_converter_pre_process_with_expected_args(
+    task_queue_with_history: TaskQueue, converter: Converter
+):
+    task_queue_with_history._modifying = MagicMock()
+    converter.pre_process = MagicMock()
+
+    first_task = task_queue_with_history._get_running_task()
+    other_tasks = [
+        task_queue_with_history._tasks[task_id]
+        for task_id in task_queue_with_history._queue[1:]
+    ]
+    history = task_queue_with_history._get_history()
+
+    task_queue_with_history._sync()
+
+    converter.pre_process.assert_called_once_with(first_task, other_tasks, history, [])
+
+
+async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
+    task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
+):
+    patch_get_metadata_from_tiled.return_value = [
+        (
+            "tiled_id",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10000,
+                }
+            },
+        )
+    ]
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    call.blueapi_id = "1234"
+    assert call.status == CallStatus.IN_PROGRESS
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert call.scan_ids == [10000]
+    assert call.tiled_ids == ["tiled_id"]
+
+
+async def test_given_multiple_scans_then_complete_call_adds_correct_ids(
+    task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
+):
+    patch_get_metadata_from_tiled.return_value = [
+        (
+            "tiled_id",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10000,
+                }
+            },
+        ),
+        (
+            "tiled_id_2",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10001,
+                }
+            },
+        ),
+    ]
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    call.blueapi_id = "1234"
+    assert call.status == CallStatus.IN_PROGRESS
+    await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
+    assert call.scan_ids == [10000, 10001]
+    assert call.tiled_ids == ["tiled_id", "tiled_id_2"]
+
+
+async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
+    task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
+):
+    patch_get_metadata_from_tiled.return_value = [
+        (
+            "tiled_id_1",
+            {
+                "start": {
+                    "time": 1,
+                    "experiment_definition": {"data": {"time_per_pdf": 10}},
+                    "sample_info": {"data": {"capillary": "air"}},
+                    "data_session_directory": "/path/to/data/2026/cm12345-1",
+                    "scan_id": 10001,
+                }
+            },
+        )
+    ]
+    call = await task_queue.get_next_call_once_available()
+    call.put_in_progress()
+    call.blueapi_id = "1234"
+    assert call.status == CallStatus.IN_PROGRESS
+    await task_queue.fail_call(call)
+    assert call.scan_ids == [10001]
+    assert call.tiled_ids == ["tiled_id_1"]

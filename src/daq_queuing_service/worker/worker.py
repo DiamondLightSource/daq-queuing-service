@@ -13,8 +13,13 @@ from blueapi.core import DataEvent
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
 from blueapi.worker.event import TaskError, TaskResult
 
-from daq_queuing_service.blueapi_interaction.blueapi_adapter import BlueapiClientAdapter
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall, CallStatus
+from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
+    BlueapiClientAdapter,
+)
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    CallStatus,
+)
 from daq_queuing_service.log import HANDLER
 from daq_queuing_service.task_queue.queue import TaskQueue
 
@@ -79,12 +84,12 @@ class QueueWorker:
         assert task_status.result
         match task_status.result:
             case TaskResult():
-                LOGGER.debug(
+                LOGGER.info(
                     f"Call {call} completed successfully:  {task_status.result}"
                 )
                 await self._queue.complete_call(call, task_status.result)
             case TaskError():
-                LOGGER.debug(f"Call {call} failed: {task_status.result}. Pausing queue")
+                LOGGER.info(f"Call {call} failed: {task_status.result}. Pausing queue")
                 await self._queue.fail_call(call, [task_status.result])
 
     @staticmethod

@@ -1,15 +1,21 @@
 import asyncio
 import json
+import uuid
 from collections.abc import AsyncGenerator
+from typing import Annotated
 
 from blueapi.service.model import TaskRequest
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
 
 from daq_queuing_service.app._config import AppConfig
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
+from daq_queuing_service.app.authentication import User
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCallResponse,
+)
+from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter, ValidateError
 from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
@@ -21,6 +27,14 @@ from daq_queuing_service.task_queue.queue import (
 from daq_queuing_service.task_queue.task import Experiment, Status, Task
 
 # pyright: reportUnusedFunction=false
+
+
+def get_current_user(request: Request) -> User | None:
+    if hasattr(request.state, "user"):
+        return request.state.user
+
+
+CurrentUser = Annotated[User | None, Depends(get_current_user)]
 
 
 class QueueStateUpdate(BaseModel):
@@ -39,17 +53,9 @@ def _filter_by_status(
     return [task for task in tasks if task.status == status]
 
 
-def create_api_router(
-    queue: TaskQueue,
-    broadcaster: Broadcaster[QUEUE_EVENTS],
-    config: AppConfig,
-    converter: Converter,
-) -> APIRouter:
+def public_routes(queue: TaskQueue) -> APIRouter:
+    """No authentication is required to access these endpoints."""
     router = APIRouter()
-
-    @router.get("/healthz")
-    async def healthz():
-        return Response()
 
     @router.get("/")
     def read_root(request: Request):
@@ -57,6 +63,29 @@ def create_api_router(
         return (
             f"Welcome to the daq queuing service. Visit {base_url}docs for Uvicorn API."
         )
+
+    @router.get("/healthz")
+    async def healthz():
+        return Response()
+
+    @router.get("/queue/state")
+    def get_queue_state() -> QueueState:
+        return queue.state
+
+    return router
+
+
+def protected_routes(
+    queue: TaskQueue,
+    broadcaster: Broadcaster[QUEUE_EVENTS],
+    config: AppConfig,
+    converter: Converter,
+) -> APIRouter:
+    """Authentication is required to access these endpoints (if turned on in config).
+    Additionally, for endpoints that depend on whitelist_check, you must be in the
+    whitelist of authorised fedIDs to access them.
+    """
+    router = APIRouter()
 
     @router.get("/config")
     def get_config() -> AppConfig:
@@ -69,10 +98,6 @@ def create_api_router(
         else:
             return await queue.resume_queue()
 
-    @router.get("/queue/state")
-    def get_queue_state() -> QueueState:
-        return queue.state
-
     @router.get("/queue")
     async def get_queued_tasks(status: Status | None = None) -> list[TaskWithPosition]:
         return _filter_by_status(await queue.get_queue(), status)
@@ -80,6 +105,7 @@ def create_api_router(
     @router.post("/queue")
     async def add_tasks_to_queue(
         experiments: list[TaskRequest | Experiment],
+        user: CurrentUser,
         position: int | None = None,
     ) -> list[str]:
         try:
@@ -87,7 +113,7 @@ def create_api_router(
         except Exception as e:
             raise ValidateError(*e.args) from e
 
-        tasks = [Task(experiment=experiment) for experiment in experiments]
+        tasks = [Task(experiment=experiment, user=user) for experiment in experiments]
         task_ids = [task.id for task in tasks]
         await queue.add_tasks(tasks, position)
         return task_ids
@@ -136,7 +162,12 @@ def create_api_router(
 
     @router.get("/events")
     async def stream_events() -> EventSourceResponse:
+        connection_id = uuid.uuid4().hex[:8]
         subscriber = broadcaster.subscribe()
+
+        LOGGER.debug(
+            f"SSE connection subscribed connection_id={connection_id}",
+        )
 
         async def event_generator() -> AsyncGenerator[str, None]:
             try:
@@ -149,8 +180,18 @@ def create_api_router(
 
             except asyncio.CancelledError:
                 # Client disconnected
+                LOGGER.debug(
+                    f"SSE connection cancelled connection_id={connection_id}",
+                )
+            except Exception:
+                LOGGER.exception(
+                    f"SSE generator failed connection_id={connection_id}",
+                )
                 raise
             finally:
+                LOGGER.info(
+                    f"SSE connection unsubscribing connection_id={connection_id}",
+                )
                 broadcaster.unsubscribe(subscriber)
 
         return EventSourceResponse(event_generator())

@@ -1,14 +1,29 @@
+from functools import cached_property
+from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock, patch
+
 import pytest
+from blueapi.config import OIDCConfig
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
+from fastapi import FastAPI
+from fastapi.dependencies.models import Dependant
 from pytest import MonkeyPatch
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
+from constants import TEST_CONFIG_WITH_AUTH_PATH
+from daq_queuing_service.app._config import AppConfig, load_config
+from daq_queuing_service.app.app import create_app
+from daq_queuing_service.app.authentication import User
 from daq_queuing_service.broadcaster import Broadcaster
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.tiled.tiled import cache
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
+    Container,
+    ContainerPosition,
     Experiment,
     ExperimentDefinition,
     Sample,
@@ -24,6 +39,20 @@ def propagate_logs(monkeypatch: MonkeyPatch):
     monkeypatch.setattr(LOGGER, "propagate", True)
 
 
+CONTAINER_POSITION = ContainerPosition(position=2)
+CONTAINER = Container(id="", positionInParent=CONTAINER_POSITION)
+
+
+def make_sample(name: str, id: str):
+    return Sample(
+        name=name,
+        id=id,
+        data={"capillary": "fq1.0"},
+        positionInContainer=CONTAINER_POSITION,
+        container=CONTAINER,
+    )
+
+
 @pytest.fixture
 def tasks() -> list[Task]:
     return [
@@ -34,7 +63,7 @@ def tasks() -> list[Task]:
                 experiment_definition=ExperimentDefinition(
                     name="test", id=str(i), data={}
                 ),
-                sample=Sample(name=f"test_8_{i}", id=str(i), data={}),
+                sample=make_sample(f"test_8_{i}", str(i)),
             ),
             id=str(i),
         )
@@ -154,3 +183,88 @@ def converter():
                     )
 
     return DNConverter()
+
+
+@pytest.fixture
+def oidc_config():
+    class MockOIDCConfig(OIDCConfig):
+        @cached_property
+        def _config_from_oidc_url(self) -> dict[str, Any]:
+            # This would usually make a real request, we don't want this in tests
+            return {}
+
+        @cached_property
+        def jwks_uri(self) -> str:
+            return "https://"
+
+    config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
+    assert config.oidc is not None
+    return MockOIDCConfig.model_validate(config.oidc.model_dump())
+
+
+@pytest.fixture
+def config_with_auth(oidc_config: OIDCConfig):
+
+    config = load_config(Path(TEST_CONFIG_WITH_AUTH_PATH))
+    config.oidc = oidc_config
+    with patch("daq_queuing_service.__main__.load_config", return_value=config):
+        yield config
+
+
+@pytest.fixture
+def app_with_auth(config_with_auth: AppConfig) -> FastAPI:
+    return create_app(config_with_auth)
+
+
+@pytest.fixture
+def app_with_authz(config_with_auth: AppConfig):
+    """Authentication always passes. Only user abc12345 is authorised"""
+
+    def fake_get_current_user():
+        return User(fedid="xyz54321")
+
+    with patch(
+        "daq_queuing_service.app.app.build_get_current_user",
+        MagicMock(return_value=fake_get_current_user),
+    ):
+        app = create_app(config_with_auth)
+        yield app
+    return app
+
+
+def has_dependency_name(dep: Dependant, name: str) -> bool:
+    if getattr(dep.call, "__name__", None) == name:
+        return True
+
+    return any(has_dependency_name(child, name) for child in dep.dependencies)
+
+
+@pytest.fixture(autouse=True)
+def patch_get_tiled_client():
+    with patch(
+        "daq_queuing_service.task_queue.queue.get_tiled_client"
+    ) as mock_get_metadata_from_tiled:
+        yield mock_get_metadata_from_tiled
+
+
+@pytest.fixture(autouse=True)
+def patch_get_metadata_from_tiled():
+    with patch(
+        "daq_queuing_service.external_interaction.tiled.tiled.get_metadata_from_tiled",
+        MagicMock(return_value=[]),
+    ) as mock_get_metadata_from_tiled:
+        yield mock_get_metadata_from_tiled
+
+
+@pytest.fixture(autouse=True)
+def tiled_client():
+    with patch(
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.get_tiled_client"
+    ) as mock_get_tiled_client:
+        yield mock_get_tiled_client.return_value
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    yield
+    cache.clear()
