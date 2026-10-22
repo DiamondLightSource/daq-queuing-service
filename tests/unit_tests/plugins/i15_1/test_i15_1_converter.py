@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
-from blueapi.worker.event import TaskError
+from blueapi.worker.event import TaskError, TaskResult
 from daq_config_server.models.i15_1.queue_parameters import QueueParameters
 from daq_config_server.models.i15_1.standards_puck import (
     STANDARD_CAPILLARY,
@@ -14,6 +14,7 @@ from daq_config_server.models.i15_1.standards_puck import (
     StandardsPin,
     StandardsPuck,
 )
+from heliotrapi.client import AnalysisResult
 
 from daq_queuing_service.broadcaster import Broadcaster, serialise
 from daq_queuing_service.plugins.i15_1.auxiliary import (
@@ -954,3 +955,62 @@ def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)
+
+
+async def test_centring_info_added_to_data_collection_metadata(
+    queue_with_i15_1_plugin: TaskQueue, centring_result: AnalysisResult
+):
+    while True:
+        call = await queue_with_i15_1_plugin.get_next_call_once_available()
+        if (
+            call.task_request.name == "data_collection"
+            and call.task_request.params["metadata"].get("sample") is not None
+        ):
+            break
+        call.put_in_progress()
+        result = (
+            centring_result.model_dump(mode="json")
+            if call.task_request.name == "centre_sample"
+            else None
+        )
+        await queue_with_i15_1_plugin.complete_call(
+            call, TaskResult(outcome="success", result=result, type="AnalysisResult")
+        )
+
+    assert call.task_request.params["metadata"]["centring_scan"] == {
+        "result": TaskResult(
+            outcome="success",
+            result={
+                "request_id": "7d71e99e-f6f6-4e93-a1e4-ac91f8804006",
+                "status": "completed",
+                "analysis_name": "sample_alignment_i15_1",
+                "inputs": {
+                    "filepath": "/dls/i15-1/data/2026/cm44163-4/i15-1-100259.nxs",
+                    "beamline": "i15-1",
+                },
+                "result": {
+                    "centre": -1.7327164569369127,
+                    "peaks": [
+                        {
+                            "amplitude": 684.5096633867339,
+                            "centre": -12.500470871238504,
+                            "fwhm": 16.126336919254836,
+                            "normalised": False,
+                        },
+                        {
+                            "amplitude": 14080.218114003073,
+                            "centre": -1.7327164569369127,
+                            "fwhm": 7.5161854303657645,
+                            "normalised": False,
+                        },
+                    ],
+                    "scores": [11038.633456260188, 105829.53024484203],
+                },
+                "created_at": "2026-10-12T22:22:45.370672",
+                "finished_at": "2026-10-12T22:22:47.577230",
+                "version": "0.3.4.dev0+gfbb23e084.d20260929",
+            },
+            type="AnalysisResult",
+        ),
+        "tiled_id": None,
+    }

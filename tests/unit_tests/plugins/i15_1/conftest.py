@@ -1,5 +1,7 @@
+import datetime
 from typing import Any
 from unittest.mock import patch
+from uuid import UUID
 
 import pytest
 from daq_config_server.client import ConfigClient
@@ -11,6 +13,7 @@ from daq_config_server.models.i15_1 import (
     StandardsPuck,
 )
 from daq_config_server.testing import MockServerResponse
+from heliotrapi.client import AnalysisResult
 
 from daq_queuing_service.plugins.i15_1.i15_1_converter import (
     QUEUE_PARAMS_CONFIG_PATH,
@@ -92,3 +95,37 @@ def mock_config_client(mock_config: dict[str, Any]):
         return_value=config_client,
     ):
         yield config_client
+
+
+@pytest.fixture
+def centring_result() -> AnalysisResult:
+    return AnalysisResult(
+        request_id=UUID("7d71e99e-f6f6-4e93-a1e4-ac91f8804006"),
+        status="completed",
+        analysis_name="sample_alignment_i15_1",
+        inputs={
+            "filepath": "/dls/i15-1/data/2026/cm44163-4/i15-1-100259.nxs",
+            "beamline": "i15-1",
+        },
+        result={
+            "centre": -1.7327164569369127,
+            "peaks": [
+                {
+                    "amplitude": 684.5096633867339,
+                    "centre": -12.500470871238504,
+                    "fwhm": 16.126336919254836,
+                    "normalised": False,
+                },
+                {
+                    "amplitude": 14080.218114003073,
+                    "centre": -1.7327164569369127,
+                    "fwhm": 7.5161854303657645,
+                    "normalised": False,
+                },
+            ],
+            "scores": [11038.633456260188, 105829.53024484203],
+        },
+        created_at=datetime.datetime(2026, 10, 12, 22, 22, 45, 370672),
+        finished_at=datetime.datetime(2026, 10, 12, 22, 22, 47, 577230),
+        version="0.3.4.dev0+gfbb23e084.d20260929",
+    )

@@ -1404,3 +1404,24 @@ async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
     await task_queue.fail_call(call)
     assert call.scan_ids == [10001]
     assert call.tiled_ids == ["tiled_id_1"]
+
+
+async def test_complete_call_amends_future_calls_based_on_plugin_processing(
+    task_queue_in_progress: TaskQueue, converter: Converter
+):
+    future_call = BlueapiCall(
+        task_request=TaskRequest(
+            name="test process_running task", params={}, instrument_session=""
+        ),
+        parent_task_id="",
+    )
+
+    converter.process_running_task = MagicMock(return_value=[future_call])
+    await task_queue_in_progress.complete_call(
+        task_queue_in_progress._call_queue[0],
+        result=TaskResult(outcome="success", result=None, type=""),
+    )
+
+    current_task = task_queue_in_progress._get_running_task()
+    assert current_task
+    assert current_task.blueapi_calls[1] == future_call.to_response()
