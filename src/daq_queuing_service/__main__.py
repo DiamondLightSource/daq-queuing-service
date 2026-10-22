@@ -27,10 +27,7 @@ def main(args: Sequence[str] | None = None) -> None:
     config = load_config(parsed_args.config)
     dev = parsed_args.dev
 
-    for logger in (
-        LOGGER,
-        WORKER_LOGGER,
-    ):
+    for logger in (LOGGER, WORKER_LOGGER):
         setup_logger(
             logger,
             stream=config.logging.stream,

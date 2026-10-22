@@ -6,6 +6,7 @@ from graypy import GELFTCPHandler
 from daq_queuing_service.app.config import GraylogConfig, StreamConfig
 
 LOGGER = logging.getLogger("Queue")
+LOGGER.setLevel(logging.DEBUG)
 
 
 class BeamlineFilter(logging.Filter):
@@ -53,3 +54,5 @@ def setup_logger(
 
     if beamline:
         logger.addFilter(BeamlineFilter(beamline))
+
+    logger.info(f"Set up logger: {logger} with handlers: {logger.handlers}")
