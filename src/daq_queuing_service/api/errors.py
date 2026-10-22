@@ -1,5 +1,4 @@
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -15,10 +14,6 @@ from daq_queuing_service.task_queue.queue_utils import (
 )
 
 # pyright: reportUnusedFunction=false
-
-E = TypeVar("E", bound=Exception)
-
-Handler = Callable[[Request, E], Awaitable[JSONResponse]]
 
 
 def make_exception_handler(
