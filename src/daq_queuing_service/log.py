@@ -3,38 +3,53 @@ import logging
 import colorlog
 from graypy import GELFTCPHandler
 
-HANDLER = colorlog.StreamHandler()
-HANDLER.setFormatter(
-    colorlog.ColoredFormatter(
-        "%(log_color)s%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-        log_colors={
-            "DEBUG": "cyan",
-            "INFO": "green",
-            "WARNING": "yellow",
-            "ERROR": "red",
-            "CRITICAL": "bold_red",
-        },
-    )
-)
-GRAYLOG_HANDLER = GELFTCPHandler(
-    "graylog-log-target.diamond.ac.uk",
-    # https://gitlab.diamond.ac.uk/sscc-docs/developer-guide/-/merge_requests/295/diffs
-    12231,  # dodal port - should make dedicated one for the queue
-)
+from daq_queuing_service.app.config import GraylogConfig, StreamConfig
 
 LOGGER = logging.getLogger("Queue")
 
 
+class BeamlineFilter(logging.Filter):
+    def __init__(self, beamline: str):
+        self.beamline = beamline
+
+    def filter(self, record: logging.LogRecord):
+        record.beamline = self.beamline
+        return True
+
+
 def setup_logger(
-    log_level: int = logging.INFO, graylog: bool = True, propagate: bool = False
+    logger: logging.Logger,
+    stream: StreamConfig | None,
+    graylog: GraylogConfig | None,
+    propagate: bool,
+    beamline: str | None,
 ):
-    LOGGER.handlers.clear()
-    LOGGER.addHandler(HANDLER)
-    if graylog:
-        LOGGER.addHandler(GRAYLOG_HANDLER)
+    logger.handlers.clear()
+    logger.filters.clear()
 
-    LOGGER.setLevel(log_level)
-    for handler in LOGGER.handlers:
-        handler.setLevel(log_level)
+    if stream:
+        handler = colorlog.StreamHandler()
+        handler.setFormatter(
+            colorlog.ColoredFormatter(
+                "%(log_color)s%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+                log_colors={
+                    "DEBUG": "cyan",
+                    "INFO": "green",
+                    "WARNING": "yellow",
+                    "ERROR": "red",
+                    "CRITICAL": "bold_red",
+                },
+            )
+        )
+        logger.addHandler(handler)
+        handler.setLevel(stream.level)
 
-    LOGGER.propagate = propagate
+    if graylog and graylog.enabled:
+        graylog_handler = GELFTCPHandler(host=graylog.url, port=graylog.port)
+        graylog_handler.setLevel(graylog.level)
+        logger.addHandler(graylog_handler)
+
+    logger.propagate = propagate
+
+    if beamline:
+        logger.addFilter(BeamlineFilter(beamline))

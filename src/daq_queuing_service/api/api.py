@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel
 
-from daq_queuing_service.app._config import AppConfig
 from daq_queuing_service.app.authentication import User
+from daq_queuing_service.app.config import AppConfig
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCallResponse,

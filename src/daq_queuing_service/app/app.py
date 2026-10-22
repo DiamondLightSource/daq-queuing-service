@@ -30,7 +30,7 @@ from daq_queuing_service.plugins.converter import get_converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 
-from ._config import AppConfig
+from .config import AppConfig
 
 # pyright: reportUnusedFunction=false
 

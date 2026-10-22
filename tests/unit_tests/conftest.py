@@ -11,13 +11,18 @@ from fastapi import FastAPI
 from fastapi.dependencies.models import Dependant
 
 from constants import TEST_CONFIG_WITH_AUTH_PATH
-from daq_queuing_service.app._config import AppConfig, load_config
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.app.authentication import User
+from daq_queuing_service.app.config import (
+    AppConfig,
+    GraylogConfig,
+    StreamConfig,
+    load_config,
+)
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
 from daq_queuing_service.external_interaction.tiled.tiled import cache
-from daq_queuing_service.log import setup_logger
+from daq_queuing_service.log import LOGGER, setup_logger
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
@@ -29,12 +34,20 @@ from daq_queuing_service.task_queue.task import (
     Task,
     TaskWithPosition,
 )
+from daq_queuing_service.worker.worker import LOGGER as WORKER_LOGGER
 
 
 @pytest.fixture(autouse=True)
 def setup_logger_for_tests():
     # Needed to prevent graylog being polluted with logs from unit tests
-    setup_logger(graylog=False, propagate=True)
+    for logger in LOGGER, WORKER_LOGGER:
+        setup_logger(
+            logger=logger,
+            stream=StreamConfig(),
+            graylog=GraylogConfig(enabled=False),
+            propagate=True,
+            beamline="ixx",
+        )
 
 
 CONTAINER_POSITION = ContainerPosition(position=2)
