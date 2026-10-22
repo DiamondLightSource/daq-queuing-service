@@ -16,18 +16,18 @@ from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
 from pytest import LogCaptureFixture, MonkeyPatch
 
-from daq_queuing_service.blueapi_interaction.blueapi_adapter import (
+from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
     BlueapiClientAdapter,
     BlueapiResult,
 )
-from daq_queuing_service.blueapi_interaction.blueapi_call import CallStatus
-from daq_queuing_service.task import Status
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import CallStatus
 from daq_queuing_service.task_queue.queue import (
     PauseReason,
     TaskError,
     TaskQueue,
     TaskResult,
 )
+from daq_queuing_service.task_queue.task import Status
 from daq_queuing_service.worker.worker import LOGGER, QueueWorker
 
 
@@ -222,7 +222,7 @@ async def test_when_plan_name_error_then_call_failed_and_error_added_to_call(
 
     first_call = first_task.blueapi_calls[0]
     assert first_call.status == CallStatus.ERROR
-    assert first_call.errors == ["Unknown plan", ""]
+    assert first_call.errors == ["Plan not recognised by blueapi: test"]
     worker_with_unknown_plan_error._client.get_state.assert_called_once()  # type: ignore
     worker_with_unknown_plan_error._client.run_task.assert_called_once()  # type: ignore
 
@@ -321,8 +321,6 @@ async def test_if_call_not_put_in_progress_by_event_then_call_put_in_progress_an
 
     assert first_call.status == CallStatus.SUCCESS
     assert (
-        "Call (task_request=TaskRequest(name='test', params={}, instrument_session='')"
-        + " parent_task_id='0' status=<CallStatus.CLAIMED: 'Claimed'> time_started=None"
-        + " time_completed=None result=None errors=[] blueapi_id=None) status was not "
-        + "updated to in progress even though the blueapi task is now complete!"
+        "status was not updated to in progress even though the blueapi task is now "
+        + "complete!"
     ) in caplog.text

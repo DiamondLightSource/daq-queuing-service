@@ -1,4 +1,3 @@
-from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any, Self
 from uuid import uuid4
@@ -6,29 +5,41 @@ from uuid import uuid4
 from blueapi.service.model import TaskRequest
 from pydantic import BaseModel, Field, computed_field
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import (
+from daq_queuing_service.app.authentication import User
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
     CallStatus,
 )
 
 
+class ContainerPosition(BaseModel):
+    position: int
+
+
+class Container(BaseModel):
+    id: str
+    positionInParent: ContainerPosition  # noqa: N815
+
+
 class Sample(BaseModel):
     name: str
     id: str
-    data: Mapping[str, Any]
+    data: dict[str, Any]
+    container: Container
+    positionInContainer: ContainerPosition  # noqa: N815
 
 
 class ExperimentDefinition(BaseModel):
     name: str
     id: str
-    data: Mapping[str, Any]
+    data: dict[str, Any]
 
 
 class Experiment(BaseModel):
     name: str
     instrument_session: str
-    sample: Sample
+    sample: Sample | None
     experiment_definition: ExperimentDefinition
 
 
@@ -53,6 +64,7 @@ class Task(BaseModel):
     experiment: Experiment | TaskRequest
     id: str = Field(default_factory=create_uuid_str)
     blueapi_calls: list[BlueapiCall] = Field(default_factory=lambda: [])
+    user: User | None = None
     _cancelled: bool = False
 
     def cancel(self):
@@ -98,6 +110,7 @@ class TaskWithPosition(BaseModel):
     blueapi_calls: list[BlueapiCallResponse]
     position: int | None
     kind: TaskKind
+    user: User | None
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:

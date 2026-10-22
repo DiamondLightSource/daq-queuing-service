@@ -6,12 +6,13 @@ from blueapi.service.model import TaskRequest
 from pydantic import HttpUrl, TypeAdapter, ValidationError
 
 from daq_queuing_service.api.api import TaskCancelRequest
-from daq_queuing_service.api.errors import ErrorContent
 from daq_queuing_service.app._config import AppConfig
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCallResponse
-from daq_queuing_service.task import Experiment, TaskWithPosition
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCallResponse,
+)
 from daq_queuing_service.task_queue.queue import QueueState
 from daq_queuing_service.task_queue.queue_utils import QueueError
+from daq_queuing_service.task_queue.task import Experiment, TaskWithPosition
 
 T = TypeVar("T")
 
@@ -62,8 +63,8 @@ class QueueClient:
         try:
             return TypeAdapter(target_type).validate_python(response.json())
         except ValidationError:
-            error = ErrorContent.model_validate(response.json())
-            raise QueueError(error.model_dump_json()) from None
+            error = response.json()
+            raise QueueError(error) from None
 
     def healthz(self):
         return self._request_and_validate("/healthz", str)
@@ -86,7 +87,7 @@ class QueueClient:
         self,
         experiments: list[Experiment | TaskRequest],
         position: int | None = None,
-    ) -> list[str] | ErrorContent:
+    ) -> list[str] | str:
         return self._request_and_validate(
             "/queue",
             list[str],
@@ -95,7 +96,7 @@ class QueueClient:
             params={"position": position},
         )
 
-    def move_task(self, task_id: str, new_position: int) -> int | ErrorContent:
+    def move_task(self, task_id: str, new_position: int) -> int | str:
         return self._request_and_validate(
             "/queue/move",
             int,
@@ -103,9 +104,7 @@ class QueueClient:
             params={"task_id": task_id, "new_position": new_position},
         )
 
-    def cancel_tasks(
-        self, task_ids: list[str]
-    ) -> list[TaskWithPosition] | ErrorContent:
+    def cancel_tasks(self, task_ids: list[str]) -> list[TaskWithPosition] | str:
         return self._request_and_validate(
             "/queue/tasks",
             list[TaskWithPosition],
@@ -122,7 +121,7 @@ class QueueClient:
     def get_all_tasks(self) -> list[TaskWithPosition]:
         return self._request_and_validate("/tasks", list[TaskWithPosition])
 
-    def get_task_by_id(self, task_id: str) -> TaskWithPosition | ErrorContent:
+    def get_task_by_id(self, task_id: str) -> TaskWithPosition | str:
         return self._request_and_validate(f"/tasks/{task_id}", TaskWithPosition)
 
     def get_completed_tasks(self) -> list[TaskWithPosition]:

@@ -2,31 +2,25 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import NoReturn
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
-from daq_queuing_service.app._config import TEST_CONFIG_PATH
+from constants import TEST_CONFIG_PATH
+from daq_queuing_service.api.api import protected_routes, public_routes
+from daq_queuing_service.app._config import load_config
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
-
-
-@pytest.fixture(autouse=True)
-def patch_config_path():
-    with patch(
-        "daq_queuing_service.app._config.CONFIG_PATH",
-        "tests/test_data/test_config.yaml",
-    ):
-        yield
+from unit_tests.conftest import has_dependency_name
 
 
 def test_create_app_returns_fast_api_object():
-    app = create_app(Path(TEST_CONFIG_PATH))
+    app = create_app(load_config(Path(TEST_CONFIG_PATH)))
     assert isinstance(app, FastAPI)
 
 
@@ -34,22 +28,24 @@ def test_create_app_registers_exception_handlers():
     with patch(
         "daq_queuing_service.app.app.register_exception_handlers"
     ) as mock_register_exception_handlers:
-        create_app(Path(TEST_CONFIG_PATH))
+        create_app(load_config(Path(TEST_CONFIG_PATH)))
 
     mock_register_exception_handlers.assert_called_once()
 
 
-def test_create_app_adds_router():
-    with patch(
-        "daq_queuing_service.app.app.create_api_router"
-    ) as mock_create_api_router:
-        create_app(Path(TEST_CONFIG_PATH))
+@patch("daq_queuing_service.app.app.public_routes", wraps=public_routes)
+@patch("daq_queuing_service.app.app.protected_routes", wraps=protected_routes)
+def test_create_app_adds_routers(
+    mock_public_routes: MagicMock, mock_protected_routes: MagicMock
+):
+    create_app(load_config(Path(TEST_CONFIG_PATH)))
 
-    mock_create_api_router.assert_called_once()
+    mock_public_routes.assert_called_once()
+    mock_protected_routes.assert_called_once()
 
 
 def test_lifespan_runs_without_error():
-    app = create_app(Path(TEST_CONFIG_PATH))
+    app = create_app(load_config(Path(TEST_CONFIG_PATH)))
 
     with TestClient(app):
         # Startup run by now
@@ -59,7 +55,7 @@ def test_lifespan_runs_without_error():
 
 
 def test_worker_task_cancelled_on_shutdown():
-    app = create_app(Path(TEST_CONFIG_PATH))
+    app = create_app(load_config(Path(TEST_CONFIG_PATH)))
 
     with TestClient(app):
         worker_task: asyncio.Task[NoReturn] = app.state.worker_task
@@ -68,11 +64,12 @@ def test_worker_task_cancelled_on_shutdown():
     assert worker_task.cancelled()
 
 
-def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app():
-    with patch(
-        "daq_queuing_service.app.app.create_api_router"
-    ) as mock_create_api_router:
-        app = create_app(Path(TEST_CONFIG_PATH))
+@patch("daq_queuing_service.app.app.protected_routes", wraps=protected_routes)
+def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
+    mock_protected_routes: MagicMock,
+):
+
+    app = create_app(load_config(Path(TEST_CONFIG_PATH)))
 
     app_queue = app.state.queue
     app_worker = app.state.worker
@@ -80,7 +77,7 @@ def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
     assert isinstance(app_queue, TaskQueue)
     assert isinstance(app_worker, QueueWorker)
     assert app_worker._queue is app_queue
-    assert mock_create_api_router.call_args_list[0].args[0] is app_queue
+    assert mock_protected_routes.call_args_list[0].args[0] is app_queue
 
 
 @patch(
@@ -88,7 +85,7 @@ def test_queue_and_worker_added_to_app_state_and_queue_object_shared_across_app(
     AsyncMock(side_effect=Exception("Worker crashed!")),
 )
 def test_if_worker_crashes_then_error_logged(caplog: LogCaptureFixture):
-    app = create_app(Path(TEST_CONFIG_PATH))
+    app = create_app(load_config(Path(TEST_CONFIG_PATH)))
 
     with caplog.at_level(logging.ERROR):
         with TestClient(app):
@@ -101,12 +98,29 @@ def test_if_dev_mode_cors_middlewhere_added_to_app():
     with patch(
         "daq_queuing_service.app.app.FastAPI.add_middleware"
     ) as mock_add_middleware:
-        _ = create_app(Path(TEST_CONFIG_PATH), dev=True)
+        _ = create_app(load_config(Path(TEST_CONFIG_PATH)), dev=True)
 
-    mock_add_middleware.assert_called_once_with(
+    mock_add_middleware.assert_called_with(
         CORSMiddleware,
         allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+def test_create_app_adds_auth_dependencies_to_correct_routes(app_with_auth: FastAPI):
+    no_auth_required = ["read_root", "healthz", "get_queue_state"]
+
+    for route in app_with_auth.routes:
+        if isinstance(route, APIRoute):
+            if route.name not in no_auth_required:
+                assert has_dependency_name(route.dependant, "validate_bearer_token"), (
+                    f"No access token check dependency for route {str(route)}"
+                )
+                assert has_dependency_name(route.dependant, "get_current_user"), (
+                    f"No get user dependency for route {str(route)}"
+                )
+            else:
+                assert not has_dependency_name(route.dependant, "validate_bearer_token")
+                assert not has_dependency_name(route.dependant, "get_current_user")

@@ -1,12 +1,19 @@
 import importlib
 
 from blueapi.service.model import TaskRequest
+from blueapi.worker.event import TaskError, TaskResult
 
-from daq_queuing_service.blueapi_interaction.blueapi_call import BlueapiCall
-from daq_queuing_service.task import Experiment, Task, TaskWithPosition
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+)
+from daq_queuing_service.task_queue.task import Experiment, Task, TaskWithPosition
 
 
-class ConverterError(Exception): ...
+class ConverterError(Exception):
+    def __init__(self, original: Exception):
+        super().__init__(f"{type(original).__name__}: {original}")
+        self.original = original
 
 
 class ValidateError(Exception): ...
@@ -31,6 +38,7 @@ class Converter:
 
     def pre_process(
         self,
+        current_task: TaskWithPosition | None,
         queue: list[Task],
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
@@ -46,6 +54,8 @@ class Converter:
         If not overridden, this method returns the queue as is with no modification.
 
         Args:
+            current_task (TaskWithPosition | None): The current running task, if one
+                exists.
             queue (list[Task]): List of tasks currently in the queue
             history (list[TaskWithPosition]): List of completed tasks
             call_history (list[BlueapiCall]): List of completed blueapi calls
@@ -84,6 +94,34 @@ class Converter:
             for task in queue
         ]
         return call_list
+
+    def pause_on_complete_blueapi_call(
+        self, call: BlueapiCall, result: TaskResult
+    ) -> bool:
+        """Decide whether to pause the queue after a blueapi call completes successfully
+
+        Args:
+            call (BlueapiCallResponse): The completed call
+            result (TaskResult): The result of the call from blueapi
+
+        Returns:
+            bool: True to pause the queue, False to leave it running.
+        """
+        return False
+
+    def pause_on_fail_blueapi_call(
+        self, call: BlueapiCallResponse, errors: list[str | TaskError] | None
+    ) -> bool:
+        """Decide whether to pause the queue after a blueapi call fails
+
+        Args:
+            call (BlueapiCallResponse): The failed call
+            errors (list[str  |  TaskError] | None): The errors that occurred
+
+        Returns:
+            bool: True to pause the queue, False to leave it running.
+        """
+        return True
 
     def _construct_blueapi_task_request(
         self,

@@ -23,36 +23,14 @@ ENV UV_PYTHON_INSTALL_DIR=/python
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable --no-dev --managed-python
 
-
-FROM build AS debug
-
-
-# Set origin to use ssh
-RUN git remote set-url origin git@github.com:DiamondLightSource/daq-queuing-service.git
-
-
-# For this pod to understand finding user information from LDAP
-RUN apt update
-RUN DEBIAN_FRONTEND=noninteractive apt install libnss-ldapd -y
-RUN sed -i 's/files/ldap files/g' /etc/nsswitch.conf
-
-# Make editable and debuggable
-RUN uv pip install debugpy
-RUN uv pip install -e .
-ENV PATH=/app/.venv/bin:$PATH
-
-# Alternate entrypoint to allow devcontainer to attach
-ENTRYPOINT [ "/bin/bash", "-c", "--" ]
-CMD [ "while true; do sleep 30; done;" ]
-
-
 # The runtime stage copies the built venv into a runtime container
-FROM ubuntu:resolute AS runtime
+FROM ubuntu:noble AS runtime
 
 # Add apt-get system dependecies for runtime here if needed
-# RUN apt-get update -y && apt-get install -y --no-install-recommends \
-#     some-library \
-#     && apt-get dist-clean
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    update-ca-certificates && \
+    apt-get dist-clean
 
 # Copy the python installation from the build stage
 COPY --from=build /python /python

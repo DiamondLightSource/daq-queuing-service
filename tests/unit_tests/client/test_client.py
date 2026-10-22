@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, _Call, call, patch
 import pytest
 from requests import Response
 
-from daq_queuing_service.api.api import create_api_router
-from daq_queuing_service.api.errors import ErrorContent
+from daq_queuing_service.api.api import protected_routes, public_routes
 from daq_queuing_service.client.client import QueueClient
 from daq_queuing_service.task_queue.queue_utils import QueueError
 
@@ -13,8 +12,15 @@ from daq_queuing_service.task_queue.queue_utils import QueueError
 def test_all_endpoints_have_a_client_function():
     exceptions = ["read_root", "stream_events"]
 
-    router = create_api_router(MagicMock(), MagicMock(), MagicMock(), MagicMock())
-    endpoints: list[str] = [route.endpoint.__name__ for route in router.routes]  # type: ignore
+    protected_router = protected_routes(
+        MagicMock(), MagicMock(), MagicMock(), MagicMock()
+    )
+    public_router = public_routes(MagicMock())
+
+    endpoints: list[str] = [
+        route.endpoint.__name__  # type: ignore
+        for route in protected_router.routes + public_router.routes
+    ]
 
     not_in_client = [
         endpoint
@@ -70,9 +76,7 @@ def test__request_expect_error_raises_error_with_error_content_if_validation_err
     client = QueueClient(url="http://queue.com")
     mock_response = Response()
     mock_response.json = MagicMock(
-        return_value=ErrorContent(
-            error="some_error", message="some_error_message"
-        ).model_dump()
+        return_value={"error": "some_error", "message": "some_error_message"}
     )
     with patch(
         "daq_queuing_service.client.client.QueueClient._request",
@@ -81,4 +85,4 @@ def test__request_expect_error_raises_error_with_error_content_if_validation_err
         with pytest.raises(QueueError) as exc:
             client.get_task_by_id("1")
 
-    assert str(exc.value) == '{"error":"some_error","message":"some_error_message"}'
+    assert str(exc.value) == "{'error': 'some_error', 'message': 'some_error_message'}"
