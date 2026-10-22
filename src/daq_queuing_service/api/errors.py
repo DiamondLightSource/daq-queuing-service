@@ -13,8 +13,6 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotInQueueError,
 )
 
-# pyright: reportUnusedFunction=false
-
 
 def make_exception_handler(
     status_code: int, error_code: str
