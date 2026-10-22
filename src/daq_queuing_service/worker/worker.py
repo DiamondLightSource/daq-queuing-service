@@ -59,7 +59,10 @@ class QueueWorker:
         return await self._queue.get_next_call_once_available()
 
     async def _process_call(self, call: BlueapiCall):
-        LOGGER.info(f"Sending call {call} to BlueAPI")
+        LOGGER.info(
+            f"Sending call {call} to BlueAPI",
+            extra={"session": call.task_request.instrument_session},
+        )
 
         result = await self._client.run_task(
             call.task_request, on_event=partial(self._on_blueapi_event, call=call)
@@ -72,7 +75,8 @@ class QueueWorker:
         if call.status == CallStatus.CLAIMED:
             LOGGER.warning(
                 f"Call ({call}) status was not updated to in progress even"
-                + " though the blueapi task is now complete!"
+                + " though the blueapi task is now complete!",
+                extra={"session": call.task_request.instrument_session},
             )
             call.put_in_progress()
 
@@ -82,11 +86,15 @@ class QueueWorker:
         match task_status.result:
             case TaskResult():
                 LOGGER.info(
-                    f"Call {call} completed successfully:  {task_status.result}"
+                    f"Call {call} completed successfully:  {task_status.result}",
+                    extra={"session": call.task_request.instrument_session},
                 )
                 await self._queue.complete_call(call, task_status.result)
             case TaskError():
-                LOGGER.info(f"Call {call} failed: {task_status.result}. Pausing queue")
+                LOGGER.info(
+                    f"Call {call} failed: {task_status.result}. Pausing queue",
+                    extra={"session": call.task_request.instrument_session},
+                )
                 await self._queue.fail_call(call, [task_status.result])
 
     @staticmethod
@@ -101,7 +109,8 @@ class QueueWorker:
                     call.blueapi_id = worker_event.task_status.task_id
                     LOGGER.info(
                         f"Putting call in progress, blueapi ID: {call.blueapi_id}. "
-                        + f"Call: ({call})"
+                        + f"Call: ({call})",
+                        extra={"session": call.task_request.instrument_session},
                     )
                     call.put_in_progress()
             case ProgressEvent():
