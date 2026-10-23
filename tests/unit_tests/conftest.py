@@ -15,7 +15,7 @@ from daq_queuing_service.app.app import create_app
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.app.config import (
     AppConfig,
-    StreamConfig,
+    LoggingHandlerConfig,
     load_config,
 )
 from daq_queuing_service.broadcaster import Broadcaster
@@ -41,7 +41,7 @@ def setup_logger_for_tests():
     for logger in LOGGER, WORKER_LOGGER:
         setup_logger(
             logger=logger,
-            stream=StreamConfig(),
+            stream=LoggingHandlerConfig(),
             graylog=None,  # Don't want to send logs to graylog in unit tests
             propagate=True,
             beamline="ixx",

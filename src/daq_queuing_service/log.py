@@ -3,7 +3,10 @@ import logging
 import colorlog
 from graypy import GELFTCPHandler
 
-from daq_queuing_service.app.config import GraylogConfig, StreamConfig
+from daq_queuing_service.app.config import (
+    GraylogConfig,
+    LoggingHandlerConfig,
+)
 
 LOGGER = logging.getLogger("Queue")
 
@@ -19,7 +22,7 @@ class BeamlineFilter(logging.Filter):
 
 def setup_logger(
     logger: logging.Logger,
-    stream: StreamConfig,
+    stream: LoggingHandlerConfig,
     graylog: GraylogConfig | None = None,
     propagate: bool = False,
     beamline: str | None = None,

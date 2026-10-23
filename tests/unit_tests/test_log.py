@@ -4,7 +4,7 @@ from colorlog import StreamHandler
 from graypy import GELFTCPHandler
 from pytest import LogCaptureFixture
 
-from daq_queuing_service.app.config import GraylogConfig, StreamConfig
+from daq_queuing_service.app.config import GraylogConfig, LoggingHandlerConfig
 from daq_queuing_service.log import LOGGER, setup_logger
 
 
@@ -12,7 +12,7 @@ def test_setup_logger_sets_up_logger_correctly():
     logger = logging.Logger(name="test")
     setup_logger(
         logger,
-        StreamConfig(level=logging.WARNING),
+        LoggingHandlerConfig(level=logging.WARNING),
         GraylogConfig(enabled=True, port=1, url="test_port", level=logging.ERROR),
         propagate=False,
     )
@@ -28,7 +28,7 @@ def test_setup_logger_sets_up_logger_correctly():
 def test_setup_logger_adds_beamline_to_all_logs(caplog: LogCaptureFixture):
     setup_logger(
         LOGGER,
-        StreamConfig(level=logging.INFO),
+        LoggingHandlerConfig(level=logging.INFO),
         None,
         propagate=True,
         beamline="test beamline",

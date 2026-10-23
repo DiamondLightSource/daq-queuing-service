@@ -11,6 +11,9 @@ blueapi:
       username: guest
       password: guest
 logging:
+  stream:
+    level: "DEBUG"
   graylog:
     enabled: false
+    level: "INFO"
 beamline: "ixx"
