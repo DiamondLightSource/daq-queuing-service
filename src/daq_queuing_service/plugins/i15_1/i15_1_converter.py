@@ -127,7 +127,8 @@ class I151Converter(Converter):
                 if "Robot load failed, no sample found at puck" in error.message:
                     LOGGER.warning(
                         "Robot load failed, no sample found. "
-                        + "Continuing with the rest of the queue"
+                        + "Continuing with the rest of the queue",
+                        extra={"session": call.task_request.instrument_session},
                     )
                     return False
         return True
@@ -135,7 +136,10 @@ class I151Converter(Converter):
     def _construct_blueapi_tasks_from_experiment(
         self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
-        LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
+        LOGGER.debug(
+            f"Converting to blueapi calls, experiment = {experiment}",
+            extra={"session": experiment.instrument_session},
+        )
 
         session = experiment.instrument_session
         sample = experiment.sample
@@ -244,7 +248,8 @@ class I151Converter(Converter):
 
         LOGGER.info(
             f"No existing suitable auxiliary scans found for {required_auxiliary}, "
-            + "modifying or adding one"
+            + "modifying or adding one",
+            extra={"session": instrument_session},
         )
         return self._add_or_replace_auxiliary_scan(
             required_auxiliary,
@@ -310,7 +315,10 @@ class I151Converter(Converter):
     def _construct_auxiliary_experiment(
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
-        LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
+        LOGGER.debug(
+            f"Constructing experiment for auxiliary scan: {auxiliary_scan}",
+            extra={"session": instrument_session},
+        )
 
         sample = self._construct_auxiliary_sample(auxiliary_scan.pin)
         experiment_name = (

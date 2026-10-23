@@ -65,10 +65,9 @@ config:
   logging:
     graylog:
       enabled: false
-      url: ""
+      url: "graylog-log-target.diamond.ac.uk"
       level: "INFO"
     stream:
-      enabled: true
       level: "DEBUG"
 
 volumeMounts: []

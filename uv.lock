@@ -1265,6 +1265,7 @@ dependencies = [
     { name = "cachetools" },
     { name = "daq-config-server" },
     { name = "fastapi" },
+    { name = "graypy" },
     { name = "pydantic" },
     { name = "tiled", extra = ["client"] },
 ]
@@ -1296,6 +1297,7 @@ requires-dist = [
     { name = "cachetools", specifier = ">=7.0.5" },
     { name = "daq-config-server", git = "https://github.com/DiamondLightSource/daq-config-server?rev=917e0005770f761b0435bdd447b2760fb2b7152d" },
     { name = "fastapi", specifier = ">=0.136.0" },
+    { name = "graypy", specifier = ">=2.1.0" },
     { name = "pydantic", specifier = ">=2.13.2" },
     { name = "tiled", extras = ["client"], specifier = ">=0.2.9" },
 ]
