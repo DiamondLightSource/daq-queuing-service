@@ -42,7 +42,7 @@ class AppConfig(BaseModel):
     converter: ConverterConfig
     oidc: OIDCConfig | None = None
     authorisation_whitelist: list[str] | None = None
-    logging: LoggingConfig = LoggingConfig()
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
     beamline: str | None = None
 
 
