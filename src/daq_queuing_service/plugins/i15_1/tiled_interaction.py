@@ -62,7 +62,8 @@ def get_suitable_tiled_scan(
                 capillary = sample["data"].get("capillary")
                 if not capillary:
                     LOGGER.warning(
-                        f"No capillary found for tiled scan '{tiled_id}'. Skipping."
+                        f"No capillary found for tiled scan '{tiled_id}'. Skipping.",
+                        extra={"session": instrument_session},
                     )
                     continue
                 pin = StandardsPin(
@@ -84,22 +85,28 @@ def get_suitable_tiled_scan(
                 LOGGER.warning(
                     f"Inferred auxiliary type: '{auxiliary_scan.kind}' does not match "
                     + f"scan type in metadata: '{start_doc['scan_type']}' for auxiliary"
-                    + f" scan '{tiled_id}'. Skipping."
+                    + f" scan '{tiled_id}'. Skipping.",
+                    extra={"session": instrument_session},
                 )
                 continue
             auxiliary_scans.append(auxiliary_scan)
 
         LOGGER.debug(
             f"Found {len(auxiliary_scans)} auxiliary scans in tiled since "
-            + f"{stale_time_s}s ago for visit {instrument_session}."
+            + f"{stale_time_s}s ago for visit {instrument_session}.",
+            extra={"session": instrument_session},
         )
         return auxiliary_scans
 
     auxiliary_scans = _query_tiled(required_scan.instrument_session)
     for scan in auxiliary_scans:
         if scan.is_suitable(required_scan):
-            LOGGER.info(f"Found suitable auxiliary scans in tiled: {scan.tiled_id}")
+            LOGGER.info(
+                f"Found suitable auxiliary scans in tiled: {scan.tiled_id}",
+                extra={"session": required_scan.instrument_session},
+            )
             return scan
     LOGGER.info(
-        f"Found no suitable auxiliary scans in tiled matching: {required_scan}."
+        f"Found no suitable auxiliary scans in tiled matching: {required_scan}.",
+        extra={"session": required_scan.instrument_session},
     )
