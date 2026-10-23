@@ -20,30 +20,40 @@ class BeamlineFilter(logging.Filter):
 
 def setup_logger(
     logger: logging.Logger,
-    stream: StreamConfig | None,
+    stream: StreamConfig,
     graylog: GraylogConfig | None,
-    propagate: bool,
-    beamline: str | None,
+    propagate: bool = False,
+    beamline: str | None = None,
 ):
+    """_summary_
+
+    Args:
+        logger (logging.Logger): Logger to set up
+        stream (StreamConfig): Configuration for stream handler
+        graylog (GraylogConfig | None): Configuration for graylog handler
+        propagate (bool): Whether log records should be passed from handlers to parent
+            loggers. Defaults to False.
+        beamline (str, optional): Optionally add a beamline to the logger, to be added
+            as context to all logs. Defaults to None
+    """
     logger.handlers.clear()
     logger.filters.clear()
 
-    if stream:
-        handler = colorlog.StreamHandler()
-        handler.setFormatter(
-            colorlog.ColoredFormatter(
-                "%(log_color)s%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-                log_colors={
-                    "DEBUG": "cyan",
-                    "INFO": "green",
-                    "WARNING": "yellow",
-                    "ERROR": "red",
-                    "CRITICAL": "bold_red",
-                },
-            )
+    handler = colorlog.StreamHandler()
+    handler.setFormatter(
+        colorlog.ColoredFormatter(
+            "%(log_color)s%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+            log_colors={
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "yellow",
+                "ERROR": "red",
+                "CRITICAL": "bold_red",
+            },
         )
-        logger.addHandler(handler)
-        handler.setLevel(stream.level)
+    )
+    logger.addHandler(handler)
+    handler.setLevel(stream.level)
 
     if graylog and graylog.enabled:
         graylog_handler = GELFTCPHandler(host=graylog.url, port=graylog.port)

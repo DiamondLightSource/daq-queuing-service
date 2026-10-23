@@ -558,12 +558,12 @@ class TaskQueue:
         Returns:
             QueueState: The new state of the queue.
         """
+        LOGGER.info("Resuming queue")
         async with self._modifying:
             self._state = QueueState(
                 paused=False, last_pause_reason=self._state.last_pause_reason
             )
             self._broadcaster.broadcast(Event(type="state_update", data=self._state))
-        LOGGER.info("Resumed queue")
         return self._state
 
     @property
