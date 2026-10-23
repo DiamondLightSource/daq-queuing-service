@@ -31,7 +31,7 @@ def setup_logger(
 
     Args:
         logger (logging.Logger): Logger to set up
-        stream (StreamConfig): Configuration for stream handler
+        stream (LoggingHandlerConfig): Configuration for stream handler
         graylog (GraylogConfig | None): Configuration for graylog handler.
             Defaults to None
         propagate (bool): Whether log records should be forwarded to parent loggers
