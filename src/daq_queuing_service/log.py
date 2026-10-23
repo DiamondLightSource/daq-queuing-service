@@ -6,7 +6,6 @@ from graypy import GELFTCPHandler
 from daq_queuing_service.app.config import GraylogConfig, StreamConfig
 
 LOGGER = logging.getLogger("Queue")
-LOGGER.setLevel(logging.DEBUG)
 
 
 class BeamlineFilter(logging.Filter):
@@ -21,18 +20,20 @@ class BeamlineFilter(logging.Filter):
 def setup_logger(
     logger: logging.Logger,
     stream: StreamConfig,
-    graylog: GraylogConfig | None,
+    graylog: GraylogConfig | None = None,
     propagate: bool = False,
     beamline: str | None = None,
 ):
-    """_summary_
+    """Setup a logger for stream and optionally graylog
 
     Args:
         logger (logging.Logger): Logger to set up
         stream (StreamConfig): Configuration for stream handler
-        graylog (GraylogConfig | None): Configuration for graylog handler
-        propagate (bool): Whether log records should be passed from handlers to parent
-            loggers. Defaults to False.
+        graylog (GraylogConfig | None): Configuration for graylog handler.
+            Defaults to None
+        propagate (bool): Whether log records should be forwarded to parent loggers
+            in the logging hierarchy after being processed by this logger.
+            Defaults to False.
         beamline (str, optional): Optionally add a beamline to the logger, to be added
             as context to all logs. Defaults to None
     """
@@ -65,4 +66,5 @@ def setup_logger(
     if beamline:
         logger.addFilter(BeamlineFilter(beamline))
 
-    logger.info(f"Set up logger: {logger} with handlers: {logger.handlers}")
+    logger.setLevel(min(handler.level for handler in logger.handlers))
+    logger.debug(f"Set up logger: {logger} with handlers: {logger.handlers}")

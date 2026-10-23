@@ -13,15 +13,15 @@ def test_setup_logger_sets_up_logger_correctly():
     setup_logger(
         logger,
         StreamConfig(level=logging.WARNING),
-        GraylogConfig(enabled=True, port=1, url="test_port", level=logging.INFO),
+        GraylogConfig(enabled=True, port=1, url="test_port", level=logging.ERROR),
         propagate=False,
     )
 
     assert isinstance(logger.handlers[0], StreamHandler)
     assert logger.handlers[0].level == logging.WARNING
     assert isinstance(logger.handlers[1], GELFTCPHandler)
-    assert logger.handlers[1].level == logging.INFO
-
+    assert logger.handlers[1].level == logging.ERROR
+    assert logger.level == logging.WARNING  # min of handlers level
     assert not logger.propagate
 
 

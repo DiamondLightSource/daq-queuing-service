@@ -23,7 +23,6 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
 from daq_queuing_service.task_queue.queue import TaskQueue
 
 LOGGER = logging.getLogger("Queue Worker")
-LOGGER.setLevel(logging.DEBUG)
 
 
 class QueueWorker:
