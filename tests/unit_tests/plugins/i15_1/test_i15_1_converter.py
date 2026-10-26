@@ -406,6 +406,11 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     assert tasks[4].params["settle_time"] == 5
     assert tasks[4].params["temperatures_celsius"] == [100, 120]
     assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
+    assert (
+        tasks[4].params["temperature_calibration_path"]
+        == "/dls_sw/i15-1/software/daq_configuration/temperature_calibration/blower/"
+        + "temperature_calibration_fq1.0.txt"
+    )
     assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
