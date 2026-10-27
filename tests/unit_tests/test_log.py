@@ -6,7 +6,12 @@ from graypy import GELFTCPHandler
 from pytest import LogCaptureFixture
 
 from daq_queuing_service.app.config import GraylogConfig, LoggingHandlerConfig
-from daq_queuing_service.log import LOGGER, add_session_to_logger, setup_logger
+from daq_queuing_service.log import (
+    LOGGER,
+    add_session_to_logger,
+    get_session_filter,
+    setup_logger,
+)
 
 
 def test_setup_logger_sets_up_logger_correctly():
@@ -58,3 +63,8 @@ def test_add_session_to_logger_raises_if_different_session_already_added():
         with pytest.raises(ValueError):
             with add_session_to_logger("cm54321-1", LOGGER):
                 ...
+
+
+def test_get_session_filter_raises_error_if_logger_does_not_have_one():
+    with pytest.raises(RuntimeError):
+        get_session_filter(logging.Logger(""))
