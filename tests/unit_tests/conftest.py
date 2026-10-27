@@ -44,7 +44,7 @@ def setup_logger_for_tests():
             stream=LoggingHandlerConfig(),
             graylog=None,  # Don't want to send logs to graylog in unit tests
             propagate=True,
-            beamline="ixx",
+            instrument="ixx",
         )
 
 

@@ -1,13 +1,16 @@
 import logging
 import os
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from blueapi.config import OIDCConfig, RestConfig, StompConfig
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 CONFIG_PATH = "/etc/config/config.yaml"
 TEST_CONFIG_PATH = "tests/test_data/test_config.yaml"
+
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 class ConverterConfig(BaseModel):
@@ -21,17 +24,7 @@ class BlueapiConfig(BaseModel):
 
 
 class LoggingHandlerConfig(BaseModel):
-    level: int = logging.INFO
-
-    @field_validator("level", mode="before")
-    @classmethod
-    def convert_logging_str_to_int(cls, value: str | int) -> int:
-        if isinstance(value, str):
-            level = getattr(logging, value)
-            if not isinstance(level, int):
-                raise ValueError(f"Got invalid logging level: {value}")
-            return level
-        return value
+    level: LogLevel | int = logging.INFO
 
 
 class GraylogConfig(LoggingHandlerConfig):
@@ -52,7 +45,7 @@ class AppConfig(BaseModel):
     oidc: OIDCConfig | None = None
     authorisation_whitelist: list[str] | None = None
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
-    beamline: str | None = None
+    instrument: str | None = None
 
 
 def get_default_config_path() -> str:

@@ -11,7 +11,10 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCallResponse,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
-from daq_queuing_service.log import LOGGER
+from daq_queuing_service.log import (
+    LOGGER,
+    add_session_to_logger,
+)
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
@@ -99,36 +102,39 @@ class I151Converter(Converter):
         call_list: list[BlueapiCall] = []
 
         for task in queue:
-            match task.experiment:
-                case TaskRequest():
-                    call_list.append(
-                        BlueapiCall(
-                            task_request=task.experiment, parent_task_id=task.id
-                        )
-                    )
-                case Experiment():
-                    call_list.extend(
-                        [
-                            BlueapiCall(task_request=b_api_task, parent_task_id=task.id)
-                            for b_api_task in (
-                                self._construct_blueapi_tasks_from_experiment(
-                                    task.experiment, task.id
-                                )
+            with add_session_to_logger(task.experiment.instrument_session):
+                match task.experiment:
+                    case TaskRequest():
+                        call_list.append(
+                            BlueapiCall(
+                                task_request=task.experiment, parent_task_id=task.id
                             )
-                        ]
-                    )
+                        )
+                    case Experiment():
+                        call_list.extend(
+                            [
+                                BlueapiCall(
+                                    task_request=b_api_task, parent_task_id=task.id
+                                )
+                                for b_api_task in (
+                                    self._construct_blueapi_tasks_from_experiment(
+                                        task.experiment, task.id
+                                    )
+                                )
+                            ]
+                        )
         return call_list
 
     def pause_on_fail_blueapi_call(
         self, call: BlueapiCallResponse, errors: list[str | TaskError] | None
     ) -> bool:
+
         for error in errors or []:
             if isinstance(error, TaskError):
                 if "Robot load failed, no sample found at puck" in error.message:
                     LOGGER.warning(
                         "Robot load failed, no sample found. "
-                        + "Continuing with the rest of the queue",
-                        extra={"session": call.task_request.instrument_session},
+                        + "Continuing with the rest of the queue"
                     )
                     return False
         return True
@@ -138,7 +144,6 @@ class I151Converter(Converter):
     ) -> list[TaskRequest]:
         LOGGER.debug(
             f"Converting to blueapi calls, experiment = {experiment}",
-            extra={"session": experiment.instrument_session},
         )
 
         session = experiment.instrument_session
@@ -191,26 +196,27 @@ class I151Converter(Converter):
         new_tasks: list[Task] = []
 
         for task in tasks:
-            experiment = task.experiment
-            if isinstance(experiment, Experiment) and not is_auxiliary_experiment(
-                experiment
-            ):
-                instrument_session = experiment.instrument_session
-
-                required_auxiliary_scans = self._get_required_auxiliary_scans(
+            with add_session_to_logger(task.experiment.instrument_session):
+                experiment = task.experiment
+                if isinstance(experiment, Experiment) and not is_auxiliary_experiment(
                     experiment
-                )
+                ):
+                    instrument_session = experiment.instrument_session
 
-                for required_auxiliary in required_auxiliary_scans:
-                    new_tasks = self._ensure_auxiliary_in_queue_or_tiled(
-                        required_auxiliary,
-                        current_task,
-                        new_tasks,
-                        task.id,
-                        instrument_session,
+                    required_auxiliary_scans = self._get_required_auxiliary_scans(
+                        experiment
                     )
 
-            new_tasks.append(task)
+                    for required_auxiliary in required_auxiliary_scans:
+                        new_tasks = self._ensure_auxiliary_in_queue_or_tiled(
+                            required_auxiliary,
+                            current_task,
+                            new_tasks,
+                            task.id,
+                            instrument_session,
+                        )
+
+                new_tasks.append(task)
         return new_tasks
 
     def _ensure_auxiliary_in_queue_or_tiled(
@@ -220,7 +226,7 @@ class I151Converter(Converter):
         new_tasks: list[Task],
         task_id: str,
         instrument_session: str,
-    ):
+    ) -> list[Task]:
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
@@ -249,7 +255,6 @@ class I151Converter(Converter):
         LOGGER.info(
             f"No existing suitable auxiliary scans found for {required_auxiliary}, "
             + "modifying or adding one",
-            extra={"session": instrument_session},
         )
         return self._add_or_replace_auxiliary_scan(
             required_auxiliary,
@@ -317,7 +322,6 @@ class I151Converter(Converter):
     ) -> Experiment:
         LOGGER.debug(
             f"Constructing experiment for auxiliary scan: {auxiliary_scan}",
-            extra={"session": instrument_session},
         )
 
         sample = self._construct_auxiliary_sample(auxiliary_scan.pin)

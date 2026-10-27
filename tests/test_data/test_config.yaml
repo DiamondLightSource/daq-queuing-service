@@ -16,4 +16,4 @@ logging:
   graylog:
     enabled: false
     level: "INFO"
-beamline: "ixx"
+instrument: "ixx"

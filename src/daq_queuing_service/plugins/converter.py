@@ -7,7 +7,11 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
 )
-from daq_queuing_service.task_queue.task import Experiment, Task, TaskWithPosition
+from daq_queuing_service.task_queue.task import (
+    Experiment,
+    Task,
+    TaskWithPosition,
+)
 
 
 class ConverterError(Exception):

@@ -1,11 +1,12 @@
 import logging
 
+import pytest
 from colorlog import StreamHandler
 from graypy import GELFTCPHandler
 from pytest import LogCaptureFixture
 
 from daq_queuing_service.app.config import GraylogConfig, LoggingHandlerConfig
-from daq_queuing_service.log import LOGGER, setup_logger
+from daq_queuing_service.log import LOGGER, add_session_to_logger, setup_logger
 
 
 def test_setup_logger_sets_up_logger_correctly():
@@ -25,16 +26,35 @@ def test_setup_logger_sets_up_logger_correctly():
     assert not logger.propagate
 
 
-def test_setup_logger_adds_beamline_to_all_logs(caplog: LogCaptureFixture):
+def test_setup_logger_adds_instrument_to_all_logs(caplog: LogCaptureFixture):
     setup_logger(
         LOGGER,
         LoggingHandlerConfig(level=logging.INFO),
         None,
         propagate=True,
-        beamline="test beamline",
+        instrument="test instrument",
     )
 
     with caplog.at_level(logging.INFO):
         LOGGER.info("test log")
 
-    assert caplog.records[0].beamline == "test beamline"  # type: ignore
+    assert caplog.records[0].instrument == "test instrument"  # type: ignore
+
+
+def test_add_session_to_logger_adds_session_to_logs_and_leaving_removes_it(
+    caplog: LogCaptureFixture,
+):
+    with caplog.at_level(logging.INFO):
+        with add_session_to_logger("cm12345-1", LOGGER):
+            LOGGER.info("test log")
+        LOGGER.info("test log 2")
+
+    assert caplog.records[0].instrument_session == "cm12345-1"  # type: ignore
+    assert getattr(caplog.records[1], "instrument_session", None) is None
+
+
+def test_add_session_to_logger_raises_if_different_session_already_added():
+    with add_session_to_logger("cm12345-1", LOGGER):
+        with pytest.raises(ValueError):
+            with add_session_to_logger("cm54321-1", LOGGER):
+                ...

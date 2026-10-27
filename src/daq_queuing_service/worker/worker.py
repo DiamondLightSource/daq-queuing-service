@@ -20,6 +20,7 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     CallStatus,
 )
+from daq_queuing_service.log import add_session_to_logger
 from daq_queuing_service.task_queue.queue import TaskQueue
 
 LOGGER = logging.getLogger("Queue Worker")
@@ -39,8 +40,11 @@ class QueueWorker:
     async def run_loop(self):
         while True:
             next_call = await self._wait_for_next_task()
-            await self._process_call(next_call)
-            self._at_loop_end()
+            with add_session_to_logger(
+                next_call.task_request.instrument_session, LOGGER
+            ):
+                await self._process_call(next_call)
+                self._at_loop_end()
 
     def _at_loop_end(self):
         LOGGER.info("Loop finished")
@@ -58,10 +62,7 @@ class QueueWorker:
         return await self._queue.get_next_call_once_available()
 
     async def _process_call(self, call: BlueapiCall):
-        LOGGER.info(
-            f"Sending call {call} to BlueAPI",
-            extra={"session": call.task_request.instrument_session},
-        )
+        LOGGER.info(f"Sending call {call} to BlueAPI")
 
         result = await self._client.run_task(
             call.task_request, on_event=partial(self._on_blueapi_event, call=call)
@@ -74,8 +75,7 @@ class QueueWorker:
         if call.status == CallStatus.CLAIMED:
             LOGGER.warning(
                 f"Call ({call}) status was not updated to in progress even"
-                + " though the blueapi task is now complete!",
-                extra={"session": call.task_request.instrument_session},
+                + " though the blueapi task is now complete!"
             )
             call.put_in_progress()
 
@@ -85,15 +85,11 @@ class QueueWorker:
         match task_status.result:
             case TaskResult():
                 LOGGER.info(
-                    f"Call {call} completed successfully:  {task_status.result}",
-                    extra={"session": call.task_request.instrument_session},
+                    f"Call {call} completed successfully:  {task_status.result}"
                 )
                 await self._queue.complete_call(call, task_status.result)
             case TaskError():
-                LOGGER.info(
-                    f"Call {call} failed: {task_status.result}. Pausing queue",
-                    extra={"session": call.task_request.instrument_session},
-                )
+                LOGGER.info(f"Call {call} failed: {task_status.result}. Pausing queue")
                 await self._queue.fail_call(call, [task_status.result])
 
     @staticmethod
@@ -108,8 +104,7 @@ class QueueWorker:
                     call.blueapi_id = worker_event.task_status.task_id
                     LOGGER.info(
                         f"Putting call in progress, blueapi ID: {call.blueapi_id}. "
-                        + f"Call: ({call})",
-                        extra={"session": call.task_request.instrument_session},
+                        + f"Call: ({call})"
                     )
                     call.put_in_progress()
             case ProgressEvent():

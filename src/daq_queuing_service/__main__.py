@@ -33,7 +33,7 @@ def main(args: Sequence[str] | None = None) -> None:
             stream=config.logging.stream,
             graylog=config.logging.graylog,
             propagate=False,
-            beamline=config.beamline,
+            instrument=config.instrument,
         )
 
     from daq_queuing_service.app.app import create_app

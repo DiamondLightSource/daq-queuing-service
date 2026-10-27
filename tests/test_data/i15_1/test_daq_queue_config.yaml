@@ -13,4 +13,4 @@ blueapi:
 logging:
   graylog:
     enabled: false
-beamline: "i15-1"
+instrument: "i15-1 (test)"
