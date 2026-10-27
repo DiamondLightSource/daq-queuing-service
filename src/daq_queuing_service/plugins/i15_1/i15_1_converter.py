@@ -45,7 +45,9 @@ CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
 STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
-QUEUE_PARAMS_CONFIG_PATH = "/dls_sw/i15-1/software/daq_configuration/queue_params.toml"
+QUEUE_PARAMS_CONFIG_PATH = (
+    "/dls_sw/i15-1/software/daq_configuration/queue_parameters.toml"
+)
 
 
 def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
