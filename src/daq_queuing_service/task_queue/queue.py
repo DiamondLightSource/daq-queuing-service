@@ -712,7 +712,10 @@ class TaskQueue:
             if has_no_runtime:
                 try:
                     runtimes = self._runtime_client.estimate_runtime_per_task(
-                        [task.experiment for task in has_no_runtime], "i15-1"
+                        [task.experiment for task in has_no_runtime],
+                        # Once https://github.com/DiamondLightSource/daq-queuing-service/pull/157
+                        # gets merged, use instrument from config
+                        "i15-1",
                     )
                 except Exception as e:
                     # This shouldn't prevent syncing so catch and log
