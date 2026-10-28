@@ -96,7 +96,7 @@ class Converter:
         return call_list
 
     def pause_on_complete_blueapi_call(
-        self, call: BlueapiCall, result: TaskResult
+        self, call: BlueapiCallResponse, result: TaskResult
     ) -> bool:
         """Decide whether to pause the queue after a blueapi call completes successfully
 
@@ -122,6 +122,24 @@ class Converter:
             bool: True to pause the queue, False to leave it running.
         """
         return True
+
+    def process_running_task(
+        self, completed_plans: list[BlueapiCallResponse], plans_to_do: list[BlueapiCall]
+    ) -> list[BlueapiCall]:
+        """An opportunity to process the currently running task, by amending the
+        blueapi calls yet to be made. Get's called right after a blueapi call completes.
+
+        Args:
+            completed_plans (list[BlueapiCallResponse]): Completed blueapi calls
+                associated with the currently running task.
+            plans_to_do (list[BlueapiCall]): Future blueapi calls associated with the
+                currently running task.
+
+        Returns:
+            list[BlueapiCall]: An amended list of future blueapi calls for the running
+                task.
+        """
+        return plans_to_do
 
     def _construct_blueapi_task_request(
         self,

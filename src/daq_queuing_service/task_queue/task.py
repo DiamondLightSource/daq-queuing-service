@@ -76,7 +76,8 @@ class Task(BaseModel):
         if self._cancelled:
             return Status.CANCELLED
         if self.blueapi_calls and all(
-            call.status == CallStatus.SUCCESS for call in self.blueapi_calls
+            call.status in (CallStatus.SUCCESS, CallStatus.SKIPPED)
+            for call in self.blueapi_calls
         ):
             return Status.COMPLETE
         if any(call.status == CallStatus.ERROR for call in self.blueapi_calls):

@@ -134,6 +134,24 @@ class I151Converter(Converter):
                     return False
         return True
 
+    def process_running_task(
+        self, completed_plans: list[BlueapiCallResponse], plans_to_do: list[BlueapiCall]
+    ):
+        if completed_plans[-1].task_request.name == "centre_sample":
+            centring_plan = completed_plans[-1]
+            assert len(centring_plan.tiled_ids) <= 1
+            tiled_id = (
+                centring_plan.tiled_ids[0] if len(centring_plan.tiled_ids) else None
+            )
+            for plan in plans_to_do:
+                if centring_plan.result and plan.task_request.name == "data_collection":
+                    plan.task_request.params["metadata"]["centring_scan"] = {
+                        "result": centring_plan.result,
+                        "tiled_id": tiled_id,
+                    }
+
+        return super().process_running_task(completed_plans, plans_to_do)
+
     def _construct_blueapi_tasks_from_experiment(
         self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
