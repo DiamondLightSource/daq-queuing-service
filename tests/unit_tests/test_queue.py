@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import logging
 from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock
@@ -7,6 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
+from pytest import LogCaptureFixture
 
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
@@ -1458,3 +1460,22 @@ def test__add_runtime_estimates_to_tasks_gets_runtime_for_tasks_without_an_estim
         [task.experiment for task in no_estimated_runtime], "i15-1"
     )
     assert all(task.estimated_runtime == 100 for task in no_estimated_runtime)
+
+
+def test__add_runtime_estimates_to_tasks_cathes_errors_and_logs(
+    task_queue: TaskQueue,
+    mock_runtime_estimator_client: MagicMock,
+    caplog: LogCaptureFixture,
+):
+    for task in task_queue._tasks.values():
+        task.estimated_runtime = None
+
+    class SomeError(Exception): ...
+
+    mock_runtime_estimator_client.estimate_runtime_per_task = MagicMock(
+        side_effect=SomeError("Error getting runtime estimate from server")
+    )
+    with caplog.at_level(logging.ERROR):
+        task_queue._add_runtime_estimates_to_tasks()
+
+    assert "Error getting runtime estimate from server" in caplog.text
