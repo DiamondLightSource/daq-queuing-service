@@ -312,6 +312,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=None,
+            estimated_runtime=100,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -343,6 +344,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=None,
+            estimated_runtime=100,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -374,6 +376,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=None,
+            estimated_runtime=100,
         ),
     ]
 
@@ -420,6 +423,7 @@ async def test_get_history_only_returns_tasks_in_history(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=59,
+            estimated_runtime=100,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -451,6 +455,7 @@ async def test_get_history_only_returns_tasks_in_history(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=59,
+            estimated_runtime=100,
         ),
     ]
 
@@ -498,6 +503,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=59,
+            estimated_runtime=100,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -529,6 +535,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=59,
+            estimated_runtime=100,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -560,6 +567,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=None,
+            estimated_runtime=100,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -591,6 +599,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=None,
+            estimated_runtime=100,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -622,6 +631,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             kind=TaskKind.EXPERIMENT,
             user=None,
             runtime=None,
+            estimated_runtime=100,
         ),
     ]
 
@@ -1430,3 +1440,21 @@ async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
     await task_queue.fail_call(call)
     assert call.scan_ids == [10001]
     assert call.tiled_ids == ["tiled_id_1"]
+
+
+def test__add_runtime_estimates_to_tasks_gets_runtime_for_tasks_without_an_estimate(
+    task_queue: TaskQueue, mock_runtime_estimator_client: MagicMock
+):
+    no_estimated_runtime: list[Task] = []
+
+    for i, task in enumerate(task_queue._tasks.values()):
+        if i in (1, 2):
+            task.estimated_runtime = None
+            no_estimated_runtime.append(task)
+
+    assert all(task.estimated_runtime is None for task in no_estimated_runtime)
+    task_queue._add_runtime_estimates_to_tasks()
+    mock_runtime_estimator_client.estimate_runtime_per_task.assert_called_with(
+        [task.experiment for task in no_estimated_runtime], "i15-1"
+    )
+    assert all(task.estimated_runtime == 100 for task in no_estimated_runtime)

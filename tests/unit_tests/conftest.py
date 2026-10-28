@@ -18,6 +18,9 @@ from daq_queuing_service.app.app import create_app
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.runtime_estimator.client import (
+    RuntimeEstimatorClient,
+)
 from daq_queuing_service.external_interaction.tiled.tiled import cache
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
@@ -88,8 +91,33 @@ def bluesky_tasks() -> list[Task]:
 
 
 @pytest.fixture
-async def task_queue(tasks: list[Task], converter: Converter):
-    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
+def mock_runtime_estimator_client():
+    client = MagicMock()
+
+    def estimate_runtime(tasks: list[Experiment | TaskRequest], instrument: str):
+        return len(tasks) * 100
+
+    def estimate_runtime_per_task(
+        tasks: list[Experiment | TaskRequest], instrument: str
+    ):
+        return [100 for _ in tasks]
+
+    client.estimate_runtime = MagicMock(wraps=estimate_runtime)
+    client.estimate_runtime_per_task = MagicMock(wraps=estimate_runtime_per_task)
+    return client
+
+
+@pytest.fixture
+async def task_queue(
+    tasks: list[Task],
+    converter: Converter,
+    mock_runtime_estimator_client: RuntimeEstimatorClient,
+):
+    queue = TaskQueue(
+        converter=converter,
+        broadcaster=Broadcaster(),
+        runtime_estimator_client=mock_runtime_estimator_client,
+    )
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue

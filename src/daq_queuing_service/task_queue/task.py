@@ -125,7 +125,7 @@ class TaskWithPosition(BaseModel):
     position: int | None
     kind: TaskKind
     user: User | None
-    estimated_runtime: int | None = None
+    estimated_runtime: int | None
     runtime: float | None
 
     @classmethod
