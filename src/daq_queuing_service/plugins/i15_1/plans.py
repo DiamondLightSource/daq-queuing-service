@@ -14,6 +14,11 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
 )
 from daq_queuing_service.task_queue.task import Experiment, Sample
 
+BASE_TEMPERATURE_CALIBRATION_PATH = (
+    "/dls_sw/i15-1/software/daq_configuration/"
+    + "temperature_calibration/blower/temperature_calibration_"
+)
+
 
 class ScanType(StrEnum):
     DATA_COLLECTION = "Data Collection"
@@ -108,17 +113,25 @@ def get_data_collection(
     }
 
     if experiment_is_blower(experiment):
+        params = common_params | {
+            "time_per_collection": experiment_definition.data["time_per_pdf"],
+            "ramp_rate_c_per_min": experiment_definition.data["ramp_rate"],
+            "settle_time": experiment_definition.data["settle_time"],
+            "temperatures_celsius": experiment_definition.data["list_of_temperatures"],
+        }
+
+        if (
+            capillary := experiment.sample.data["capillary"]
+            if experiment.sample
+            else None
+        ):
+            params["temperature_calibration_path"] = (
+                BASE_TEMPERATURE_CALIBRATION_PATH + f"{capillary}.txt"
+            )
+
         data_collection = TaskRequest(
             name="blower_collection",
-            params=common_params
-            | {
-                "time_per_collection": experiment_definition.data["time_per_pdf"],
-                "ramp_rate_c_per_min": experiment_definition.data["ramp_rate"],
-                "settle_time": experiment_definition.data["settle_time"],
-                "temperatures_celsius": experiment_definition.data[
-                    "list_of_temperatures"
-                ],
-            },
+            params=params,
             instrument_session=experiment.instrument_session,
         )
     else:
