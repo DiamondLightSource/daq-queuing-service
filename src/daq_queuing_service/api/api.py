@@ -165,9 +165,7 @@ def protected_routes(
         connection_id = uuid.uuid4().hex[:8]
         subscriber = broadcaster.subscribe()
 
-        LOGGER.debug(
-            f"SSE connection subscribed connection_id={connection_id}",
-        )
+        LOGGER.debug(f"SSE connection subscribed connection_id={connection_id}")
 
         async def event_generator() -> AsyncGenerator[str, None]:
             try:
@@ -180,17 +178,13 @@ def protected_routes(
 
             except asyncio.CancelledError:
                 # Client disconnected
-                LOGGER.debug(
-                    f"SSE connection cancelled connection_id={connection_id}",
-                )
+                LOGGER.debug(f"SSE connection cancelled connection_id={connection_id}")
             except Exception:
-                LOGGER.exception(
-                    f"SSE generator failed connection_id={connection_id}",
-                )
+                LOGGER.exception(f"SSE generator failed connection_id={connection_id}")
                 raise
             finally:
                 LOGGER.info(
-                    f"SSE connection unsubscribing connection_id={connection_id}",
+                    f"SSE connection unsubscribing connection_id={connection_id}"
                 )
                 broadcaster.unsubscribe(subscriber)
 

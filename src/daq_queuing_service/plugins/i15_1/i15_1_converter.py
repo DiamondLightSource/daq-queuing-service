@@ -144,9 +144,7 @@ class I151Converter(Converter):
     def _construct_blueapi_tasks_from_experiment(
         self, experiment: Experiment, task_id: str
     ) -> list[TaskRequest]:
-        LOGGER.debug(
-            f"Converting to blueapi calls, experiment = {experiment}",
-        )
+        LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
 
         session = experiment.instrument_session
         sample = experiment.sample
@@ -322,9 +320,7 @@ class I151Converter(Converter):
     def _construct_auxiliary_experiment(
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
-        LOGGER.debug(
-            f"Constructing experiment for auxiliary scan: {auxiliary_scan}",
-        )
+        LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
 
         sample = self._construct_auxiliary_sample(auxiliary_scan.pin)
         experiment_name = (

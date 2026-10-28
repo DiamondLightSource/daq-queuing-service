@@ -65,6 +65,21 @@ def test_add_session_to_logger_raises_if_different_session_already_added():
                 ...
 
 
+def test_add_session_to_logger_nested_with_same_session_adds_session_in_every_layer(
+    caplog: LogCaptureFixture,
+):
+    with add_session_to_logger("cm12345-1", LOGGER):
+        LOGGER.info("test log")
+        with add_session_to_logger("cm12345-1", LOGGER):
+            LOGGER.info("test log 2")
+        LOGGER.info("test log 3")
+    LOGGER.info("test log 4")
+
+    for i in (0, 1, 2):
+        assert caplog.records[i].instrument_session == "cm12345-1"  # type: ignore
+    assert getattr(caplog.records[3], "instrument_session", None) is None
+
+
 def test_get_session_filter_raises_error_if_logger_does_not_have_one():
     with pytest.raises(RuntimeError):
         get_session_filter(logging.Logger(""))

@@ -338,9 +338,7 @@ class TaskQueue:
         with add_session_to_logger(call.task_request.instrument_session):
             tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
             should_pause = self._converter.pause_on_complete_blueapi_call(call, result)
-            LOGGER.info(
-                f"Plan {call} completed successfully. Result: {result}",
-            )
+            LOGGER.info(f"Plan {call} completed successfully. Result: {result}")
 
         async with self._modifying:
             call.tiled_ids = tiled_ids
@@ -376,7 +374,7 @@ class TaskQueue:
 
             else:
                 LOGGER.warning(
-                    "Call failed but queue not paused due to plugin decision",
+                    "Call failed but queue not paused due to plugin decision"
                 )
             self._check_call_valid_to_be_returned(call)
             call.fail(errors)
