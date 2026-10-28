@@ -710,9 +710,14 @@ class TaskQueue:
                 and self._tasks[task_id].estimated_runtime is None
             ]
             if has_no_runtime:
-                runtimes = self._runtime_client.estimate_runtime_per_task(
-                    [task.experiment for task in has_no_runtime], "i15-1"
-                )
+                try:
+                    runtimes = self._runtime_client.estimate_runtime_per_task(
+                        [task.experiment for task in has_no_runtime], "i15-1"
+                    )
+                except Exception as e:
+                    # This shouldn't prevent syncing so catch and log
+                    LOGGER.exception(e)
+                    return
                 for task, runtime in zip(has_no_runtime, runtimes, strict=True):
                     task.estimated_runtime = runtime
 
