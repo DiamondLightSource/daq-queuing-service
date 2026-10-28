@@ -20,12 +20,18 @@ class BlueapiConfig(BaseModel):
     api: RestConfig = Field(default_factory=RestConfig)
 
 
+class RuntimeEstimationConfig(BaseModel):
+    enabled: bool = True
+    url: str
+
+
 class AppConfig(BaseModel):
     blueapi: BlueapiConfig
     converter: ConverterConfig
     oidc: OIDCConfig | None = None
     authorisation_whitelist: list[str] | None = None
     log_level: int = logging.INFO
+    runtime_estimation: RuntimeEstimationConfig | None = None
 
 
 def get_default_config_path() -> str:

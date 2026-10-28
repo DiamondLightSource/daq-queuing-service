@@ -16,6 +16,9 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCallResponse,
     CallStatus,
 )
+from daq_queuing_service.external_interaction.runtime_estimator.client import (
+    RuntimeEstimatorClient,
+)
 from daq_queuing_service.external_interaction.tiled.tiled import (
     get_tiled_and_scan_ids,
     get_tiled_client,
@@ -117,7 +120,12 @@ QUEUE_EVENTS = Literal[
 
 
 class TaskQueue:
-    def __init__(self, converter: Converter, broadcaster: Broadcaster[QUEUE_EVENTS]):
+    def __init__(
+        self,
+        converter: Converter,
+        broadcaster: Broadcaster[QUEUE_EVENTS],
+        runtime_estimator_client: RuntimeEstimatorClient | None = None,
+    ):
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -136,6 +144,7 @@ class TaskQueue:
             on_exit=self._sync,
             on_error=self._restore_latest_good_contents,
         )
+        self._runtime_client = runtime_estimator_client
 
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
@@ -220,6 +229,8 @@ class TaskQueue:
 
         if not self._call_queue:
             self._pause_queue(PauseReason.EMPTY_QUEUE)
+
+        self._add_runtime_estimates_to_tasks()
 
         self._save_contents()
         self._broadcast_changes()
@@ -689,6 +700,21 @@ class TaskQueue:
         current_task = self._get_task_by_position(0)
         if current_task and current_task.status == Status.IN_PROGRESS:
             return current_task
+
+    def _add_runtime_estimates_to_tasks(self):
+        if self._runtime_client:
+            has_no_runtime = [
+                self._tasks[task_id]
+                for task_id in self._queue
+                if self._tasks[task_id].status == Status.QUEUED
+                and self._tasks[task_id].estimated_runtime is None
+            ]
+            if has_no_runtime:
+                runtimes = self._runtime_client.estimate_runtime_per_task(
+                    [task.experiment for task in has_no_runtime], "i15-1"
+                )
+                for task, runtime in zip(has_no_runtime, runtimes, strict=True):
+                    task.estimated_runtime = runtime
 
     @cached_property
     def _tiled_client(self) -> Container:
