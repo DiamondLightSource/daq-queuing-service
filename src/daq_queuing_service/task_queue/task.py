@@ -103,6 +103,19 @@ class Task(BaseModel):
             case TaskRequest():
                 return TaskKind.PLAN
 
+    @computed_field
+    @property
+    def runtime(self) -> float | None:
+        # This should get nicer once we have seperate types for queued, in progress and
+        # complete tasks.
+        if runtimes := [blueapi_call.runtime for blueapi_call in self.blueapi_calls]:
+            total = 0
+            for runtime in runtimes:
+                if runtime is None:
+                    return
+                total += runtime
+            return total
+
 
 class TaskWithPosition(BaseModel):
     experiment: Experiment | TaskRequest
@@ -113,6 +126,7 @@ class TaskWithPosition(BaseModel):
     kind: TaskKind
     user: User | None
     estimated_runtime: int | None = None
+    runtime: float | None
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:

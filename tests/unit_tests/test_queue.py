@@ -1,5 +1,6 @@
 import asyncio
 import copy
+from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -297,18 +298,20 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="2",
                     status=CallStatus.IN_PROGRESS,
-                    time_started="2026-04-17T15:02:00.000000",
+                    time_started=datetime.fromisoformat("2026-04-17T15:02:00.000000"),
                     time_completed=None,
                     errors=[],
                     result=None,
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=None,
                 )
             ],
             position=0,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -333,11 +336,13 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=None,
                 )
             ],
             position=1,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -362,11 +367,13 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=None,
                 )
             ],
             position=2,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=None,
         ),
     ]
 
@@ -393,8 +400,8 @@ async def test_get_history_only_returns_tasks_in_history(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="0",
                     status=CallStatus.ERROR,
-                    time_started="2026-04-17T15:00:00.000000",
-                    time_completed="2026-04-17T15:00:59.000000",
+                    time_started=datetime.fromisoformat("2026-04-17T15:00:00.000000"),
+                    time_completed=datetime.fromisoformat("2026-04-17T15:00:59.000000"),
                     errors=[
                         TaskError(
                             outcome="error",
@@ -406,11 +413,13 @@ async def test_get_history_only_returns_tasks_in_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=59,
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=59,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -428,18 +437,20 @@ async def test_get_history_only_returns_tasks_in_history(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="1",
                     status=CallStatus.SUCCESS,
-                    time_started="2026-04-17T15:01:00.000000",
-                    time_completed="2026-04-17T15:01:59.000000",
+                    time_started=datetime.fromisoformat("2026-04-17T15:01:00.000000"),
+                    time_completed=datetime.fromisoformat("2026-04-17T15:01:59.000000"),
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=59,
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=59,
         ),
     ]
 
@@ -467,8 +478,8 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="0",
                     status=CallStatus.ERROR,
-                    time_started="2026-04-17T15:00:00.000000",
-                    time_completed="2026-04-17T15:00:59.000000",
+                    time_started=datetime.fromisoformat("2026-04-17T15:00:00.000000"),
+                    time_completed=datetime.fromisoformat("2026-04-17T15:00:59.000000"),
                     errors=[
                         TaskError(
                             outcome="error",
@@ -480,11 +491,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=59,
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=59,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -502,18 +515,20 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="1",
                     status=CallStatus.SUCCESS,
-                    time_started="2026-04-17T15:01:00.000000",
-                    time_completed="2026-04-17T15:01:59.000000",
+                    time_started=datetime.fromisoformat("2026-04-17T15:01:00.000000"),
+                    time_completed=datetime.fromisoformat("2026-04-17T15:01:59.000000"),
                     errors=[],
                     result=TaskResult(result=None, type="NoneType"),
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=59,
                 )
             ],
             position=None,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=59,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -531,18 +546,20 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     task_request=TaskRequest(name="test", instrument_session=""),
                     parent_task_id="2",
                     status=CallStatus.IN_PROGRESS,
-                    time_started="2026-04-17T15:02:00.000000",
+                    time_started=datetime.fromisoformat("2026-04-17T15:02:00.000000"),
                     time_completed=None,
                     errors=[],
                     result=None,
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=None,
                 )
             ],
             position=0,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -567,11 +584,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=None,
                 )
             ],
             position=1,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -596,11 +615,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
+                    runtime=None,
                 )
             ],
             position=2,
             kind=TaskKind.EXPERIMENT,
             user=None,
+            runtime=None,
         ),
     ]
 
@@ -938,13 +959,14 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="2",
             status=CallStatus.IN_PROGRESS,
-            time_started="2026-04-17T15:02:00.000000",
+            time_started=datetime.fromisoformat("2026-04-17T15:02:00.000000"),
             time_completed=None,
             result=None,
             errors=[],
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
+            runtime=None,
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -957,6 +979,7 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
+            runtime=None,
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -969,6 +992,7 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
+            runtime=None,
         ),
     ]
 
@@ -982,8 +1006,8 @@ async def test_get_call_history_returns_calls_in_call_history(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="0",
             status=CallStatus.ERROR,
-            time_started="2026-04-17T15:00:00.000000",
-            time_completed="2026-04-17T15:00:59.000000",
+            time_started=datetime.fromisoformat("2026-04-17T15:00:00.000000"),
+            time_completed=datetime.fromisoformat("2026-04-17T15:00:59.000000"),
             result=None,
             errors=[
                 TaskError(
@@ -993,18 +1017,20 @@ async def test_get_call_history_returns_calls_in_call_history(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
+            runtime=59,
         ),
         BlueapiCallResponse(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
             parent_task_id="1",
             status=CallStatus.SUCCESS,
-            time_started="2026-04-17T15:01:00.000000",
-            time_completed="2026-04-17T15:01:59.000000",
+            time_started=datetime.fromisoformat("2026-04-17T15:01:00.000000"),
+            time_completed=datetime.fromisoformat("2026-04-17T15:01:59.000000"),
             result=TaskResult(outcome="success", result=None, type="NoneType"),
             errors=[],
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
+            runtime=59,
         ),
     ]
 

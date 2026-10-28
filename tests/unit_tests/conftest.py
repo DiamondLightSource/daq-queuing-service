@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -156,12 +157,12 @@ async def task_queue_with_history(task_queue: TaskQueue):
     # By this point should have 3 tasks in queue and 2 in history
     for i, call in enumerate(task_queue._call_history):
         # Real timestamps will break tests
-        call.time_started = f"2026-04-17T15:0{i}:00.000000"
-        call.time_completed = f"2026-04-17T15:0{i}:59.000000"
+        call.time_started = datetime.fromisoformat(f"2026-04-17T15:0{i}:00.000000")
+        call.time_completed = datetime.fromisoformat(f"2026-04-17T15:0{i}:59.000000")
 
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
-    call.time_started = "2026-04-17T15:02:00.000000"
+    call.time_started = datetime.fromisoformat("2026-04-17T15:02:00.000000")
     return task_queue
 
 
