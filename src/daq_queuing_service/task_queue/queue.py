@@ -337,7 +337,9 @@ class TaskQueue:
         """
         with add_session_to_logger(call.task_request.instrument_session):
             tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
-            should_pause = self._converter.pause_on_complete_blueapi_call(call, result)
+            should_pause = self._converter.pause_on_complete_blueapi_call(
+                call.model_copy(), result
+            )
             LOGGER.info(f"Plan {call} completed successfully. Result: {result}")
 
         async with self._modifying:
@@ -361,7 +363,7 @@ class TaskQueue:
         """
         with add_session_to_logger(call.task_request.instrument_session):
             should_pause = self._converter.pause_on_fail_blueapi_call(
-                call.to_response(), errors
+                call.model_copy(), errors
             )
             tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
             LOGGER.error(f"Plan {call} has failed with the following errors: {errors}")
