@@ -745,11 +745,11 @@ async def test__pause_queue_if_queue_already_paused_then_last_reason_kept_unless
     initial_state: QueueState,
     pause_reason: PauseReason,
     expected_state: QueueState,
-    task_queue: TaskQueue,
+    task_queue_no_runtime: TaskQueue,
 ):
-    task_queue._state = initial_state
-    task_queue._pause_queue(reason=pause_reason)
-    assert task_queue.state == expected_state
+    task_queue_no_runtime._state = initial_state
+    task_queue_no_runtime._pause_queue(reason=pause_reason)
+    assert task_queue_no_runtime.state == expected_state
 
 
 async def test_claim_next_call_once_available_claims_task_and_returns(
@@ -857,13 +857,13 @@ async def test_complete_call_does_not_pause_queue_if_plugin_decides(
     task_queue: TaskQueue,
 ):
     assert task_queue.state == QueueState(
-        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=500
     )
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
     await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
     assert task_queue.state == QueueState(
-        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=400
     )
 
 
@@ -872,13 +872,15 @@ async def test_complete_call_pauses_queue_if_plugin_decides(
 ):
     converter.pause_on_complete_blueapi_call = MagicMock(return_value=True)
     assert task_queue.state == QueueState(
-        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=500
     )
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
     await task_queue.complete_call(call, TaskResult(result=None, type="NoneType"))
     assert task_queue.state == QueueState(
-        paused=True, last_pause_reason=PauseReason.PLUGIN_REQUESTED
+        paused=True,
+        last_pause_reason=PauseReason.PLUGIN_REQUESTED,
+        estimated_runtime=400,
     )
 
 
@@ -919,13 +921,13 @@ async def test_fail_call_with_errors_adds_errors_to_call(
 
 async def test_fail_call_pauses_queue_if_plugin_decides(task_queue: TaskQueue):
     assert task_queue.state == QueueState(
-        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=500
     )
     call = await task_queue.get_next_call_once_available()
     error = "This task failed"
     await task_queue.fail_call(call, [str(error)])
     assert task_queue.state == QueueState(
-        paused=True, last_pause_reason=PauseReason.ERROR
+        paused=True, last_pause_reason=PauseReason.ERROR, estimated_runtime=400
     )
 
 
@@ -934,13 +936,13 @@ async def test_fail_call_does_not_pause_queue_if_plugin_decides(
 ):
     converter.pause_on_fail_blueapi_call = MagicMock(return_value=False)
     assert task_queue.state == QueueState(
-        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=500
     )
     call = await task_queue.get_next_call_once_available()
     error = "This task failed"
     await task_queue.fail_call(call, [str(error)])
     assert task_queue.state == QueueState(
-        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE
+        paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=400
     )
 
 
@@ -1444,22 +1446,29 @@ async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
     assert call.tiled_ids == ["tiled_id_1"]
 
 
-def test__add_runtime_estimates_to_tasks_gets_runtime_for_tasks_without_an_estimate(
-    task_queue: TaskQueue, mock_runtime_estimator_client: MagicMock
+def test__add_runtime_estimates_to_tasks_gets_runtime_for_all_queued_tasks(
+    task_queue_in_progress: TaskQueue, mock_runtime_estimator_client: MagicMock
 ):
-    no_estimated_runtime: list[Task] = []
+    task_queue_in_progress._state.estimated_runtime = None
+    for task in task_queue_in_progress._tasks.values():
+        task.estimated_runtime = None
 
-    for i, task in enumerate(task_queue._tasks.values()):
-        if i in (1, 2):
-            task.estimated_runtime = None
-            no_estimated_runtime.append(task)
+    task_queue_in_progress._add_runtime_estimates_to_tasks()
 
-    assert all(task.estimated_runtime is None for task in no_estimated_runtime)
-    task_queue._add_runtime_estimates_to_tasks()
-    mock_runtime_estimator_client.estimate_runtime_per_task.assert_called_with(
-        [task.experiment for task in no_estimated_runtime], "i15-1"
+    for func in (
+        mock_runtime_estimator_client.estimate_runtime_per_task,
+        mock_runtime_estimator_client.estimate_runtime,
+    ):
+        func.assert_called_with(
+            [task.experiment for task in task_queue_in_progress._get_queue()], "i15-1"
+        )
+
+    assert task_queue_in_progress._state.estimated_runtime == 500
+    assert all(
+        task.estimated_runtime == 100
+        for task in task_queue_in_progress._get_queue()[1:]
     )
-    assert all(task.estimated_runtime == 100 for task in no_estimated_runtime)
+    assert task_queue_in_progress._get_queue()[0].estimated_runtime is None
 
 
 def test__add_runtime_estimates_to_tasks_cathes_errors_and_logs(

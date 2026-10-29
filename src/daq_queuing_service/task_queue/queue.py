@@ -51,6 +51,7 @@ class PauseReason(StrEnum):
 class QueueState(BaseModel):
     paused: bool
     last_pause_reason: PauseReason
+    estimated_runtime: int | None = None
 
 
 class QueueContents(TypedDict):
@@ -213,7 +214,11 @@ class TaskQueue:
 
         try:
             new_calls = self._converter.construct_blueapi_calls(
-                [task for task in self._get_queue() if task.status == Status.QUEUED],
+                [
+                    task
+                    for task in self._get_queue_with_positions()
+                    if task.status == Status.QUEUED
+                ],
                 self._get_history(),
                 self._queue_history,
             )
@@ -267,7 +272,7 @@ class TaskQueue:
         self._restore_from_contents(self._last_good_contents)
 
     def _broadcast_changes(self):
-        queue = self._get_queue()
+        queue = self._get_queue_with_positions()
         history = self._get_history()
 
         # broadcast only does anything if there have been changes
@@ -303,7 +308,7 @@ class TaskQueue:
         available if it's at the top of the queue, is not already in progress or
         claimed, and the queue is not paused.
         """
-        async with self._modifying:
+        async with self._lock:
             while not self._task_available():
                 await self._modifying.wait()
 
@@ -426,7 +431,7 @@ class TaskQueue:
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._lock:
-            return self._get_queue()
+            return self._get_queue_with_positions()
 
     async def get_history(self) -> list[TaskWithPosition]:
         """Get the history list.
@@ -448,7 +453,7 @@ class TaskQueue:
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._lock:
-            return self._get_history() + self._get_queue()
+            return self._get_history() + self._get_queue_with_positions()
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
         """Add tasks to the queue. Can specify a position to add the tasks in at.
@@ -531,7 +536,8 @@ class TaskQueue:
             if reason == PauseReason.ERROR or not self._state.paused
             else self._state.last_pause_reason
         )
-        self._state = QueueState(paused=True, last_pause_reason=reason)
+        self._state.paused = True
+        self._state.last_pause_reason = reason
         self._broadcaster.broadcast(Event(type="state_update", data=self._state))
 
     async def pause_queue(self, reason: PauseReason) -> QueueState:
@@ -555,9 +561,7 @@ class TaskQueue:
             QueueState: The new state of the queue.
         """
         async with self._modifying:
-            self._state = QueueState(
-                paused=False, last_pause_reason=self._state.last_pause_reason
-            )
+            self._state.paused = False
             self._broadcaster.broadcast(Event(type="state_update", data=self._state))
         LOGGER.info("Successfully resumed queue")
         return self._state
@@ -670,7 +674,10 @@ class TaskQueue:
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )
 
-    def _get_queue(self) -> list[TaskWithPosition]:
+    def _get_queue(self) -> list[Task]:
+        return [self._tasks[task_id] for task_id in self._queue]
+
+    def _get_queue_with_positions(self) -> list[TaskWithPosition]:
         return [
             TaskWithPosition.from_task(self._tasks[task_id], i)
             for i, task_id in enumerate(self._queue)
@@ -703,25 +710,24 @@ class TaskQueue:
 
     def _add_runtime_estimates_to_tasks(self):
         if self._runtime_client:
-            has_no_runtime = [
-                self._tasks[task_id]
-                for task_id in self._queue
-                if self._tasks[task_id].status == Status.QUEUED
-                and self._tasks[task_id].estimated_runtime is None
-            ]
-            if has_no_runtime:
-                try:
-                    runtimes = self._runtime_client.estimate_runtime_per_task(
-                        [task.experiment for task in has_no_runtime],
-                        # Once https://github.com/DiamondLightSource/daq-queuing-service/pull/157
-                        # gets merged, use instrument from config
-                        "i15-1",
-                    )
-                except Exception as e:
-                    # This shouldn't prevent syncing so catch and log
-                    LOGGER.exception(e)
-                    return
-                for task, runtime in zip(has_no_runtime, runtimes, strict=True):
+            tasks = self._get_queue()
+            experiments = [task.experiment for task in tasks]
+            try:
+                # Once https://github.com/DiamondLightSource/daq-queuing-service/pull/157
+                # gets merged, use instrument from config instead of hard coded i15-1
+                total_runtime = self._runtime_client.estimate_runtime(
+                    experiments, "i15-1"
+                )
+                runtimes = self._runtime_client.estimate_runtime_per_task(
+                    experiments, "i15-1"
+                )
+            except Exception as e:
+                # This shouldn't prevent syncing so catch and log
+                LOGGER.exception(e)
+                return
+            self._state.estimated_runtime = total_runtime
+            for task, runtime in zip(tasks, runtimes, strict=True):
+                if task.status == Status.QUEUED:
                     task.estimated_runtime = runtime
 
     @cached_property

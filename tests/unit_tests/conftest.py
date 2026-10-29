@@ -108,19 +108,27 @@ def mock_runtime_estimator_client():
 
 
 @pytest.fixture
-async def task_queue(
+async def task_queue_no_runtime(
     tasks: list[Task],
     converter: Converter,
-    mock_runtime_estimator_client: RuntimeEstimatorClient,
 ):
     queue = TaskQueue(
         converter=converter,
         broadcaster=Broadcaster(),
-        runtime_estimator_client=mock_runtime_estimator_client,
     )
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
+
+
+@pytest.fixture
+async def task_queue(
+    task_queue_no_runtime: TaskQueue,
+    mock_runtime_estimator_client: RuntimeEstimatorClient,
+):
+    task_queue_no_runtime._runtime_client = mock_runtime_estimator_client
+    await task_queue_no_runtime.resume_queue()
+    return task_queue_no_runtime
 
 
 @pytest.fixture

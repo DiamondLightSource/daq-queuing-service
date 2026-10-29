@@ -1034,6 +1034,17 @@
           },
           "last_pause_reason": {
             "$ref": "#/components/schemas/PauseReason"
+          },
+          "estimated_runtime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Runtime"
           }
         },
         "type": "object",

@@ -120,6 +120,7 @@ def test_get_queue_state_returns_queue_state(test_client: TestClient):
     assert response.json() == {
         "paused": False,
         "last_pause_reason": "Paused as last task errored",
+        "estimated_runtime": 300,
     }
 
 
@@ -131,6 +132,7 @@ def test_resume_changes_queue_state_and_returns_new_state(
     assert response.json() == {
         "paused": False,
         "last_pause_reason": PauseReason.ERROR,
+        "estimated_runtime": 300,
     }
 
 
@@ -142,6 +144,7 @@ def test_pause_changes_queue_state_and_returns_new_state(
     assert response.json() == {
         "paused": True,
         "last_pause_reason": PauseReason.USER_REQUESTED,
+        "estimated_runtime": 300,
     }
 
 
