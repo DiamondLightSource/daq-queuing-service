@@ -10,3 +10,10 @@ blueapi:
     auth:
       username: guest
       password: guest
+logging:
+  stream:
+    level: "DEBUG"
+  graylog:
+    enabled: false
+    level: "INFO"
+instrument: "ixx"

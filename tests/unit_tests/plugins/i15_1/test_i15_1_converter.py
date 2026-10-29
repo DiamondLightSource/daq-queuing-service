@@ -730,9 +730,13 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
 
 
 async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: TaskQueue):
+    for i, task in enumerate(queue_with_i15_1_plugin._tasks.values()):
+        task.experiment.instrument_session = str(i)
     first_task = await queue_with_i15_1_plugin.get_task_by_position(0)
     assert first_task
     await queue_with_i15_1_plugin.move_task(first_task.id, 2)
+    call = await queue_with_i15_1_plugin.get_next_call_once_available()
+    await queue_with_i15_1_plugin.return_call_to_queue(call)
 
 
 def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(

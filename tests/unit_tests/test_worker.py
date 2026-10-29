@@ -14,7 +14,7 @@ from blueapi.client.rest import (
 from blueapi.core import DataEvent
 from blueapi.service.model import TaskRequest
 from blueapi.worker import ProgressEvent, TaskStatus, WorkerEvent, WorkerState
-from pytest import LogCaptureFixture, MonkeyPatch
+from pytest import LogCaptureFixture
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
     BlueapiClientAdapter,
@@ -28,14 +28,7 @@ from daq_queuing_service.task_queue.queue import (
     TaskResult,
 )
 from daq_queuing_service.task_queue.task import Status
-from daq_queuing_service.worker.worker import LOGGER, QueueWorker
-
-
-@pytest.fixture(autouse=True)
-def propagate_logs(monkeypatch: MonkeyPatch):
-    # This is turned off in prod to avoid duplicate logs
-    # but needed in tests for caplog to receive logs
-    monkeypatch.setattr(LOGGER, "propagate", True)
+from daq_queuing_service.worker.worker import QueueWorker
 
 
 def _get_mock_blueapi_client(

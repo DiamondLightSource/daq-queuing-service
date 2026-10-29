@@ -18,6 +18,7 @@ dependencies = [
     "cachetools>=7.0.5",
     "daq-config-server @ git+https://github.com/DiamondLightSource/daq-config-server@917e0005770f761b0435bdd447b2760fb2b7152d",
     "fastapi>=0.136.0",
+    "graypy>=2.1.0",
     "pydantic>=2.13.2",
     "tiled[client]>=0.2.9",
 ]

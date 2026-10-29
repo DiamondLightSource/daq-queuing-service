@@ -20,7 +20,12 @@ from daq_queuing_service.external_interaction.tiled.tiled import (
     get_tiled_and_scan_ids,
     get_tiled_client,
 )
-from daq_queuing_service.log import LOGGER
+from daq_queuing_service.log import (
+    LOGGER,
+    add_session_to_logger,
+    get_session_filter,
+    notify,
+)
 from daq_queuing_service.plugins.converter import Converter, ConverterError
 from daq_queuing_service.task_queue.queue_utils import (
     NegativePositionError,
@@ -142,8 +147,10 @@ class TaskQueue:
         tasks to a queue of blueapi calls. This is called every time the queue is
         modified, and also right before a call is popped off the front of the queue.
         """
-        LOGGER.debug("Syncing")
-        LOGGER.debug(f"Queue before sync: {self._queue}")
+        assert get_session_filter(LOGGER).instrument_session_var.get() is None, (
+            "Logger instrument session should not be set at this point"
+        )
+        LOGGER.debug(f"Syncing. Queue before sync: {self._queue}")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
             if task.status in (Status.COMPLETE, Status.ERROR):
@@ -283,8 +290,9 @@ class TaskQueue:
                 await self._modifying.wait()
             self._sync()  # Do conversion here to ensure conditions are up to date
             call = self._call_queue[0]
-            call.claim()
-        LOGGER.info(f"Plan {call} has been claimed")
+            with add_session_to_logger(call.task_request.instrument_session):
+                call.claim()
+                LOGGER.info(f"Plan {call} has been claimed")
         return call
 
     async def wait_until_call_available(self):
@@ -305,6 +313,7 @@ class TaskQueue:
         Raises:
             TaskNotClaimedError: Raised if the task's status is not 'Claimed'
         """
+
         self._check_call_valid_to_be_returned(call)
         async with self._modifying:
             match call.status:
@@ -316,7 +325,8 @@ class TaskQueue:
                         f"Cannot return call {call}, "
                         + f"it's status is {call.status}."
                     )
-        LOGGER.info(f"Call {call} has been returned to the queue")
+        with add_session_to_logger(call.task_request.instrument_session):
+            LOGGER.info(f"Call {call} has been returned to the queue")
 
     async def complete_call(self, call: BlueapiCall, result: TaskResult):
         """Sets a task to complete, removes it from the queue and adds it to history
@@ -325,8 +335,12 @@ class TaskQueue:
             task (Task): Task to be completed
             result (TaskResult): The result of the task from blueapi
         """
-        tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
-        should_pause = self._converter.pause_on_complete_blueapi_call(call, result)
+        with add_session_to_logger(call.task_request.instrument_session):
+            tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+            should_pause = self._converter.pause_on_complete_blueapi_call(
+                call.model_copy(), result
+            )
+            LOGGER.info(f"Plan {call} completed successfully. Result: {result}")
 
         async with self._modifying:
             call.tiled_ids = tiled_ids
@@ -336,7 +350,6 @@ class TaskQueue:
             self._call_history.append(call)
             if should_pause:
                 self._pause_queue(reason=PauseReason.PLUGIN_REQUESTED)
-        LOGGER.info(f"Plan {call} has been completed successfully: {result}")
 
     async def fail_call(
         self, call: BlueapiCall, errors: list[str | TaskError] | None = None
@@ -348,16 +361,19 @@ class TaskQueue:
             errors (list[str  |  TaskError] | None, optional): A list of errors that
             occurred when trying to run the task. Defaults to None.
         """
-        should_pause = self._converter.pause_on_fail_blueapi_call(
-            call.to_response(), errors
-        )
-        tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
-        LOGGER.error(f"Call {call} has failed with the following errors: {errors}")
+        with add_session_to_logger(call.task_request.instrument_session):
+            should_pause = self._converter.pause_on_fail_blueapi_call(
+                call.model_copy(), errors
+            )
+            tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+            LOGGER.error(f"Plan {call} has failed with the following errors: {errors}")
+
         async with self._modifying:
             call.tiled_ids = tiled_ids
             call.scan_ids = scan_ids
             if should_pause:
                 self._pause_queue(PauseReason.ERROR)
+
             else:
                 LOGGER.warning(
                     "Call failed but queue not paused due to plugin decision"
@@ -522,6 +538,7 @@ class TaskQueue:
         )
         self._state = QueueState(paused=True, last_pause_reason=reason)
         self._broadcaster.broadcast(Event(type="state_update", data=self._state))
+        notify(f"Queue paused: {reason}", "INFO")
 
     async def pause_queue(self, reason: PauseReason) -> QueueState:
         """Pause the queue if running.
@@ -534,7 +551,7 @@ class TaskQueue:
         """
         async with self._modifying:
             self._pause_queue(reason)
-        LOGGER.info(f"Successfully paused queue due to {reason}")
+
         return self._state
 
     async def resume_queue(self) -> QueueState:
@@ -543,12 +560,12 @@ class TaskQueue:
         Returns:
             QueueState: The new state of the queue.
         """
+        LOGGER.info("Resuming queue")
         async with self._modifying:
             self._state = QueueState(
                 paused=False, last_pause_reason=self._state.last_pause_reason
             )
             self._broadcaster.broadcast(Event(type="state_update", data=self._state))
-        LOGGER.info("Successfully resumed queue")
         return self._state
 
     @property
