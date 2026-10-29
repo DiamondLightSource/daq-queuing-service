@@ -52,7 +52,7 @@ def setup_logger(
             in the logging hierarchy after being processed by this logger.
             Defaults to False.
         instrument (str, optional): Optionally add a instrument to the logger, to be
-        added as context to all logs. Defaults to None
+            added as context to all logs. Defaults to None
     """
     logger.handlers.clear()
     logger.filters.clear()
@@ -100,6 +100,21 @@ def get_session_filter(logger: Logger) -> InstrumentSessionFilter:
 
 @contextmanager
 def add_session_to_logger(instrument_session: str, logger: Logger = LOGGER):
+    """Adds a session to logs within this context. Wherever possible, an instrument
+    session should be added to logs to improve filtering in graylog.
+    See https://gitlab.diamond.ac.uk/sscc-docs/developer-guide/-/merge_requests/295
+    TODO: Link to actual docs page once MR is merged
+
+    Args:
+        instrument_session (str): The instrument session to add to log messages
+        logger (Logger, optional): The logger who's logs the session will be added to.
+            Defaults to the queue's global LOGGER.
+
+    Raises:
+        ValueError: Raised if two different sessions are added with nested calls of this
+        context manager. Nested calls are allowed as long as the session is the same,
+        in which case the inner call is a no-op.
+    """
     session_filter = get_session_filter(logger)
 
     current = session_filter.instrument_session_var.get()
@@ -124,6 +139,19 @@ def notify(
     logger: Logger = LOGGER,
     **kwargs: Any,
 ):
+    """Format a log message such that it gets picked up by graylog notifications and
+    sent to slack. For example, when the instrument is set to "i15-1"
+    (see InstrumentFilter above), logs from this function will be picked up by this
+    event definition: https://graylog.diamond.ac.uk/alerts/definitions/6adb2e7cc6cc415af7f2c9fb
+    and sent to slack by this notification:
+    https://graylog.diamond.ac.uk/alerts/notifications/6abbfaefc6cc415af78f167a
+
+    Args:
+        message (str): The message to be logged
+        level (LogLevel, optional): The severity level of the log. Defaults to "INFO".
+        logger (Logger, optional): The logger to make the log.
+            Defaults to the queue's global LOGGER.
+    """
     kwargs["extra"] = {
         **kwargs.get("extra", {}),
         "event_type": "notification",

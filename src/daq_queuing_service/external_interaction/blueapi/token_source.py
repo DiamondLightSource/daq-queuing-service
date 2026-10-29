@@ -6,7 +6,7 @@ from daq_queuing_service.log import LOGGER
 
 
 class UDCTokenSource:
-    """Implements `get_valid_access_token` to get a token using a sealed secret."""
+    """Implements 'get_valid_access_token' to get a token using a sealed secret."""
 
     def __init__(
         self,

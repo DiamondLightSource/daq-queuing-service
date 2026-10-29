@@ -48,7 +48,7 @@ class Converter:
         call_history: list[BlueapiCall],
     ) -> list[Task]:
         """This gets run whenever something changes in the queue, before
-        `construct_blueapi_calls`. It is an opportunity to automatically modify the
+        'construct_blueapi_calls'. It is an opportunity to automatically modify the
         queue based on it's current state and history.
 
         For example, it could be used to add calibration scans before any experiments
