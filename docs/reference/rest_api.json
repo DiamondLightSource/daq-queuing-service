@@ -633,6 +633,21 @@
               }
             ],
             "title": "Authorisation Whitelist"
+          },
+          "log_level": {
+            "type": "integer",
+            "title": "Log Level",
+            "default": 20
+          },
+          "runtime_estimation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuntimeEstimationConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -686,7 +701,8 @@
           "time_started": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -697,7 +713,8 @@
           "time_completed": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -749,10 +766,21 @@
           },
           "scan_ids": {
             "items": {
-              "type": "string"
+              "type": "integer"
             },
             "type": "array",
             "title": "Scan Ids"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
           }
         },
         "type": "object",
@@ -766,7 +794,8 @@
           "errors",
           "blueapi_id",
           "tiled_ids",
-          "scan_ids"
+          "scan_ids",
+          "runtime"
         ],
         "title": "BlueapiCallResponse"
       },
@@ -992,7 +1021,8 @@
         "enum": [
           "Pause requested by user",
           "Paused as queue completed",
-          "Paused as last task errored"
+          "Paused as last task errored",
+          "Pause requested by plugin"
         ],
         "title": "PauseReason"
       },
@@ -1004,6 +1034,17 @@
           },
           "last_pause_reason": {
             "$ref": "#/components/schemas/PauseReason"
+          },
+          "estimated_runtime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Runtime"
           }
         },
         "type": "object",
@@ -1050,6 +1091,24 @@
         "additionalProperties": false,
         "type": "object",
         "title": "RestConfig"
+      },
+      "RuntimeEstimationConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "RuntimeEstimationConfig"
       },
       "Sample": {
         "properties": {
@@ -1278,6 +1337,28 @@
                 "type": "null"
               }
             ]
+          },
+          "estimated_runtime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Runtime"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
           }
         },
         "type": "object",
@@ -1288,7 +1369,9 @@
           "blueapi_calls",
           "position",
           "kind",
-          "user"
+          "user",
+          "estimated_runtime",
+          "runtime"
         ],
         "title": "TaskWithPosition"
       },

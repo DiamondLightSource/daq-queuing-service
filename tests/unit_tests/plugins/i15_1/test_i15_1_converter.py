@@ -91,6 +91,8 @@ def create_task_dict(task_id: str, experiment: dict[str, Any]) -> dict[str, Any]
         "status": Status.QUEUED,
         "kind": TaskKind.EXPERIMENT,
         "user": None,
+        "runtime": None,
+        "estimated_runtime": None,
     }
 
 
@@ -353,6 +355,8 @@ def test_experiment_with_correct_experiment_type_are_converted():
         position=None,
         kind=TaskKind.EXPERIMENT,
         user=None,
+        runtime=None,
+        estimated_runtime=100,
     )
     call_list = I151Converter().construct_blueapi_calls([task], [], [])
     assert len(call_list) == 6
@@ -525,6 +529,8 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         position=None,
         kind=TaskKind.EXPERIMENT,
         user=None,
+        runtime=None,
+        estimated_runtime=100,
     )
 
     class BadExperiment:

@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,9 @@ from daq_queuing_service.app.app import create_app
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.runtime_estimator.client import (
+    RuntimeEstimatorClient,
+)
 from daq_queuing_service.external_interaction.tiled.tiled import cache
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter
@@ -87,11 +91,44 @@ def bluesky_tasks() -> list[Task]:
 
 
 @pytest.fixture
-async def task_queue(tasks: list[Task], converter: Converter):
-    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
+def mock_runtime_estimator_client():
+    client = MagicMock()
+
+    def estimate_runtime(tasks: list[Experiment | TaskRequest], instrument: str):
+        return len(tasks) * 100
+
+    def estimate_runtime_per_task(
+        tasks: list[Experiment | TaskRequest], instrument: str
+    ):
+        return [100 for _ in tasks]
+
+    client.estimate_runtime = MagicMock(wraps=estimate_runtime)
+    client.estimate_runtime_per_task = MagicMock(wraps=estimate_runtime_per_task)
+    return client
+
+
+@pytest.fixture
+async def task_queue_no_runtime(
+    tasks: list[Task],
+    converter: Converter,
+):
+    queue = TaskQueue(
+        converter=converter,
+        broadcaster=Broadcaster(),
+    )
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
+
+
+@pytest.fixture
+async def task_queue(
+    task_queue_no_runtime: TaskQueue,
+    mock_runtime_estimator_client: RuntimeEstimatorClient,
+):
+    task_queue_no_runtime._runtime_client = mock_runtime_estimator_client
+    await task_queue_no_runtime.resume_queue()
+    return task_queue_no_runtime
 
 
 @pytest.fixture
@@ -156,12 +193,12 @@ async def task_queue_with_history(task_queue: TaskQueue):
     # By this point should have 3 tasks in queue and 2 in history
     for i, call in enumerate(task_queue._call_history):
         # Real timestamps will break tests
-        call.time_started = f"2026-04-17T15:0{i}:00.000000"
-        call.time_completed = f"2026-04-17T15:0{i}:59.000000"
+        call.time_started = datetime.fromisoformat(f"2026-04-17T15:0{i}:00")
+        call.time_completed = datetime.fromisoformat(f"2026-04-17T15:0{i}:59")
 
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
-    call.time_started = "2026-04-17T15:02:00.000000"
+    call.time_started = datetime.fromisoformat("2026-04-17T15:02:00")
     return task_queue
 
 

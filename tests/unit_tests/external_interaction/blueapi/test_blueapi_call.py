@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskResult
@@ -121,3 +123,30 @@ def test_fail_updates_status_to_error_and_adds_time_completed_and_errors():
     assert call.status == CallStatus.ERROR
     assert call.time_completed is not None
     assert call.errors == ["errors", "more_errors"]
+
+
+@pytest.mark.parametrize(
+    "time_started, time_completed, expected_runtime",
+    [
+        (None, None, None),
+        (datetime.fromisoformat("2026-04-17T15:00:00"), None, None),
+        (
+            datetime.fromisoformat("2026-04-17T15:00:00"),
+            datetime.fromisoformat("2026-04-17T16:20:30.4"),
+            pytest.approx(3600 + 1200 + 30 + 0.4, abs=0.0001),
+        ),
+    ],
+)
+def test_runtime_calculates_from_time_started_and_time_completed(
+    time_started: datetime | None,
+    time_completed: datetime | None,
+    expected_runtime: float | None,
+):
+    call = BlueapiCall(
+        time_started=time_started,
+        time_completed=time_completed,
+        task_request=TaskRequest(name="", params={}, instrument_session=""),
+        parent_task_id="",
+    )
+
+    assert call.runtime == expected_runtime
