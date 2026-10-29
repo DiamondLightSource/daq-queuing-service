@@ -8,7 +8,6 @@ from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
-    BlueapiCallResponse,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import (
@@ -128,7 +127,7 @@ class I151Converter(Converter):
         return call_list
 
     def pause_on_fail_blueapi_call(
-        self, call: BlueapiCallResponse, errors: list[str | TaskError] | None
+        self, call: BlueapiCall, errors: list[str | TaskError] | None
     ) -> bool:
 
         for error in errors or []:
