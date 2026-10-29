@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>daq_queuing_service.task_queue.queue &#8212; daq-queuing-service 0.1.22.dev15+g4efabd32d documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../../_static/documentation_options.js?v=7a082fba"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=30646c52"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/daq_queuing_service/task_queue/queue';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://DiamondLightSource.github.io/daq-queuing-service/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'main';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../../_static/dls-logo.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="main" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/dls-logo.svg" class="logo__image only-light" alt=""/>
+    <img src="../../../_static/dls-logo.svg" class="logo__image only-dark pst-js-only" alt=""/>
+  
+  
+    <p class="title logo__title">daq-queuing-service</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../how-to.html">
+    How-to Guides
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../explanations.html">
+    Explanations
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference.html">
+    Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/DiamondLightSource/daq-queuing-service" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/daq-queuing-service" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fas fa-cube fa-lg" aria-hidden="true"></i><span class="visually-hidden">PyPI</span></a>
+        </li>
+</ul></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../how-to.html">
+    How-to Guides
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../explanations.html">
+    Explanations
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference.html">
+    Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/DiamondLightSource/daq-queuing-service" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/daq-queuing-service" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fas fa-cube fa-lg" aria-hidden="true"></i><span class="visually-hidden">PyPI</span></a>
+        </li>
+</ul></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">daq_queuing_service.task_queue.queue</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for daq_queuing_service.task_queue.queue</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">StrEnum</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">TracebackType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">TypedDict</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">blueapi.worker.event</span><span class="w"> </span><span class="kn">import</span> <span class="n">TaskError</span><span class="p">,</span> <span class="n">TaskResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tiled.client.container</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">daq_queuing_service.broadcaster</span><span class="w"> </span><span class="kn">import</span> <span class="n">Broadcaster</span><span class="p">,</span> <span class="n">Event</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">daq_queuing_service.external_interaction.blueapi.blueapi_call</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BlueapiCall</span><span class="p">,</span>
+    <span class="n">BlueapiCallResponse</span><span class="p">,</span>
+    <span class="n">CallStatus</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">daq_queuing_service.external_interaction.tiled.tiled</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_tiled_and_scan_ids</span><span class="p">,</span>
+    <span class="n">get_tiled_client</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">daq_queuing_service.log</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">LOGGER</span><span class="p">,</span>
+    <span class="n">add_session_to_logger</span><span class="p">,</span>
+    <span class="n">get_session_filter</span><span class="p">,</span>
+    <span class="n">notify</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">daq_queuing_service.plugins.converter</span><span class="w"> </span><span class="kn">import</span> <span class="n">Converter</span><span class="p">,</span> <span class="n">ConverterError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">daq_queuing_service.task_queue.queue_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">NegativePositionError</span><span class="p">,</span>
+    <span class="n">TaskIdInUseError</span><span class="p">,</span>
+    <span class="n">TaskInProgressError</span><span class="p">,</span>
+    <span class="n">TaskNotClaimedError</span><span class="p">,</span>
+    <span class="n">TaskNotFoundError</span><span class="p">,</span>
+    <span class="n">TaskNotInQueueError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">daq_queuing_service.task_queue.task</span><span class="w"> </span><span class="kn">import</span> <span class="n">Status</span><span class="p">,</span> <span class="n">Task</span><span class="p">,</span> <span class="n">TaskWithPosition</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">TaskRegistry</span><span class="p">(</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Task</span><span class="p">]):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__missing__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Task</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">TaskNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No task found matching id: </span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">PauseReason</span><span class="p">(</span><span class="n">StrEnum</span><span class="p">):</span>
+    <span class="n">USER_REQUESTED</span> <span class="o">=</span> <span class="s2">"Pause requested by user"</span>
+    <span class="n">EMPTY_QUEUE</span> <span class="o">=</span> <span class="s2">"Paused as queue completed"</span>
+    <span class="n">ERROR</span> <span class="o">=</span> <span class="s2">"Paused as last task errored"</span>
+    <span class="n">PLUGIN_REQUESTED</span> <span class="o">=</span> <span class="s2">"Pause requested by plugin"</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">QueueState</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">paused</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">last_pause_reason</span><span class="p">:</span> <span class="n">PauseReason</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">QueueContents</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A class to represent the contents of the queue</span>
+
+<span class="sd">    tasks (dict[str, Task]): A dict containing all the tasks contained in the queue,</span>
+<span class="sd">        including history, with the task ID as the key.</span>
+
+<span class="sd">    queue (list[str]): A list of the task IDs of the tasks in the queue. The order of</span>
+<span class="sd">        the list represents the order of the queue.</span>
+
+<span class="sd">    history (list[str]): A list of the task IDs of any completed tasks.</span>
+
+<span class="sd">    call_queue: (list[BlueapiCall]): A list of blueapi calls that will be executed in</span>
+<span class="sd">        order to complete the queued tasks.</span>
+
+<span class="sd">    call_history: (list[BlueapiCall]): A list of completed blueapi calls.</span>
+<span class="sd">    """</span>
+
+    <span class="n">tasks</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Task</span><span class="p">]</span>
+    <span class="n">queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">call_queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCall</span><span class="p">]</span>
+    <span class="n">call_history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCall</span><span class="p">]</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Modifying</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Condition</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">lock</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span><span class="p">,</span>
+        <span class="n">on_exit</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="n">on_error</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">lock</span><span class="o">=</span><span class="n">lock</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_exit</span> <span class="o">=</span> <span class="n">on_exit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_error</span> <span class="o">=</span> <span class="n">on_error</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="fm">__aexit__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">exc_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="ne">BaseException</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">tb</span><span class="p">:</span> <span class="n">TracebackType</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">exc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_on_error</span><span class="p">()</span>
+                <span class="k">return</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_exit</span><span class="p">()</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_error</span><span class="p">()</span>
+            <span class="k">raise</span>
+
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">await</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__aexit__</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">exc</span><span class="p">,</span> <span class="n">tb</span><span class="p">)</span>
+
+
+<span class="n">QUEUE_EVENTS</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span>
+    <span class="s2">"state_update"</span><span class="p">,</span>
+    <span class="s2">"queue_update"</span><span class="p">,</span>
+    <span class="s2">"history_update"</span><span class="p">,</span>
+    <span class="s2">"tasks_update"</span><span class="p">,</span>
+    <span class="s2">"call_queue_update"</span><span class="p">,</span>
+    <span class="s2">"call_history_update"</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<div class="viewcode-block" id="TaskQueue">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TaskQueue</span><span class="p">:</span>
+<div class="viewcode-block" id="TaskQueue.__init__">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">converter</span><span class="p">:</span> <span class="n">Converter</span><span class="p">,</span> <span class="n">broadcaster</span><span class="p">:</span> <span class="n">Broadcaster</span><span class="p">[</span><span class="n">QUEUE_EVENTS</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">:</span> <span class="n">TaskRegistry</span> <span class="o">=</span> <span class="n">TaskRegistry</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCall</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCall</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_contents</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue_history</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCall</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="p">:</span> <span class="n">QueueState</span> <span class="o">=</span> <span class="n">QueueState</span><span class="p">(</span>
+            <span class="n">paused</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">last_pause_reason</span><span class="o">=</span><span class="n">PauseReason</span><span class="o">.</span><span class="n">EMPTY_QUEUE</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="o">=</span> <span class="n">converter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span> <span class="o">=</span> <span class="n">broadcaster</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span> <span class="o">=</span> <span class="n">Modifying</span><span class="p">(</span>
+            <span class="n">lock</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">,</span>
+            <span class="n">on_exit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_sync</span><span class="p">,</span>
+            <span class="n">on_error</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_restore_latest_good_contents</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_sync</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Syncs the task queue with the call queue, applying a conversion from queue of</span>
+<span class="sd">        tasks to a queue of blueapi calls. This is called every time the queue is</span>
+<span class="sd">        modified, and also right before a call is popped off the front of the queue.</span>
+<span class="sd">        """</span>
+        <span class="k">assert</span> <span class="n">get_session_filter</span><span class="p">(</span><span class="n">LOGGER</span><span class="p">)</span><span class="o">.</span><span class="n">instrument_session_var</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="p">(</span>
+            <span class="s2">"Logger instrument session should not be set at this point"</span>
+        <span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Syncing. Queue before sync: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">):</span>
+            <span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="p">(</span><span class="n">Status</span><span class="o">.</span><span class="n">COMPLETE</span><span class="p">,</span> <span class="n">Status</span><span class="o">.</span><span class="n">ERROR</span><span class="p">):</span>
+                <span class="c1"># Move task from queue to history if all blueapi calls complete</span>
+                <span class="c1"># Or an error occurred during one of them</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">call</span><span class="p">:</span> <span class="n">call</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">CallStatus</span><span class="o">.</span><span class="n">WAITING</span><span class="p">,</span> <span class="n">task</span><span class="o">.</span><span class="n">blueapi_calls</span>
+                <span class="p">):</span>
+                    <span class="n">call</span><span class="o">.</span><span class="n">skip</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">task</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">Status</span><span class="o">.</span><span class="n">QUEUED</span><span class="p">:</span>
+                <span class="c1"># If task is not in progress calls will be re-calculated</span>
+                <span class="n">task</span><span class="o">.</span><span class="n">blueapi_calls</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">new_tasks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span><span class="o">.</span><span class="n">pre_process</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_task</span><span class="p">(),</span>
+                <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">Status</span><span class="o">.</span><span class="n">QUEUED</span>
+                <span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_get_history</span><span class="p">(),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_queue_history</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConverterError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+        <span class="c1"># Update task_registry to match new tasks</span>
+        <span class="c1"># Not needed as long as pre_process modifies in place</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">new_tasks</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">task</span>
+
+        <span class="c1"># Update queue to match new tasks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">task_id</span>
+            <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">Status</span><span class="o">.</span><span class="n">QUEUED</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">new_tasks</span><span class="p">)</span>
+
+        <span class="c1"># This is needed because pre_process could remove tasks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_tasks_from_registry</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="c1"># Persist calls which aren't complete but who's parent task is in progress</span>
+            <span class="c1"># Once a task is in progress it is not provided to the converter</span>
+            <span class="c1"># More work needed to allow for interleaved calls from different tasks,</span>
+            <span class="c1"># and for in progress tasks to inform conversion</span>
+            <span class="n">call</span>
+            <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span>
+            <span class="k">if</span> <span class="n">call</span><span class="o">.</span><span class="n">parent_task_id</span>
+            <span class="ow">and</span> <span class="n">call</span><span class="o">.</span><span class="n">parent_task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">call</span><span class="o">.</span><span class="n">parent_task_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">Status</span><span class="o">.</span><span class="n">IN_PROGRESS</span>
+            <span class="ow">and</span> <span class="n">call</span><span class="o">.</span><span class="n">status</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">CallStatus</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span> <span class="n">CallStatus</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">new_calls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span><span class="o">.</span><span class="n">construct_blueapi_calls</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">task</span> <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue</span><span class="p">()</span> <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">Status</span><span class="o">.</span><span class="n">QUEUED</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_get_history</span><span class="p">(),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_queue_history</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConverterError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">new_calls</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="n">new_calls</span><span class="p">:</span>
+            <span class="c1"># Add children to parent tasks</span>
+            <span class="k">if</span> <span class="n">call</span><span class="o">.</span><span class="n">parent_task_id</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">call</span><span class="o">.</span><span class="n">parent_task_id</span><span class="p">]</span><span class="o">.</span><span class="n">blueapi_calls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">call</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pause_queue</span><span class="p">(</span><span class="n">PauseReason</span><span class="o">.</span><span class="n">EMPTY_QUEUE</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_contents</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcast_changes</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="o">.</span><span class="n">notify_all</span><span class="p">()</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Queue after sync: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_copy_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueueContents</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">deepcopy</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">"tasks"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">,</span>
+                <span class="s2">"queue"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">,</span>
+                <span class="s2">"history"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">,</span>
+                <span class="s2">"call_queue"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">,</span>
+                <span class="s2">"call_history"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_history</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_good_contents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_copy_contents</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_restore_from_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contents</span><span class="p">:</span> <span class="n">QueueContents</span><span class="p">):</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Restoring to contents: </span><span class="si">{</span><span class="n">contents</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="n">restored</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span> <span class="o">=</span> <span class="n">TaskRegistry</span><span class="p">(</span><span class="n">restored</span><span class="p">[</span><span class="s2">"tasks"</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span> <span class="o">=</span> <span class="n">restored</span><span class="p">[</span><span class="s2">"queue"</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_history</span> <span class="o">=</span> <span class="n">restored</span><span class="p">[</span><span class="s2">"history"</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span> <span class="o">=</span> <span class="n">restored</span><span class="p">[</span><span class="s2">"call_queue"</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_history</span> <span class="o">=</span> <span class="n">restored</span><span class="p">[</span><span class="s2">"call_history"</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_restore_latest_good_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Restoring to last good contents"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_restore_from_contents</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_good_contents</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_broadcast_changes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue</span><span class="p">()</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_history</span><span class="p">()</span>
+
+        <span class="c1"># broadcast only does anything if there have been changes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"queue_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">queue</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"history_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">history</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"tasks_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">history</span> <span class="o">+</span> <span class="n">queue</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span>
+            <span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"call_queue_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_call_queue</span><span class="p">())</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span>
+            <span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"call_history_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_call_history</span><span class="p">())</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="TaskQueue.get_next_call_once_available">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_next_call_once_available">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_next_call_once_available</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BlueapiCall</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Waits until a call is available before returning the call. A call is</span>
+<span class="sd">        available if it's at the top of the call queue, is not already in progress or</span>
+<span class="sd">        claimed, and the queue is not paused.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            BlueapiCall: The call at the top of the queue</span>
+<span class="sd">        """</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_available</span><span class="p">():</span>
+                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sync</span><span class="p">()</span>  <span class="c1"># Do conversion here to ensure conditions are up to date</span>
+            <span class="n">call</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">with</span> <span class="n">add_session_to_logger</span><span class="p">(</span><span class="n">call</span><span class="o">.</span><span class="n">task_request</span><span class="o">.</span><span class="n">instrument_session</span><span class="p">):</span>
+                <span class="n">call</span><span class="o">.</span><span class="n">claim</span><span class="p">()</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Plan </span><span class="si">{</span><span class="n">call</span><span class="si">}</span><span class="s2"> has been claimed"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">call</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.wait_until_call_available">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.wait_until_call_available">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">wait_until_call_available</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Waits until a task is available before returning. A task is</span>
+<span class="sd">        available if it's at the top of the queue, is not already in progress or</span>
+<span class="sd">        claimed, and the queue is not paused.</span>
+<span class="sd">        """</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_available</span><span class="p">():</span>
+                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.return_call_to_queue">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.return_call_to_queue">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">return_call_to_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">call</span><span class="p">:</span> <span class="n">BlueapiCall</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Returns a task to the queue that had previously been claimed</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            task (Task): The task to return</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            TaskNotClaimedError: Raised if the task's status is not 'Claimed'</span>
+<span class="sd">        """</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_call_valid_to_be_returned</span><span class="p">(</span><span class="n">call</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="k">match</span> <span class="n">call</span><span class="o">.</span><span class="n">status</span><span class="p">:</span>
+                <span class="k">case</span> <span class="n">CallStatus</span><span class="o">.</span><span class="n">CLAIMED</span><span class="p">:</span>
+                    <span class="k">assert</span> <span class="n">call</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">call</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+                <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">TaskNotClaimedError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Cannot return call </span><span class="si">{</span><span class="n">call</span><span class="si">}</span><span class="s2">, "</span>
+                        <span class="o">+</span> <span class="sa">f</span><span class="s2">"it's status is </span><span class="si">{</span><span class="n">call</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">."</span>
+                    <span class="p">)</span>
+        <span class="k">with</span> <span class="n">add_session_to_logger</span><span class="p">(</span><span class="n">call</span><span class="o">.</span><span class="n">task_request</span><span class="o">.</span><span class="n">instrument_session</span><span class="p">):</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Call </span><span class="si">{</span><span class="n">call</span><span class="si">}</span><span class="s2"> has been returned to the queue"</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.complete_call">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.complete_call">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">complete_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">call</span><span class="p">:</span> <span class="n">BlueapiCall</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">TaskResult</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Sets a task to complete, removes it from the queue and adds it to history</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            task (Task): Task to be completed</span>
+<span class="sd">            result (TaskResult): The result of the task from blueapi</span>
+<span class="sd">        """</span>
+        <span class="k">with</span> <span class="n">add_session_to_logger</span><span class="p">(</span><span class="n">call</span><span class="o">.</span><span class="n">task_request</span><span class="o">.</span><span class="n">instrument_session</span><span class="p">):</span>
+            <span class="n">tiled_ids</span><span class="p">,</span> <span class="n">scan_ids</span> <span class="o">=</span> <span class="n">get_tiled_and_scan_ids</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tiled_client</span><span class="p">,</span> <span class="n">call</span><span class="p">)</span>
+            <span class="n">should_pause</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span><span class="o">.</span><span class="n">pause_on_complete_blueapi_call</span><span class="p">(</span>
+                <span class="n">call</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(),</span> <span class="n">result</span>
+            <span class="p">)</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Plan </span><span class="si">{</span><span class="n">call</span><span class="si">}</span><span class="s2"> completed successfully. Result: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="n">call</span><span class="o">.</span><span class="n">tiled_ids</span> <span class="o">=</span> <span class="n">tiled_ids</span>
+            <span class="n">call</span><span class="o">.</span><span class="n">scan_ids</span> <span class="o">=</span> <span class="n">scan_ids</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_call_valid_to_be_returned</span><span class="p">(</span><span class="n">call</span><span class="p">)</span>
+            <span class="n">call</span><span class="o">.</span><span class="n">succeed</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_call_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">call</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">should_pause</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pause_queue</span><span class="p">(</span><span class="n">reason</span><span class="o">=</span><span class="n">PauseReason</span><span class="o">.</span><span class="n">PLUGIN_REQUESTED</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.fail_call">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.fail_call">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fail_call</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">call</span><span class="p">:</span> <span class="n">BlueapiCall</span><span class="p">,</span> <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">TaskError</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Sets a task to failed, removes it from the call queue and adds it to history.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            task (Task): The task to fail</span>
+<span class="sd">            errors (list[str  |  TaskError] | None, optional): A list of errors that</span>
+<span class="sd">            occurred when trying to run the task. Defaults to None.</span>
+<span class="sd">        """</span>
+        <span class="k">with</span> <span class="n">add_session_to_logger</span><span class="p">(</span><span class="n">call</span><span class="o">.</span><span class="n">task_request</span><span class="o">.</span><span class="n">instrument_session</span><span class="p">):</span>
+            <span class="n">should_pause</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span><span class="o">.</span><span class="n">pause_on_fail_blueapi_call</span><span class="p">(</span>
+                <span class="n">call</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(),</span> <span class="n">errors</span>
+            <span class="p">)</span>
+            <span class="n">tiled_ids</span><span class="p">,</span> <span class="n">scan_ids</span> <span class="o">=</span> <span class="n">get_tiled_and_scan_ids</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tiled_client</span><span class="p">,</span> <span class="n">call</span><span class="p">)</span>
+            <span class="n">LOGGER</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Plan </span><span class="si">{</span><span class="n">call</span><span class="si">}</span><span class="s2"> has failed with the following errors: </span><span class="si">{</span><span class="n">errors</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="n">call</span><span class="o">.</span><span class="n">tiled_ids</span> <span class="o">=</span> <span class="n">tiled_ids</span>
+            <span class="n">call</span><span class="o">.</span><span class="n">scan_ids</span> <span class="o">=</span> <span class="n">scan_ids</span>
+            <span class="k">if</span> <span class="n">should_pause</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pause_queue</span><span class="p">(</span><span class="n">PauseReason</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">LOGGER</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"Call failed but queue not paused due to plugin decision"</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_call_valid_to_be_returned</span><span class="p">(</span><span class="n">call</span><span class="p">)</span>
+            <span class="n">call</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_call_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">call</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.get_task_by_id">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_task_by_id">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_task_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskWithPosition</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Returns a task based on it's task ID</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            task_id (str): Task ID of the task</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TaskWithPosition: A copy of the task with a position field.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            TaskNotFoundError: Raised if the no task exists with the requested task ID.</span>
+<span class="sd">        """</span>
+        <span class="c1"># Returns copy so don't have to be worried about caller modifying task.</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_task_by_id</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_task_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskWithPosition</span><span class="p">:</span>
+        <span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">TaskWithPosition</span><span class="o">.</span><span class="n">from_task</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">position</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TaskQueue.get_task_by_position">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_task_by_position">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_task_by_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskWithPosition</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return a task based on it's position in the queue</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            position (int): The position of the task to be returned.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            TaskWithPosition | None: A copy of the task with a position field, or None</span>
+<span class="sd">            if no task exists at the requested position.</span>
+<span class="sd">        """</span>
+        <span class="c1"># Returns copy so don't have to be worried about caller modifying task.</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_task_by_position</span><span class="p">(</span><span class="n">position</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_task_by_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskWithPosition</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">position</span> <span class="o">&lt;</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="ow">or</span> <span class="n">position</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_task_by_id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">[</span><span class="n">position</span><span class="p">])</span>
+
+<div class="viewcode-block" id="TaskQueue.get_queue">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_queue">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Get the entire queue (not including history)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[TaskWithPosition]: A list of the tasks in the queue, in the order they</span>
+<span class="sd">            will be run in.</span>
+<span class="sd">        """</span>
+        <span class="c1"># Returns copies so don't have to be worried about caller modifying tasks.</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.get_history">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_history">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Get the history list.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[TaskWithPosition]: A list of the tasks in the history list, in</span>
+<span class="sd">            chronological order.</span>
+<span class="sd">        """</span>
+        <span class="c1"># Returns copies so don't have to be worried about caller modifying tasks.</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_history</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.get_tasks">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_tasks">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Get all the tasks in the queue and history list.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[TaskWithPosition]: A list of tasks in chronological order, starting</span>
+<span class="sd">            with the history.</span>
+<span class="sd">        """</span>
+        <span class="c1"># Returns copies so don't have to be worried about caller modifying tasks.</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_history</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_queue</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.add_tasks">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.add_tasks">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">add_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tasks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Task</span><span class="p">],</span> <span class="n">position</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Add tasks to the queue. Can specify a position to add the tasks in at.</span>
+<span class="sd">        This position will apply to the first task in the list, with each subsequent</span>
+<span class="sd">        task having a position of 1 more than the previous. By default adds tasks to the</span>
+<span class="sd">        end of the queue.</span>
+
+
+<span class="sd">        Args:</span>
+<span class="sd">            tasks (list[Task]): List of tasks to add</span>
+<span class="sd">            position (int | None, optional): Position of the tasks. Defaults to None.</span>
+<span class="sd">        """</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_new_tasks</span><span class="p">(</span><span class="n">tasks</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">position</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_valid_position</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_tasks</span><span class="p">(</span><span class="n">tasks</span><span class="p">,</span> <span class="n">position</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Successfully added tasks to queue: </span><span class="si">{</span><span class="p">[</span><span class="n">task</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">task</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">tasks</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.move_task">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.move_task">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">move_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Move a task into a different position. If the requested position is</span>
+<span class="sd">        unavailable, will move to the closest available position. If the requested task</span>
+<span class="sd">        cannot be moved because it is complete or in progress, an error will be raised.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            task_id (str): ID of the task to be moved</span>
+<span class="sd">            new_position (int): New position of the task</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: The new position of the task (may be different to what was requested)</span>
+<span class="sd">        """</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_tasks_for_move_or_deletion</span><span class="p">([</span><span class="n">task_id</span><span class="p">])</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_valid_position</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_remove_tasks_from_queue</span><span class="p">([</span><span class="n">task_id</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">[</span><span class="n">position</span><span class="p">:</span><span class="n">position</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">task_id</span><span class="p">]</span>
+            <span class="n">new_position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Successfully moved task </span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="s2"> to position </span><span class="si">{</span><span class="n">new_position</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_position</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.cancel_tasks">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.cancel_tasks">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">cancel_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_ids</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Remove tasks from the queue. If one or more of the requested tasks cannot be</span>
+<span class="sd">        cancelled as they are complete or in progress, an error will be raised and none</span>
+<span class="sd">        of the requested tasks will be cancelled.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            task_ids (Sequence[str]): List of task IDs to cancel</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[TaskWithPosition]: List of the task objects that were removed from the</span>
+<span class="sd">            queue.</span>
+<span class="sd">        """</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="n">cancelled_tasks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancel_tasks</span><span class="p">(</span><span class="n">task_ids</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Successfully cancelled tasks: </span><span class="si">{</span><span class="n">task_ids</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cancelled_tasks</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.cancel_all_tasks">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.cancel_all_tasks">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">cancel_all_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="n">task_ids</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="nb">id</span>
+                <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_task_by_id</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">Status</span><span class="o">.</span><span class="n">QUEUED</span>
+            <span class="p">]</span>
+            <span class="n">cancelled_tasks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancel_tasks</span><span class="p">(</span><span class="n">task_ids</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Successfully cleared all queued tasks"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cancelled_tasks</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.clear_history">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.clear_history">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">clear_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Clears the history list. Any task in the history list at the time will be</span>
+<span class="sd">        deleted permanently and inaccessible.</span>
+<span class="sd">        """</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Successfully cleared history"</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pause_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">PauseReason</span><span class="p">):</span>
+        <span class="n">reason</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">reason</span>
+            <span class="k">if</span> <span class="n">reason</span> <span class="o">==</span> <span class="n">PauseReason</span><span class="o">.</span><span class="n">ERROR</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">paused</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">last_pause_reason</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span> <span class="o">=</span> <span class="n">QueueState</span><span class="p">(</span><span class="n">paused</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">last_pause_reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"state_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="p">))</span>
+        <span class="n">notify</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Queue paused: </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"INFO"</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TaskQueue.pause_queue">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.pause_queue">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">pause_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">PauseReason</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueueState</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Pause the queue if running.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            paused (PauseReason): The reason for pausing the queue.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QueueState: The new state of the queue.</span>
+<span class="sd">        """</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pause_queue</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span></div>
+
+
+<div class="viewcode-block" id="TaskQueue.resume_queue">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.resume_queue">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">resume_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">QueueState</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Resume the queue if paused.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QueueState: The new state of the queue.</span>
+<span class="sd">        """</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Resuming queue"</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_state</span> <span class="o">=</span> <span class="n">QueueState</span><span class="p">(</span>
+                <span class="n">paused</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">last_pause_reason</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">last_pause_reason</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"state_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_task_available</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Predicate that determines whether the queue has a task available. This</span>
+<span class="sd">        returns True if the first task in the queue has a status of WAITING, and the</span>
+<span class="sd">        queue is not paused.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: Whether or not the queue has a task available.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">paused</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">CallStatus</span><span class="o">.</span><span class="n">WAITING</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_call_valid_to_be_returned</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">call</span><span class="p">:</span> <span class="n">BlueapiCall</span><span class="p">):</span>
+        <span class="c1"># Check caller has actual task object not copy</span>
+        <span class="c1"># This ensures the caller has claimed the task, reducing the chance a task is</span>
+        <span class="c1"># returned that is actually still being run/modified by a different process.</span>
+        <span class="c1"># However if the worker crashes we then lose the Task object and can't return</span>
+        <span class="c1"># the task? Needs discussion with others.</span>
+        <span class="k">assert</span> <span class="n">call</span> <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">call</span><span class="o">.</span><span class="n">parent_task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">,</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"This call has no parent task: </span><span class="si">{</span><span class="n">call</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_valid_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">position</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NegativePositionError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Position must be &gt;= 0, got </span><span class="si">{</span><span class="n">position</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span>  <span class="c1"># if position 0 requested but a task is in progress, return position 1</span>
+            <span class="n">position</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">Status</span><span class="o">.</span><span class="n">QUEUED</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">position</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_new_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tasks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Task</span><span class="p">]):</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">TaskIdInUseError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Task ID '</span><span class="si">{</span><span class="n">task</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">' already in use!"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tasks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Task</span><span class="p">],</span> <span class="n">position</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">task_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">task</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">position</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">task_ids</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">[</span><span class="n">position</span><span class="p">:</span><span class="n">position</span><span class="p">]</span> <span class="o">=</span> <span class="n">task_ids</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">task</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_cancel_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_ids</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+        <span class="n">task_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">task_ids</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_tasks_for_move_or_deletion</span><span class="p">(</span><span class="n">task_ids</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_tasks_from_queue</span><span class="p">(</span><span class="n">task_ids</span><span class="p">)</span>
+        <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span> <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="n">task_ids</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+            <span class="n">task</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">TaskWithPosition</span><span class="o">.</span><span class="n">from_task</span><span class="p">(</span><span class="n">task</span><span class="p">)</span> <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_remove_tasks_from_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="c1">#  Only removes tasks in the queue (not history or registry)</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">should_be_removed</span><span class="p">(</span><span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">Status</span><span class="o">.</span><span class="n">IN_PROGRESS</span>
+            <span class="p">)</span>
+
+        <span class="n">removed_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">task_id</span> <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="n">task_ids</span> <span class="k">if</span> <span class="n">should_be_removed</span><span class="p">(</span><span class="n">task_id</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span> <span class="o">=</span> <span class="p">[</span><span class="n">task_id</span> <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span> <span class="k">if</span> <span class="n">task_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">removed_ids</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">removed_ids</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_remove_tasks_from_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Only removes tasks not present in the queue or history</span>
+        <span class="c1"># So should remove tasks from queue/history before removing from registry</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">should_be_removed</span><span class="p">(</span><span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">Status</span><span class="o">.</span><span class="n">IN_PROGRESS</span>
+                <span class="ow">and</span> <span class="n">task_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span>
+                <span class="ow">and</span> <span class="n">task_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span>
+            <span class="p">)</span>
+
+        <span class="n">removed_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">task_id</span> <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="n">task_ids</span> <span class="k">if</span> <span class="n">should_be_removed</span><span class="p">(</span><span class="n">task_id</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span> <span class="o">=</span> <span class="n">TaskRegistry</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="n">task_id</span><span class="p">:</span> <span class="n">task</span>
+                <span class="k">for</span> <span class="n">task_id</span><span class="p">,</span> <span class="n">task</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">removed_ids</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_tasks_for_move_or_deletion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+        <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="n">task_ids</span><span class="p">:</span>
+            <span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">task_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">TaskNotInQueueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Task </span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="s2"> isn't present in queue"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">Status</span><span class="o">.</span><span class="n">QUEUED</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">TaskInProgressError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Cannot move task '</span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="s2">', it is currently in progress!"</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">TaskWithPosition</span><span class="o">.</span><span class="n">from_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">],</span> <span class="n">i</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">)</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TaskWithPosition</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">TaskWithPosition</span><span class="o">.</span><span class="n">from_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tasks</span><span class="p">[</span><span class="n">task_id</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span>
+        <span class="p">]</span>
+
+<div class="viewcode-block" id="TaskQueue.get_call_queue">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_call_queue">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_call_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCallResponse</span><span class="p">]:</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_call_queue</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_call_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCallResponse</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">call</span><span class="o">.</span><span class="n">to_response</span><span class="p">()</span> <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_queue</span><span class="p">]</span>
+
+<div class="viewcode-block" id="TaskQueue.get_call_history">
+<a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_call_history">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_call_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCallResponse</span><span class="p">]:</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_call_history</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_call_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BlueapiCallResponse</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">call</span><span class="o">.</span><span class="n">to_response</span><span class="p">()</span> <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_history</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_running_task</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TaskWithPosition</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">current_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_task_by_position</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">current_task</span> <span class="ow">and</span> <span class="n">current_task</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">Status</span><span class="o">.</span><span class="n">IN_PROGRESS</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">current_task</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_tiled_client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Container</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_tiled_client</span><span class="p">()</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
