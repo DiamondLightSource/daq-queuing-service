@@ -10,3 +10,7 @@ blueapi:
     auth:
       username: guest
       password: guest
+logging:
+  graylog:
+    enabled: false
+instrument: "i15-1 (test)"

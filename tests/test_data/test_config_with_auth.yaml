@@ -16,3 +16,6 @@ oidc:
   client_audience: "account"
 authorisation_whitelist:
   - "abc12345"
+logging:
+  graylog:
+    enabled: false

@@ -26,13 +26,12 @@ class MyConverter(Converter):
         call_history: list[BlueapiCall],
     ) -> list[Task]: ...
 
-
-def construct_blueapi_calls(
-    self,
-    queue: list[TaskWithPosition],
-    history: list[TaskWithPosition],
-    call_history: list[BlueapiCall],
-) -> list[BlueapiCall]: ...
+    def construct_blueapi_calls(
+        self,
+        queue: list[TaskWithPosition],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCall],
+    ) -> list[BlueapiCall]: ...
 ```
 
 ### `validate()`

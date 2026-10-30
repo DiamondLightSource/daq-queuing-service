@@ -3,7 +3,7 @@ from blueapi.client.event_bus import EventBusClient
 from blueapi.client.rest import BlueapiRestClient
 from bluesky_stomp.messaging import Broker, StompClient
 
-from daq_queuing_service.app._config import BlueapiConfig
+from daq_queuing_service.app.config import BlueapiConfig
 from daq_queuing_service.external_interaction.blueapi.token_source import UDCTokenSource
 
 
