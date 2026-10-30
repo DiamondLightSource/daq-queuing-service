@@ -31,18 +31,18 @@ from daq_queuing_service.app.config import load_config
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
-    BlueapiCallResponse,
     CallStatus,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.plugins.converter import Converter
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, PauseReason, TaskQueue
 from daq_queuing_service.task_queue.queue_utils import QueueError
 from daq_queuing_service.task_queue.task import (
     Experiment,
+    QueueTask,
     Status,
     Task,
     TaskKind,
-    TaskWithPosition,
 )
 
 
@@ -393,7 +393,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
     task_ids: list[str] = response.json()
     [uuid.UUID(task_id) for task_id in task_ids]
 
-    assert await task_queue_with_history.get_task_by_position(-1) == TaskWithPosition(
+    assert await task_queue_with_history.get_task_by_position(-1) == QueueTask(
         experiment=TaskRequest(
             name="add_tasks",
             params={"time": 10},
@@ -401,7 +401,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         ),
         id=task_ids[-1],
         blueapi_calls=[
-            BlueapiCallResponse(
+            QueueBlueapiCall(
                 task_request=TaskRequest(
                     name="add_tasks", params={"time": 10}, instrument_session="abc"
                 ),
@@ -475,9 +475,9 @@ async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
     class SomeError(Exception): ...
 
     def fail_conversion(
-        current_task: TaskWithPosition | None,
+        current_task: QueueTask | None,
         queue: list[Task],
-        history: list[TaskWithPosition],
+        history: list[QueueTask],
         call_history: list[BlueapiCall],
     ):
         raise SomeError("Conversion failed because xyz")
@@ -610,7 +610,10 @@ async def test_move_task_moves_task_and_returns_position(
             "0",
             5,
             409,
-            {"error": "task_not_in_queue", "message": "Task 0 isn't present in queue"},
+            {
+                "error": "task_not_in_queue",
+                "message": "Task 0 isn't present in queue",
+            },
         ],
         [
             "2",
@@ -779,7 +782,10 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
         [
             TaskCancelRequest(task_ids=["1", "2", "3", "4"]).model_dump(),
             409,
-            {"error": "task_not_in_queue", "message": "Task 1 isn't present in queue"},
+            {
+                "error": "task_not_in_queue",
+                "message": "Task 1 isn't present in queue",
+            },
         ],
     ],
 )

@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field, computed_field
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
-    BlueapiCallResponse,
     CallStatus,
+    QueueBlueapiCall,
 )
 
 
@@ -103,11 +103,11 @@ class Task(BaseModel):
                 return TaskKind.PLAN
 
 
-class TaskWithPosition(BaseModel):
+class QueueTask(BaseModel):
     experiment: Experiment | TaskRequest
     id: str
     status: Status
-    blueapi_calls: list[BlueapiCallResponse]
+    blueapi_calls: list[QueueBlueapiCall]
     position: int | None
     kind: TaskKind
     user: User | None

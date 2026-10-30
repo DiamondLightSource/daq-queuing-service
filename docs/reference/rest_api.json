@@ -139,7 +139,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TaskWithPosition"
+                    "$ref": "#/components/schemas/QueueTask"
                   },
                   "title": "Response Get Queued Tasks Queue Get"
                 }
@@ -238,7 +238,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TaskWithPosition"
+                    "$ref": "#/components/schemas/QueueTask"
                   },
                   "title": "Response Cancel All Tasks Queue Delete"
                 }
@@ -318,7 +318,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/TaskWithPosition"
+                    "$ref": "#/components/schemas/QueueTask"
                   },
                   "type": "array",
                   "title": "Response Cancel Tasks Queue Tasks Delete"
@@ -362,7 +362,7 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/TaskWithPosition"
+                      "$ref": "#/components/schemas/QueueTask"
                     },
                     {
                       "type": "null"
@@ -416,7 +416,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TaskWithPosition"
+                    "$ref": "#/components/schemas/QueueTask"
                   },
                   "title": "Response Get All Tasks Tasks Get"
                 }
@@ -457,7 +457,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TaskWithPosition"
+                  "$ref": "#/components/schemas/QueueTask"
                 }
               }
             }
@@ -505,7 +505,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TaskWithPosition"
+                    "$ref": "#/components/schemas/QueueTask"
                   },
                   "title": "Response Get Completed Tasks History Get"
                 }
@@ -550,7 +550,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/BlueapiCallResponse"
+                    "$ref": "#/components/schemas/QueueBlueapiCall"
                   },
                   "type": "array",
                   "title": "Response Get Call Queue Call Queue Get"
@@ -572,7 +572,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/BlueapiCallResponse"
+                    "$ref": "#/components/schemas/QueueBlueapiCall"
                   },
                   "type": "array",
                   "title": "Response Get Call History Call History Get"
@@ -678,7 +678,7 @@
         "title": "BasicAuthentication",
         "description": "User credentials for basic authentication"
       },
-      "BlueapiCallResponse": {
+      "QueueBlueapiCall": {
         "properties": {
           "task_request": {
             "$ref": "#/components/schemas/TaskRequest"
@@ -782,7 +782,7 @@
           "tiled_ids",
           "scan_ids"
         ],
-        "title": "BlueapiCallResponse"
+        "title": "QueueBlueapiCall"
       },
       "BlueapiConfig": {
         "properties": {
@@ -1320,7 +1320,7 @@
         "title": "TaskResult",
         "description": "Serializable wrapper around the result of a plan\n\nIf the result is not serializable, the result will be None but the type\nwill be the name of the type. If the result is actually None, the type will\nbe 'NoneType'."
       },
-      "TaskWithPosition": {
+      "QueueTask": {
         "properties": {
           "experiment": {
             "anyOf": [
@@ -1342,7 +1342,7 @@
           },
           "blueapi_calls": {
             "items": {
-              "$ref": "#/components/schemas/BlueapiCallResponse"
+              "$ref": "#/components/schemas/QueueBlueapiCall"
             },
             "type": "array",
             "title": "Blueapi Calls"
@@ -1382,7 +1382,7 @@
           "kind",
           "user"
         ],
-        "title": "TaskWithPosition"
+        "title": "QueueTask"
       },
       "User": {
         "properties": {

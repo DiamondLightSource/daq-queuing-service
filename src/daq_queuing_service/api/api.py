@@ -13,7 +13,7 @@ from daq_queuing_service.app.authentication import User
 from daq_queuing_service.app.config import AppConfig
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
-    BlueapiCallResponse,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins.converter import Converter, ValidateError
@@ -21,8 +21,8 @@ from daq_queuing_service.task_queue.queue import (
     QUEUE_EVENTS,
     PauseReason,
     QueueState,
+    QueueTask,
     TaskQueue,
-    TaskWithPosition,
 )
 from daq_queuing_service.task_queue.task import Experiment, Status, Task
 
@@ -45,9 +45,7 @@ class TaskCancelRequest(BaseModel):
     task_ids: list[str]
 
 
-def _filter_by_status(
-    tasks: list[TaskWithPosition], status: Status | None
-) -> list[TaskWithPosition]:
+def _filter_by_status(tasks: list[QueueTask], status: Status | None) -> list[QueueTask]:
     if status is None:
         return tasks
     return [task for task in tasks if task.status == status]
@@ -99,7 +97,7 @@ def protected_routes(
             return await queue.resume_queue()
 
     @router.get("/queue")
-    async def get_queued_tasks(status: Status | None = None) -> list[TaskWithPosition]:
+    async def get_queued_tasks(status: Status | None = None) -> list[QueueTask]:
         return _filter_by_status(await queue.get_queue(), status)
 
     @router.post("/queue")
@@ -119,7 +117,7 @@ def protected_routes(
         return task_ids
 
     @router.delete("/queue")
-    async def cancel_all_tasks() -> list[TaskWithPosition]:
+    async def cancel_all_tasks() -> list[QueueTask]:
         return await queue.cancel_all_tasks()
 
     @router.post("/queue/move")
@@ -127,25 +125,25 @@ def protected_routes(
         return await queue.move_task(task_id, new_position)
 
     @router.delete("/queue/tasks")
-    async def cancel_tasks(payload: TaskCancelRequest) -> list[TaskWithPosition]:
+    async def cancel_tasks(payload: TaskCancelRequest) -> list[QueueTask]:
         return await queue.cancel_tasks(payload.task_ids)
 
     @router.get("/queue/{position}")
-    async def get_task_by_position(position: int) -> TaskWithPosition | None:
+    async def get_task_by_position(position: int) -> QueueTask | None:
         return await queue.get_task_by_position(position)
 
     @router.get("/tasks")
-    async def get_all_tasks(status: Status | None = None) -> list[TaskWithPosition]:
+    async def get_all_tasks(status: Status | None = None) -> list[QueueTask]:
         return _filter_by_status(await queue.get_tasks(), status)
 
     @router.get("/tasks/{task_id}")
-    async def get_task_by_id(task_id: str) -> TaskWithPosition:
+    async def get_task_by_id(task_id: str) -> QueueTask:
         return await queue.get_task_by_id(task_id)
 
     @router.get("/history")
     async def get_completed_tasks(
         status: Status | None = None,
-    ) -> list[TaskWithPosition]:
+    ) -> list[QueueTask]:
         return _filter_by_status(await queue.get_history(), status)
 
     @router.delete("/history")
@@ -153,11 +151,11 @@ def protected_routes(
         return await queue.clear_history()
 
     @router.get("/call_queue")
-    async def get_call_queue() -> list[BlueapiCallResponse]:
+    async def get_call_queue() -> list[QueueBlueapiCall]:
         return await queue.get_call_queue()
 
     @router.get("/call_history")
-    async def get_call_history() -> list[BlueapiCallResponse]:
+    async def get_call_history() -> list[QueueBlueapiCall]:
         return await queue.get_call_history()
 
     @router.get("/events")

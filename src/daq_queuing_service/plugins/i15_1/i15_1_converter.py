@@ -8,6 +8,7 @@ from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import (
@@ -35,9 +36,9 @@ from daq_queuing_service.task_queue.task import (
     ContainerPosition,
     Experiment,
     ExperimentDefinition,
+    QueueTask,
     Sample,
     Task,
-    TaskWithPosition,
 )
 
 CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
@@ -84,9 +85,9 @@ class I151Converter(Converter):
 
     def pre_process(
         self,
-        current_task: TaskWithPosition | None,
+        current_task: QueueTask | None,
         queue: list[Task],
-        history: list[TaskWithPosition],
+        history: list[QueueTask],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
         self._config_client.reset_cache()
@@ -96,8 +97,8 @@ class I151Converter(Converter):
 
     def construct_blueapi_calls(
         self,
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[QueueTask],
+        history: list[QueueTask],
         call_history: list[BlueapiCall],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
@@ -127,7 +128,7 @@ class I151Converter(Converter):
         return call_list
 
     def pause_on_fail_blueapi_call(
-        self, call: BlueapiCall, errors: list[str | TaskError] | None
+        self, call: QueueBlueapiCall, errors: list[str | TaskError] | None
     ) -> bool:
 
         for error in errors or []:
@@ -177,13 +178,13 @@ class I151Converter(Converter):
         return plans
 
     def _add_required_auxiliary_scans(
-        self, current_task: TaskWithPosition | None, tasks: list[Task]
+        self, current_task: QueueTask | None, tasks: list[Task]
     ) -> list[Task]:
         """Adds auxiliary scan tasks to the queue. They will be added directly
         in front of the first task in the queue that requires them.
 
         Args:
-            current_task (TaskWithPosition | None): Current running task, if one exists.
+            current_task (QueueTask | None): Current running task, if one exists.
             tasks (list[Task]): Current list of tasks
 
         Returns:
@@ -221,7 +222,7 @@ class I151Converter(Converter):
     def _ensure_auxiliary_in_queue_or_tiled(
         self,
         required_auxiliary: AuxiliaryScan,
-        current_task: TaskWithPosition | None,
+        current_task: QueueTask | None,
         new_tasks: list[Task],
         task_id: str,
         instrument_session: str,

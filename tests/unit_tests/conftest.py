@@ -19,7 +19,9 @@ from daq_queuing_service.app.config import (
     load_config,
 )
 from daq_queuing_service.broadcaster import Broadcaster
-from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+)
 from daq_queuing_service.external_interaction.tiled.tiled import cache
 from daq_queuing_service.log import LOGGER, setup_logger
 from daq_queuing_service.plugins.converter import Converter
@@ -29,9 +31,9 @@ from daq_queuing_service.task_queue.task import (
     ContainerPosition,
     Experiment,
     ExperimentDefinition,
+    QueueTask,
     Sample,
     Task,
-    TaskWithPosition,
 )
 from daq_queuing_service.worker.worker import LOGGER as WORKER_LOGGER
 
@@ -106,8 +108,8 @@ async def task_queue(tasks: list[Task], converter: Converter):
 @pytest.fixture
 async def task_queue_one_to_many(tasks: list[Task]):
     def construct_blueapi_calls(
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[QueueTask],
+        history: list[QueueTask],
         call_history: list[BlueapiCall],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []

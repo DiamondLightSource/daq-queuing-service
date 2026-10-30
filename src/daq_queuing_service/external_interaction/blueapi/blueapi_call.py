@@ -103,11 +103,11 @@ class BlueapiCall(BaseModel):
     def skip(self):
         self._update_status(CallStatus.SKIPPED)
 
-    def to_response(self) -> "BlueapiCallResponse":
-        return BlueapiCallResponse.from_blueapi_call(self)
+    def to_response(self) -> "QueueBlueapiCall":
+        return QueueBlueapiCall.from_blueapi_call(self)
 
 
-class BlueapiCallResponse(BaseModel):
+class QueueBlueapiCall(BaseModel):
     task_request: TaskRequest
     parent_task_id: str | None
     status: CallStatus

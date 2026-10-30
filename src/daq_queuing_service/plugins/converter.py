@@ -5,11 +5,12 @@ from blueapi.worker.event import TaskError, TaskResult
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.task_queue.task import (
     Experiment,
+    QueueTask,
     Task,
-    TaskWithPosition,
 )
 
 
@@ -41,9 +42,9 @@ class Converter:
 
     def pre_process(
         self,
-        current_task: TaskWithPosition | None,
+        current_task: QueueTask | None,
         queue: list[Task],
-        history: list[TaskWithPosition],
+        history: list[QueueTask],
         call_history: list[BlueapiCall],
     ) -> list[Task]:
         """This gets run whenever something changes in the queue, before
@@ -57,10 +58,10 @@ class Converter:
         If not overridden, this method returns the queue as is with no modification.
 
         Args:
-            current_task (TaskWithPosition | None): The current running task, if one
+            current_task (QueueTask | None): The current running task, if one
                 exists.
             queue (list[Task]): List of tasks currently in the queue
-            history (list[TaskWithPosition]): List of completed tasks
+            history (list[QueueTask]): List of completed tasks
             call_history (list[BlueapiCall]): List of completed blueapi calls
 
         Returns:
@@ -70,8 +71,8 @@ class Converter:
 
     def construct_blueapi_calls(
         self,
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[QueueTask],
+        history: list[QueueTask],
         call_history: list[BlueapiCall],
     ) -> list[BlueapiCall]:
         """Converts the list of queued tasks into a list of blueapi calls. This is
@@ -81,8 +82,8 @@ class Converter:
         implementation does.
 
         Args:
-            queue (list[TaskWithPosition]): List of tasks in the queue
-            history (list[TaskWithPosition]): List of completed tasks
+            queue (list[QueueTask]): List of tasks in the queue
+            history (list[QueueTask]): List of completed tasks
             call_history (list[BlueapiCall]): List of completed blueapi calls
 
         Returns:
@@ -99,12 +100,12 @@ class Converter:
         return call_list
 
     def pause_on_complete_blueapi_call(
-        self, call: BlueapiCall, result: TaskResult
+        self, call: QueueBlueapiCall, result: TaskResult
     ) -> bool:
         """Decide whether to pause the queue after a blueapi call completes successfully
 
         Args:
-            call (BlueapiCall): The completed call
+            call (QueueBlueapiCall): The completed call
             result (TaskResult): The result of the call from blueapi
 
         Returns:
@@ -113,18 +114,38 @@ class Converter:
         return False
 
     def pause_on_fail_blueapi_call(
-        self, call: BlueapiCall, errors: list[str | TaskError] | None
+        self, call: QueueBlueapiCall, errors: list[str | TaskError] | None
     ) -> bool:
         """Decide whether to pause the queue after a blueapi call fails
 
         Args:
-            call (BlueapiCall): The failed call
+            call (QueueBlueapiCall): The failed call
             errors (list[str  |  TaskError] | None): The errors that occurred
 
         Returns:
             bool: True to pause the queue, False to leave it running.
         """
         return True
+
+    def process_running_task(
+        self,
+        completed_plans: list[QueueBlueapiCall],
+        plans_to_do: list[BlueapiCall],
+    ) -> list[BlueapiCall]:
+        """An opportunity to process the currently running task, by amending the
+        blueapi calls yet to be made. Get's called right after a blueapi call completes.
+
+        Args:
+            completed_plans (list[QueueBlueapiCall]): Completed blueapi calls
+                associated with the currently running task.
+            plans_to_do (list[BlueapiCall]): Future blueapi calls associated with the
+                currently running task.
+
+        Returns:
+            list[BlueapiCall]: An amended list of future blueapi calls for the running
+                task.
+        """
+        return plans_to_do
 
     def _construct_blueapi_task_request(
         self,

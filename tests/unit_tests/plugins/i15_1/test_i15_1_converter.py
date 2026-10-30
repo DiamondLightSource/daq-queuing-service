@@ -27,10 +27,10 @@ from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Experiment,
     ExperimentDefinition,
+    QueueTask,
     Status,
     Task,
     TaskKind,
-    TaskWithPosition,
 )
 
 from ...conftest import make_sample
@@ -75,7 +75,7 @@ def make_background_task(capillary: STANDARD_CAPILLARY, time_per_pdf: int) -> Ta
     )
 
 
-def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPosition):
+def assert_tasks_equal(task1: Task | QueueTask, task2: Task | QueueTask):
     # Check two tasks are equal other than the generated UUID
     copy1 = type(task1).model_validate(task1)
     copy2 = type(task2).model_validate(task2)
@@ -345,7 +345,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    task = TaskWithPosition(
+    task = QueueTask(
         experiment=experiment,
         id="1",
         status=Status.QUEUED,
@@ -517,7 +517,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    good_task = TaskWithPosition(
+    good_task = QueueTask(
         experiment=good_experiment,
         id="1",
         status=Status.QUEUED,
@@ -765,7 +765,7 @@ def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitabl
     new_tasks: list[Task] = []
     result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
         background,
-        TaskWithPosition.from_task(make_background_task("fq1.0", 25)),
+        QueueTask.from_task(make_background_task("fq1.0", 25)),
         new_tasks,
         "task_id",
         "cm12345-1",
@@ -781,7 +781,7 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
         pin=StandardsPin(capillary="fq1.0", contents=None),
         time_per_pdf=25,
     )
-    current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25))
+    current_task = QueueTask.from_task(make_background_task("fq1.0", 25))
     # Current task is suitable but not a background
     assert isinstance(current_task.experiment, Experiment)
     current_task.experiment.experiment_definition.name = "Not a background"
@@ -926,7 +926,7 @@ def test_no_robot_load_queued_if_turned_off_in_queue_params(
     queue_params.do_robot_load = False
 
     blueapi_calls = I151Converter().construct_blueapi_calls(
-        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+        [QueueTask.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "robot_load" for call in blueapi_calls)
     assert not any(call.task_request.name == "robot_unload" for call in blueapi_calls)
@@ -939,7 +939,7 @@ def test_no_centring_queued_if_turned_off_in_queue_params(
     queue_params.do_centring = False
 
     blueapi_calls = I151Converter().construct_blueapi_calls(
-        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+        [QueueTask.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "centre_sample" for call in blueapi_calls)
     wait_for_beams = [
@@ -955,6 +955,6 @@ def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
     queue_params.do_wait_for_beam = False
 
     blueapi_calls = I151Converter().construct_blueapi_calls(
-        [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
+        [QueueTask.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)
