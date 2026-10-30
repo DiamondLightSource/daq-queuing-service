@@ -25,8 +25,11 @@ from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
 from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
+    Container,
+    ContainerPosition,
     Experiment,
     ExperimentDefinition,
+    Sample,
     Status,
     Task,
     TaskKind,
@@ -38,27 +41,142 @@ from ...conftest import make_sample
 
 @pytest.fixture
 def i15_1_tasks():
-    time_per_pdfs = [5, 10, 10, 20, 25]
     tasks = [
         Task(
             experiment=Experiment(
-                name=f"task_{i}",
+                name="task_0",
                 instrument_session="cm12345-1",
+                sample=Sample(
+                    name="sample_0_2",
+                    id="0",
+                    data={"capillary": "fq1.0"},
+                    container=Container(
+                        id="", positionInParent=ContainerPosition(position=2)
+                    ),
+                    positionInContainer=ContainerPosition(position=2),
+                ),
                 experiment_definition=ExperimentDefinition(
                     name="",
                     id="",
                     data={
-                        "list_of_temperatures": [100 * i, 100 * i + 20],
-                        "time_per_pdf": time_per_pdfs[i],
+                        "time_per_pdf": 5,
+                        "list_of_temperatures": [0, 20],
                         "settle_time": 5,
                         "ramp_rate": 10,
                     },
                 ),
-                sample=make_sample(f"sample_{i}_2", id=str(i)),
-            )
-        )
-        for i in range(5)
+            ),
+            id="c5786b54-fd88-4088-8952-8d087cb47028",
+            blueapi_calls=[],
+            user=None,
+        ),
+        Task(
+            experiment=Experiment(
+                name="task_1",
+                instrument_session="cm12345-1",
+                sample=Sample(
+                    name="sample_1_2",
+                    id="1",
+                    data={"capillary": "fq1.0"},
+                    container=Container(
+                        id="", positionInParent=ContainerPosition(position=2)
+                    ),
+                    positionInContainer=ContainerPosition(position=2),
+                ),
+                experiment_definition=ExperimentDefinition(
+                    name="",
+                    id="",
+                    data={
+                        "time_per_pdf": 10,
+                        "list_of_temperatures": [100, 120],
+                        "settle_time": 5,
+                        "ramp_rate": 10,
+                    },
+                ),
+            ),
+            id="7a23c7f6-eecf-4376-a5f3-40b0f221635b",
+            blueapi_calls=[],
+            user=None,
+        ),
+        Task(
+            experiment=Experiment(
+                name="task_2",
+                instrument_session="cm12345-1",
+                sample=Sample(
+                    name="sample_2_2",
+                    id="2",
+                    data={"capillary": "fq1.0"},
+                    container=Container(
+                        id="", positionInParent=ContainerPosition(position=2)
+                    ),
+                    positionInContainer=ContainerPosition(position=2),
+                ),
+                experiment_definition=ExperimentDefinition(
+                    name="",
+                    id="",
+                    data={
+                        "time_per_pdf": 10,
+                        "list_of_temperatures": [200, 220],
+                        "settle_time": 5,
+                        "ramp_rate": 10,
+                    },
+                ),
+            ),
+            id="c96a85c3-cc4b-41e4-b0b5-7292956b6f7c",
+            blueapi_calls=[],
+            user=None,
+        ),
+        Task(
+            experiment=Experiment(
+                name="task_3",
+                instrument_session="cm12345-1",
+                sample=Sample(
+                    name="sample_3_2",
+                    id="3",
+                    data={"capillary": "fq1.0"},
+                    container=Container(
+                        id="", positionInParent=ContainerPosition(position=2)
+                    ),
+                    positionInContainer=ContainerPosition(position=2),
+                ),
+                experiment_definition=ExperimentDefinition(
+                    name="", id="", data={"time_per_pdf": 20}
+                ),
+            ),
+            id="5e2571d9-2f87-45b2-ac3b-b486e83a92d6",
+            blueapi_calls=[],
+            user=None,
+        ),
+        Task(
+            experiment=Experiment(
+                name="task_4",
+                instrument_session="cm12345-1",
+                sample=Sample(
+                    name="sample_4_2",
+                    id="4",
+                    data={"capillary": "fq1.0"},
+                    container=Container(
+                        id="", positionInParent=ContainerPosition(position=2)
+                    ),
+                    positionInContainer=ContainerPosition(position=2),
+                ),
+                experiment_definition=ExperimentDefinition(
+                    name="",
+                    id="",
+                    data={
+                        "time_per_pdf": 25,
+                        "list_of_temperatures": [400, 420],
+                        "settle_time": 5,
+                        "ramp_rate": 10,
+                    },
+                ),
+            ),
+            id="098d3c5a-5bcb-43a3-acc6-c7e2ae050587",
+            blueapi_calls=[],
+            user=None,
+        ),
     ]
+
     return tasks
 
 
@@ -116,9 +234,19 @@ def empty_capillary_task(
     task_id: str,
     instrument_session: str,
     time_per_pdf: float,
+    list_of_temperatures: list[float] | None,
     capillary: STANDARD_CAPILLARY,
     standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
+    data: dict[str, Any] = {"time_per_pdf": time_per_pdf}
+    if list_of_temperatures is not None:
+        data.update(
+            {
+                "list_of_temperatures": list_of_temperatures,
+                "ramp_rate": 0,
+                "settle_time": 10,
+            }
+        )
     return create_task_dict(
         task_id,
         {
@@ -143,9 +271,7 @@ def empty_capillary_task(
             "experiment_definition": {
                 "name": "Empty Capillary",
                 "id": "",
-                "data": {
-                    "time_per_pdf": time_per_pdf,
-                },
+                "data": data,
             },
         },
     )
@@ -183,9 +309,7 @@ def standard_sample_task(
             "experiment_definition": {
                 "name": "Standard Sample",
                 "id": "",
-                "data": {
-                    "time_per_pdf": time_per_pdf,
-                },
+                "data": {"time_per_pdf": time_per_pdf},
             },
         },
     )
@@ -560,7 +684,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     assert len(tasks) == 4
     assert tasks[0].model_dump() == air_task(tasks[0].id, "cm12345-1", 100.0)
     assert tasks[1].model_dump() == empty_capillary_task(
-        tasks[1].id, "cm12345-1", 100.0, "fq1.0", standards_puck
+        tasks[1].id, "cm12345-1", 100.0, None, "fq1.0", standards_puck
     )
     assert tasks[2].model_dump() == standard_sample_task(
         tasks[2].id, "cm12345-1", 100.0, "fq1.0", "Silicon", standards_puck
@@ -638,7 +762,7 @@ def test_add_required_background_scans_combines_similar_background_requirements(
 
     assert len(i15_1_tasks) == 5
     new_tasks = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
-    assert len(new_tasks) == 8
+    assert len(new_tasks) == 9
     assert (
         isinstance(new_tasks[0].experiment, Experiment)
         and new_tasks[0].experiment.sample is None
@@ -653,10 +777,17 @@ def test_add_required_background_scans_combines_similar_background_requirements(
         and new_tasks[2].experiment.sample
         and new_tasks[2].experiment.sample.name == "Silicon fq1.0"
     )
+    assert (
+        isinstance(new_tasks[6].experiment, Experiment)
+        and new_tasks[6].experiment.sample
+        and new_tasks[6].experiment.sample.name == "Empty fq1.0"
+    )
     # Should have the maximum time_per_pdf of i15_1_tasks
     assert new_tasks[0].experiment.experiment_definition.data["time_per_pdf"] == 25
     assert new_tasks[1].experiment.experiment_definition.data["time_per_pdf"] == 25
     assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 25
+    # This one isn't a temperature experiment so needs a separate empty capillary
+    assert new_tasks[6].experiment.experiment_definition.data["time_per_pdf"] == 20
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_in_each(
@@ -672,11 +803,16 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
     new_tasks = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
 
-    assert len(new_tasks) == 14
+    assert len(new_tasks) == 15
 
     assert new_tasks[0].model_dump() == air_task(new_tasks[0].id, "cm12345-1", 25.0)
     assert new_tasks[1].model_dump() == empty_capillary_task(
-        new_tasks[1].id, "cm12345-1", 25.0, "fq1.0", standards_puck
+        new_tasks[1].id,
+        "cm12345-1",
+        25.0,
+        [0, 100, 200, 300, 400, 500],
+        "fq1.0",
+        standards_puck,
     )
     assert new_tasks[2].model_dump() == standard_sample_task(
         new_tasks[2].id, "cm12345-1", 25.0, "fq1.0", "Silicon", standards_puck
@@ -684,7 +820,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
     assert new_tasks[4].model_dump() == air_task(new_tasks[4].id, "different", 10.0)
     assert new_tasks[5].model_dump() == empty_capillary_task(
-        new_tasks[5].id, "different", 10.0, "fq1.0", standards_puck
+        new_tasks[5].id, "different", 10.0, [100, 120], "fq1.0", standards_puck
     )
     assert new_tasks[6].model_dump() == standard_sample_task(
         new_tasks[6].id, "different", 10.0, "fq1.0", "Silicon", standards_puck
@@ -694,10 +830,13 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
         new_tasks[8].id, "also_different", 10.0
     )
     assert new_tasks[9].model_dump() == empty_capillary_task(
-        new_tasks[9].id, "also_different", 10.0, "fq1.0", standards_puck
+        new_tasks[9].id, "also_different", 10.0, [200, 220], "fq1.0", standards_puck
     )
     assert new_tasks[10].model_dump() == standard_sample_task(
         new_tasks[10].id, "also_different", 10.0, "fq1.0", "Silicon", standards_puck
+    )
+    assert new_tasks[12].model_dump() == empty_capillary_task(
+        new_tasks[12].id, "cm12345-1", 20.0, None, "fq1.0", standards_puck
     )
 
 
