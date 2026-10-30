@@ -15,25 +15,24 @@ Subclass `Converter` and override the methods you need:
 ```python
 from daq_queuing_service.plugins.converter import Converter
 
+
 class MyConverter(Converter):
-    def validate(self, experiments: list[TaskRequest | Experiment]):
-        ...
+    def validate(self, experiments: list[TaskRequest | Experiment]): ...
 
     def pre_process(
         self,
         queue: list[Task],
         history: list[TaskWithPosition],
         call_history: list[BlueapiCall],
-    ) -> list[Task]:
-        ...
+    ) -> list[Task]: ...
+
 
 def construct_blueapi_calls(
-        self,
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
-    ) -> list[BlueapiCall]:
-        ...
+    self,
+    queue: list[TaskWithPosition],
+    history: list[TaskWithPosition],
+    call_history: list[BlueapiCall],
+) -> list[BlueapiCall]: ...
 ```
 
 ### `validate()`

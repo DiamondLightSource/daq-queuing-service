@@ -18,6 +18,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     AuxiliaryScanType,
     TiledAuxiliary,
+    get_background_temperatures,
     is_auxiliary_experiment,
 )
 from daq_queuing_service.plugins.i15_1.plans import (
@@ -44,8 +45,6 @@ STANDARDS_PUCK_CONFIG_PATH = (
     "/dls_sw/i15-1/software/daq_configuration/standards_puck.json"
 )
 QUEUE_PARAMS_CONFIG_PATH = "/dls_sw/i15-1/software/daq_configuration/queue_params.toml"
-DEFAULT_RAMP_RATE = 0  # As fast as possible
-DEFAULT_SETTLE_TIME = 10
 
 
 def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
@@ -285,15 +284,12 @@ class I151Converter(Converter):
     def _get_required_auxiliary_scans(
         self, experiment: Experiment
     ) -> list[AuxiliaryScan]:
-        # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
         list_of_temperatures = experiment.experiment_definition.data.get(
             "list_of_temperatures"
         )
         if list_of_temperatures:
-            list_of_temperatures = AuxiliaryScan.get_background_temperatures(
-                list_of_temperatures
-            )
+            list_of_temperatures = get_background_temperatures(list_of_temperatures)
 
         assert experiment.sample
         return [
@@ -308,9 +304,7 @@ class I151Converter(Converter):
                     capillary=experiment.sample.data["capillary"], contents=None
                 ),
                 time_per_pdf=time_per_pdf,
-                list_of_temperatures=experiment.experiment_definition.data.get(
-                    "list_of_temperatures"
-                ),
+                list_of_temperatures=list_of_temperatures,
             ),
             AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
@@ -327,11 +321,12 @@ class I151Converter(Converter):
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
         data: dict[str, Any] = {"time_per_pdf": auxiliary_scan.time_per_pdf}
         if auxiliary_scan.list_of_temperatures:
+            settle_time = self._queue_params.blower_collection_params.settle_time_s
             data.update(
                 {
                     "list_of_temperatures": auxiliary_scan.list_of_temperatures,
-                    "ramp_rate": DEFAULT_RAMP_RATE,
-                    "settle_time": DEFAULT_SETTLE_TIME,
+                    "ramp_rate": self._queue_params.blower_collection_params.ramp_rate,
+                    "settle_time": settle_time,
                 }
             )
 
