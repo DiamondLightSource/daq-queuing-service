@@ -27,7 +27,7 @@ class MyConverter(Converter):
     ) -> list[Task]:
         ...
 
-def construct_blueapi_calls(
+    def construct_blueapi_calls(
         self,
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],

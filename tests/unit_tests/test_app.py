@@ -12,8 +12,8 @@ from pytest import LogCaptureFixture
 
 from constants import TEST_CONFIG_PATH
 from daq_queuing_service.api.api import protected_routes, public_routes
-from daq_queuing_service.app._config import load_config
 from daq_queuing_service.app.app import create_app
+from daq_queuing_service.app.config import load_config
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 from unit_tests.conftest import has_dependency_name

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from blueapi.config import RestConfig, StompConfig
 from pydantic import HttpUrl
 
-from daq_queuing_service.app._config import BlueapiConfig
+from daq_queuing_service.app.config import BlueapiConfig
 from daq_queuing_service.external_interaction.blueapi.get_client import (
     get_blueapi_client,
 )

@@ -633,6 +633,20 @@
               }
             ],
             "title": "Authorisation Whitelist"
+          },
+          "logging": {
+            "$ref": "#/components/schemas/LoggingConfig"
+          },
+          "instrument": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument"
           }
         },
         "type": "object",
@@ -749,7 +763,7 @@
           },
           "scan_ids": {
             "items": {
-              "type": "string"
+              "type": "integer"
             },
             "type": "array",
             "title": "Scan Ids"
@@ -941,6 +955,46 @@
         ],
         "title": "ExperimentDefinition"
       },
+      "GraylogConfig": {
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DEBUG",
+                  "INFO",
+                  "WARNING",
+                  "ERROR",
+                  "CRITICAL"
+                ]
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Level",
+            "default": 20
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port",
+            "default": 12231
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "default": "graylog-log-target.diamond.ac.uk"
+          }
+        },
+        "type": "object",
+        "title": "GraylogConfig"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -953,6 +1007,43 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "LoggingConfig": {
+        "properties": {
+          "stream": {
+            "$ref": "#/components/schemas/LoggingHandlerConfig"
+          },
+          "graylog": {
+            "$ref": "#/components/schemas/GraylogConfig"
+          }
+        },
+        "type": "object",
+        "title": "LoggingConfig"
+      },
+      "LoggingHandlerConfig": {
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DEBUG",
+                  "INFO",
+                  "WARNING",
+                  "ERROR",
+                  "CRITICAL"
+                ]
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Level",
+            "default": 20
+          }
+        },
+        "type": "object",
+        "title": "LoggingHandlerConfig"
       },
       "OIDCConfig": {
         "properties": {
@@ -992,7 +1083,8 @@
         "enum": [
           "Pause requested by user",
           "Paused as queue completed",
-          "Paused as last task errored"
+          "Paused as last task errored",
+          "Pause requested by plugin"
         ],
         "title": "PauseReason"
       },

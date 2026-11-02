@@ -26,8 +26,8 @@ from daq_queuing_service.api.api import (
     public_routes,
 )
 from daq_queuing_service.api.errors import register_exception_handlers
-from daq_queuing_service.app._config import load_config
 from daq_queuing_service.app.authentication import User
+from daq_queuing_service.app.config import load_config
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,

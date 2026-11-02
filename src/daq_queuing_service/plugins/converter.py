@@ -7,7 +7,11 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     BlueapiCallResponse,
 )
-from daq_queuing_service.task_queue.task import Experiment, Task, TaskWithPosition
+from daq_queuing_service.task_queue.task import (
+    Experiment,
+    Task,
+    TaskWithPosition,
+)
 
 
 class ConverterError(Exception):
@@ -44,7 +48,7 @@ class Converter:
         call_history: list[BlueapiCall],
     ) -> list[Task]:
         """This gets run whenever something changes in the queue, before
-        `construct_blueapi_calls`. It is an opportunity to automatically modify the
+        'construct_blueapi_calls'. It is an opportunity to automatically modify the
         queue based on it's current state and history.
 
         For example, it could be used to add calibration scans before any experiments
@@ -101,7 +105,7 @@ class Converter:
         """Decide whether to pause the queue after a blueapi call completes successfully
 
         Args:
-            call (BlueapiCallResponse): The completed call
+            call (BlueapiCall): The completed call
             result (TaskResult): The result of the call from blueapi
 
         Returns:
@@ -115,7 +119,7 @@ class Converter:
         """Decide whether to pause the queue after a blueapi call fails
 
         Args:
-            call (BlueapiCallResponse): The failed call
+            call (BlueapiCall): The failed call
             errors (list[str  |  TaskError] | None): The errors that occurred
 
         Returns:
