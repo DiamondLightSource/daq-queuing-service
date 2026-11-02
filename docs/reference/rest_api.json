@@ -634,11 +634,6 @@
             ],
             "title": "Authorisation Whitelist"
           },
-          "log_level": {
-            "type": "integer",
-            "title": "Log Level",
-            "default": 20
-          },
           "runtime_estimation": {
             "anyOf": [
               {
@@ -648,6 +643,20 @@
                 "type": "null"
               }
             ]
+          },
+          "logging": {
+            "$ref": "#/components/schemas/LoggingConfig"
+          },
+          "instrument": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument"
           }
         },
         "type": "object",
@@ -970,6 +979,46 @@
         ],
         "title": "ExperimentDefinition"
       },
+      "GraylogConfig": {
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DEBUG",
+                  "INFO",
+                  "WARNING",
+                  "ERROR",
+                  "CRITICAL"
+                ]
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Level",
+            "default": 20
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port",
+            "default": 12231
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "default": "graylog-log-target.diamond.ac.uk"
+          }
+        },
+        "type": "object",
+        "title": "GraylogConfig"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -983,12 +1032,69 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "LoggingConfig": {
+        "properties": {
+          "stream": {
+            "$ref": "#/components/schemas/LoggingHandlerConfig"
+          },
+          "graylog": {
+            "$ref": "#/components/schemas/GraylogConfig"
+          }
+        },
+        "type": "object",
+        "title": "LoggingConfig"
+      },
+      "LoggingHandlerConfig": {
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DEBUG",
+                  "INFO",
+                  "WARNING",
+                  "ERROR",
+                  "CRITICAL"
+                ]
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Level",
+            "default": 20
+          }
+        },
+        "type": "object",
+        "title": "LoggingHandlerConfig"
+      },
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider"
+            "description": "URL to fetch OIDC config from the provider",
+            "deprecated": true
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer",
+            "description": "URL of OIDC provider"
           },
           "client_id": {
             "type": "string",
@@ -1011,7 +1117,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
