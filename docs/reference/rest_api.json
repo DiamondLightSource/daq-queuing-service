@@ -678,112 +678,6 @@
         "title": "BasicAuthentication",
         "description": "User credentials for basic authentication"
       },
-      "QueueBlueapiCall": {
-        "properties": {
-          "task_request": {
-            "$ref": "#/components/schemas/TaskRequest"
-          },
-          "parent_task_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Task Id"
-          },
-          "status": {
-            "$ref": "#/components/schemas/CallStatus"
-          },
-          "time_started": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Started"
-          },
-          "time_completed": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Time Completed"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TaskResult"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "errors": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/components/schemas/TaskError"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Errors"
-          },
-          "blueapi_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Blueapi Id"
-          },
-          "tiled_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Tiled Ids"
-          },
-          "scan_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Scan Ids"
-          }
-        },
-        "type": "object",
-        "required": [
-          "task_request",
-          "parent_task_id",
-          "status",
-          "time_started",
-          "time_completed",
-          "result",
-          "errors",
-          "blueapi_id",
-          "tiled_ids",
-          "scan_ids"
-        ],
-        "title": "QueueBlueapiCall"
-      },
       "BlueapiConfig": {
         "properties": {
           "stomp": {
@@ -1048,9 +942,29 @@
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider"
+            "description": "URL to fetch OIDC config from the provider",
+            "deprecated": true
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer",
+            "description": "URL of OIDC provider"
           },
           "client_id": {
             "type": "string",
@@ -1073,7 +987,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
@@ -1087,6 +1000,112 @@
           "Pause requested by plugin"
         ],
         "title": "PauseReason"
+      },
+      "QueueBlueapiCall": {
+        "properties": {
+          "task_request": {
+            "$ref": "#/components/schemas/TaskRequest"
+          },
+          "parent_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Task Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatus"
+          },
+          "time_started": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Started"
+          },
+          "time_completed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Completed"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "errors": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/TaskError"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "blueapi_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blueapi Id"
+          },
+          "tiled_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tiled Ids"
+          },
+          "scan_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Scan Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_request",
+          "parent_task_id",
+          "status",
+          "time_started",
+          "time_completed",
+          "result",
+          "errors",
+          "blueapi_id",
+          "tiled_ids",
+          "scan_ids"
+        ],
+        "title": "QueueBlueapiCall"
       },
       "QueueState": {
         "properties": {
@@ -1117,6 +1136,70 @@
           "paused"
         ],
         "title": "QueueStateUpdate"
+      },
+      "QueueTask": {
+        "properties": {
+          "experiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Experiment"
+              },
+              {
+                "$ref": "#/components/schemas/TaskRequest"
+              }
+            ],
+            "title": "Experiment"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "blueapi_calls": {
+            "items": {
+              "$ref": "#/components/schemas/QueueBlueapiCall"
+            },
+            "type": "array",
+            "title": "Blueapi Calls"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TaskKind"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "experiment",
+          "id",
+          "status",
+          "blueapi_calls",
+          "position",
+          "kind",
+          "user"
+        ],
+        "title": "QueueTask"
       },
       "RestConfig": {
         "properties": {
@@ -1319,70 +1402,6 @@
         ],
         "title": "TaskResult",
         "description": "Serializable wrapper around the result of a plan\n\nIf the result is not serializable, the result will be None but the type\nwill be the name of the type. If the result is actually None, the type will\nbe 'NoneType'."
-      },
-      "QueueTask": {
-        "properties": {
-          "experiment": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Experiment"
-              },
-              {
-                "$ref": "#/components/schemas/TaskRequest"
-              }
-            ],
-            "title": "Experiment"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "status": {
-            "$ref": "#/components/schemas/Status"
-          },
-          "blueapi_calls": {
-            "items": {
-              "$ref": "#/components/schemas/QueueBlueapiCall"
-            },
-            "type": "array",
-            "title": "Blueapi Calls"
-          },
-          "position": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Position"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/TaskKind"
-          },
-          "user": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/User"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "experiment",
-          "id",
-          "status",
-          "blueapi_calls",
-          "position",
-          "kind",
-          "user"
-        ],
-        "title": "QueueTask"
       },
       "User": {
         "properties": {
