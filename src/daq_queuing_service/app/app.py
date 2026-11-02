@@ -118,7 +118,9 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
         else None
     )
 
-    app.state.queue = TaskQueue(converter, broadcaster, runtime_client)
+    app.state.queue = TaskQueue(
+        converter, broadcaster, runtime_client, config.instrument
+    )
 
     app.state.worker = QueueWorker(
         queue=app.state.queue,

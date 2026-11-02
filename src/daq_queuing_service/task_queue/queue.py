@@ -131,7 +131,9 @@ class TaskQueue:
         converter: Converter,
         broadcaster: Broadcaster[QUEUE_EVENTS],
         runtime_estimator_client: RuntimeEstimatorClient | None = None,
+        instrument: str | None = None,
     ):
+        self.instrument = instrument
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -726,17 +728,15 @@ class TaskQueue:
             return current_task
 
     def _add_runtime_estimates_to_tasks(self):
-        if self._runtime_client:
+        if self._runtime_client and self.instrument:
             tasks = self._get_queue()
             experiments = [task.experiment for task in tasks]
             try:
-                # Once https://github.com/DiamondLightSource/daq-queuing-service/pull/157
-                # gets merged, use instrument from config instead of hard coded i15-1
                 total_runtime = self._runtime_client.estimate_runtime(
-                    experiments, "i15-1"
+                    experiments, self.instrument
                 )
                 runtimes = self._runtime_client.estimate_runtime_per_task(
-                    experiments, "i15-1"
+                    experiments, self.instrument
                 )
             except Exception as e:
                 # This shouldn't prevent syncing so catch and log

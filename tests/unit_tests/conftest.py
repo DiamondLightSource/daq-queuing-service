@@ -121,10 +121,7 @@ async def task_queue_no_runtime(
     tasks: list[Task],
     converter: Converter,
 ):
-    queue = TaskQueue(
-        converter=converter,
-        broadcaster=Broadcaster(),
-    )
+    queue = TaskQueue(converter=converter, broadcaster=Broadcaster(), instrument="ixx")
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue

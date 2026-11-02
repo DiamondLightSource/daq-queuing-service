@@ -1460,7 +1460,7 @@ def test__add_runtime_estimates_to_tasks_gets_runtime_for_all_queued_tasks(
         mock_runtime_estimator_client.estimate_runtime,
     ):
         func.assert_called_with(
-            [task.experiment for task in task_queue_in_progress._get_queue()], "i15-1"
+            [task.experiment for task in task_queue_in_progress._get_queue()], "ixx"
         )
 
     assert task_queue_in_progress._state.estimated_runtime == 500
