@@ -820,7 +820,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
     assert new_tasks[4].model_dump() == air_task(new_tasks[4].id, "different", 10.0)
     assert new_tasks[5].model_dump() == empty_capillary_task(
-        new_tasks[5].id, "different", 10.0, [100, 120], "fq1.0", standards_puck
+        new_tasks[5].id, "different", 10.0, [100, 200], "fq1.0", standards_puck
     )
     assert new_tasks[6].model_dump() == standard_sample_task(
         new_tasks[6].id, "different", 10.0, "fq1.0", "Silicon", standards_puck
@@ -830,7 +830,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
         new_tasks[8].id, "also_different", 10.0
     )
     assert new_tasks[9].model_dump() == empty_capillary_task(
-        new_tasks[9].id, "also_different", 10.0, [200, 220], "fq1.0", standards_puck
+        new_tasks[9].id, "also_different", 10.0, [200, 300], "fq1.0", standards_puck
     )
     assert new_tasks[10].model_dump() == standard_sample_task(
         new_tasks[10].id, "also_different", 10.0, "fq1.0", "Silicon", standards_puck
