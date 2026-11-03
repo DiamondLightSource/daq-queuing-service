@@ -2,7 +2,7 @@ import pytest
 from blueapi.service.model import TaskRequest
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
-    BlueapiCall,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.plugins.converter import (
     Converter,
@@ -56,6 +56,6 @@ def test_default_converter_construct_blueapi_calls_creates_one_blueapi_call_per_
     blueapi_calls = Converter().construct_blueapi_calls(task_copies, [], [])
     for task, blueapi_call in zip(task_copies, blueapi_calls, strict=True):
         assert isinstance(task.experiment, TaskRequest)
-        assert blueapi_call == BlueapiCall(
+        assert blueapi_call == QueueBlueapiCall(
             task_request=task.experiment, parent_task_id=task.id
         )

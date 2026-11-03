@@ -222,21 +222,24 @@ class TaskQueue:
         ]
 
         try:
-            new_calls = self._converter.construct_blueapi_calls(
-                [
-                    task
-                    for task in self._get_queue_with_positions()
-                    if task.status == Status.QUEUED
-                ],
-                self._get_history(),
-                self._queue_history,
-            )
+            new_blueapi_calls = [
+                BlueapiCall.from_parent(call)
+                for call in self._converter.construct_blueapi_calls(
+                    [
+                        task
+                        for task in self._get_queue_with_positions()
+                        if task.status == Status.QUEUED
+                    ],
+                    self._get_history(),
+                    self._queue_history,
+                )
+            ]
         except Exception as e:
             raise ConverterError(e) from e
 
-        self._call_queue.extend(new_calls)
+        self._call_queue.extend(new_blueapi_calls)
 
-        for call in new_calls:
+        for call in new_blueapi_calls:
             # Add children to parent tasks
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
@@ -356,7 +359,7 @@ class TaskQueue:
         with add_session_to_logger(call.task_request.instrument_session):
             tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
             should_pause = self._converter.pause_on_complete_blueapi_call(
-                call.to_parent(), result
+                call.model_copy(), result
             )
             LOGGER.info(f"Plan {call} completed successfully. Result: {result}")
 
@@ -381,7 +384,7 @@ class TaskQueue:
         """
         with add_session_to_logger(call.task_request.instrument_session):
             should_pause = self._converter.pause_on_fail_blueapi_call(
-                call.to_parent(), errors
+                call.model_copy(), errors
             )
             tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
             LOGGER.error(f"Plan {call} has failed with the following errors: {errors}")

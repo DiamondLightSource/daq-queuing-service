@@ -7,7 +7,6 @@ from daq_config_server.models.i15_1 import QueueParameters, StandardsPin, Standa
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
-    BlueapiCall,
     QueueBlueapiCall,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
@@ -88,7 +87,7 @@ class I151Converter(Converter):
         current_task: QueueTask | None,
         queue: list[Task],
         history: list[QueueTask],
-        call_history: list[BlueapiCall],
+        call_history: list[QueueBlueapiCall],
     ) -> list[Task]:
         self._config_client.reset_cache()
         if self._queue_params.add_auxiliary_scans:
@@ -99,23 +98,23 @@ class I151Converter(Converter):
         self,
         queue: list[QueueTask],
         history: list[QueueTask],
-        call_history: list[BlueapiCall],
-    ) -> list[BlueapiCall]:
-        call_list: list[BlueapiCall] = []
+        call_history: list[QueueBlueapiCall],
+    ) -> list[QueueBlueapiCall]:
+        call_list: list[QueueBlueapiCall] = []
 
         for task in queue:
             with add_session_to_logger(task.experiment.instrument_session):
                 match task.experiment:
                     case TaskRequest():
                         call_list.append(
-                            BlueapiCall(
+                            QueueBlueapiCall(
                                 task_request=task.experiment, parent_task_id=task.id
                             )
                         )
                     case Experiment():
                         call_list.extend(
                             [
-                                BlueapiCall(
+                                QueueBlueapiCall(
                                     task_request=b_api_task, parent_task_id=task.id
                                 )
                                 for b_api_task in (

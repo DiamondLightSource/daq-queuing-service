@@ -113,3 +113,7 @@ class BlueapiCall(QueueBlueapiCall):
 
     def to_parent(self) -> "QueueBlueapiCall":
         return QueueBlueapiCall.model_validate(self.model_dump())
+
+    @classmethod
+    def from_parent(cls, queue_blueapi_call: QueueBlueapiCall) -> "BlueapiCall":
+        return cls.model_validate(queue_blueapi_call.model_dump())
