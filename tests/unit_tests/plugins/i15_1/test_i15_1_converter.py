@@ -89,6 +89,8 @@ def create_task_dict(task_id: str, experiment: dict[str, Any]) -> dict[str, Any]
         "status": Status.QUEUED,
         "kind": TaskKind.EXPERIMENT,
         "user": None,
+        "runtime": None,
+        "estimated_runtime": None,
     }
 
 
@@ -351,6 +353,8 @@ def test_experiment_with_correct_experiment_type_are_converted():
         position=None,
         kind=TaskKind.EXPERIMENT,
         user=None,
+        runtime=None,
+        estimated_runtime=100,
     )
     call_list = I151Plugin().construct_blueapi_calls([task], [], [])
     assert len(call_list) == 6
@@ -440,7 +444,7 @@ def test_experiment_with_no_sample_converts_to_air_scan():
     }
 
 
-def test_wait_for_beam_plans_added_by_converter():
+def test_wait_for_beam_plans_added_by_plugin():
     experiment_definition = ExperimentDefinition(
         name="",
         id="",
@@ -523,6 +527,8 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         position=None,
         kind=TaskKind.EXPERIMENT,
         user=None,
+        runtime=None,
+        estimated_runtime=100,
     )
 
     class BadExperiment:
@@ -728,9 +734,13 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
 
 
 async def test_queue_with_i15_1_plugin_can_sync(queue_with_i15_1_plugin: TaskQueue):
+    for i, task in enumerate(queue_with_i15_1_plugin._tasks.values()):
+        task.experiment.instrument_session = str(i)
     first_task = await queue_with_i15_1_plugin.get_task_by_position(0)
     assert first_task
     await queue_with_i15_1_plugin.move_task(first_task.id, 2)
+    call = await queue_with_i15_1_plugin.get_next_call_once_available()
+    await queue_with_i15_1_plugin.return_call_to_queue(call)
 
 
 def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(

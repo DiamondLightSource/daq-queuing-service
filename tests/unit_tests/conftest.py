@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -9,16 +10,22 @@ from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
 from fastapi import FastAPI
 from fastapi.dependencies.models import Dependant
-from pytest import MonkeyPatch
 
 from constants import TEST_CONFIG_WITH_AUTH_PATH
-from daq_queuing_service.app._config import AppConfig, load_config
 from daq_queuing_service.app.app import create_app
 from daq_queuing_service.app.authentication import User
+from daq_queuing_service.app.config import (
+    AppConfig,
+    LoggingHandlerConfig,
+    load_config,
+)
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.runtime_estimator.client import (
+    RuntimeEstimatorClient,
+)
 from daq_queuing_service.external_interaction.tiled.tiled import cache
-from daq_queuing_service.log import LOGGER
+from daq_queuing_service.log import LOGGER, setup_logger
 from daq_queuing_service.plugins.base_plugin import QueuePlugin
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
@@ -30,13 +37,19 @@ from daq_queuing_service.task_queue.task import (
     Task,
     TaskWithPosition,
 )
+from daq_queuing_service.worker.worker import LOGGER as WORKER_LOGGER
 
 
 @pytest.fixture(autouse=True)
-def propagate_logs(monkeypatch: MonkeyPatch):
-    # This is turned off in prod to avoid duplicate logs
-    # but needed in tests for caplog to receive logs
-    monkeypatch.setattr(LOGGER, "propagate", True)
+def setup_logger_for_tests():
+    for logger in LOGGER, WORKER_LOGGER:
+        setup_logger(
+            logger=logger,
+            stream=LoggingHandlerConfig(),
+            graylog=None,  # Don't want to send logs to graylog in unit tests
+            propagate=True,
+            instrument="ixx",
+        )
 
 
 CONTAINER_POSITION = ContainerPosition(position=2)
@@ -87,11 +100,38 @@ def bluesky_tasks() -> list[Task]:
 
 
 @pytest.fixture
-async def task_queue(tasks: list[Task], queue_plugin: QueuePlugin):
-    queue = TaskQueue(plugin=queue_plugin, broadcaster=Broadcaster())
+def mock_runtime_estimator_client():
+    client = MagicMock()
+
+    def estimate_runtime(tasks: list[Experiment | TaskRequest], instrument: str):
+        return len(tasks) * 100
+
+    def estimate_runtime_per_task(
+        tasks: list[Experiment | TaskRequest], instrument: str
+    ):
+        return [100 for _ in tasks]
+
+    client.estimate_runtime = MagicMock(wraps=estimate_runtime)
+    client.estimate_runtime_per_task = MagicMock(wraps=estimate_runtime_per_task)
+    return client
+
+
+@pytest.fixture
+async def task_queue_no_runtime(tasks: list[Task], queue_plugin: QueuePlugin):
+    queue = TaskQueue(plugin=queue_plugin, broadcaster=Broadcaster(), instrument="ixx")
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
+
+
+@pytest.fixture
+async def task_queue(
+    task_queue_no_runtime: TaskQueue,
+    mock_runtime_estimator_client: RuntimeEstimatorClient,
+):
+    task_queue_no_runtime._runtime_client = mock_runtime_estimator_client
+    await task_queue_no_runtime.resume_queue()
+    return task_queue_no_runtime
 
 
 @pytest.fixture
@@ -156,12 +196,12 @@ async def task_queue_with_history(task_queue: TaskQueue):
     # By this point should have 3 tasks in queue and 2 in history
     for i, call in enumerate(task_queue._call_history):
         # Real timestamps will break tests
-        call.time_started = f"2026-04-17T15:0{i}:00.000000"
-        call.time_completed = f"2026-04-17T15:0{i}:59.000000"
+        call.time_started = datetime.fromisoformat(f"2026-04-17T15:0{i}:00")
+        call.time_completed = datetime.fromisoformat(f"2026-04-17T15:0{i}:59")
 
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
-    call.time_started = "2026-04-17T15:02:00.000000"
+    call.time_started = datetime.fromisoformat("2026-04-17T15:02:00")
     return task_queue
 
 

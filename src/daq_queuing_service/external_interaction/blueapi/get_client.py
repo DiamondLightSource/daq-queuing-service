@@ -3,15 +3,17 @@ from blueapi.client.event_bus import EventBusClient
 from blueapi.client.rest import BlueapiRestClient
 from bluesky_stomp.messaging import Broker, StompClient
 
-from daq_queuing_service.app._config import BlueapiConfig
+from daq_queuing_service.app.config import BlueapiConfig
 from daq_queuing_service.external_interaction.blueapi.token_source import UDCTokenSource
 
 
-def get_blueapi_client(blueapi_config: BlueapiConfig) -> BlueapiClient:
+def get_blueapi_client(
+    blueapi_config: BlueapiConfig, token_source: UDCTokenSource
+) -> BlueapiClient:
     blueapi_rest_client = BlueapiRestClient(
         config=blueapi_config.api,
         #  Waiting on https://github.com/DiamondLightSource/blueapi/pull/1553
-        session_manager=UDCTokenSource(),  # type: ignore
+        session_manager=token_source,  # type: ignore
     )
 
     if blueapi_config.stomp.enabled:

@@ -65,11 +65,13 @@ config:
   logging:
     graylog:
       enabled: false
-      url: ""
+      url: "graylog-log-target.diamond.ac.uk"
       level: "INFO"
     stream:
-      enabled: true
       level: "DEBUG"
+  runtime_estimation:
+    enabled: true
+    url: "daq-runtime-estimator.diamond.ac.uk"
 
 volumeMounts: []
 volumes: []

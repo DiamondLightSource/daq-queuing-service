@@ -20,13 +20,10 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
     CallStatus,
 )
-from daq_queuing_service.log import HANDLER
+from daq_queuing_service.log import add_session_to_logger
 from daq_queuing_service.task_queue.queue import TaskQueue
 
 LOGGER = logging.getLogger("Queue Worker")
-LOGGER.addHandler(HANDLER)
-LOGGER.setLevel(logging.DEBUG)
-LOGGER.propagate = False
 
 
 class QueueWorker:
@@ -43,8 +40,11 @@ class QueueWorker:
     async def run_loop(self):
         while True:
             next_call = await self._wait_for_next_task()
-            await self._process_call(next_call)
-            self._at_loop_end()
+            with add_session_to_logger(
+                next_call.task_request.instrument_session, LOGGER
+            ):
+                await self._process_call(next_call)
+                self._at_loop_end()
 
     def _at_loop_end(self):
         LOGGER.info("Loop finished")

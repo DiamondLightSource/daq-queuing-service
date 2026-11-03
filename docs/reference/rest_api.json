@@ -633,6 +633,30 @@
               }
             ],
             "title": "Authorisation Whitelist"
+          },
+          "runtime_estimation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuntimeEstimationConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "logging": {
+            "$ref": "#/components/schemas/LoggingConfig"
+          },
+          "instrument": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument"
           }
         },
         "type": "object",
@@ -686,7 +710,8 @@
           "time_started": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -697,7 +722,8 @@
           "time_completed": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -749,10 +775,21 @@
           },
           "scan_ids": {
             "items": {
-              "type": "string"
+              "type": "integer"
             },
             "type": "array",
             "title": "Scan Ids"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
           }
         },
         "type": "object",
@@ -766,7 +803,8 @@
           "errors",
           "blueapi_id",
           "tiled_ids",
-          "scan_ids"
+          "scan_ids",
+          "runtime"
         ],
         "title": "BlueapiCallResponse"
       },
@@ -941,6 +979,46 @@
         ],
         "title": "ExperimentDefinition"
       },
+      "GraylogConfig": {
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DEBUG",
+                  "INFO",
+                  "WARNING",
+                  "ERROR",
+                  "CRITICAL"
+                ]
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Level",
+            "default": 20
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port",
+            "default": 12231
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "default": "graylog-log-target.diamond.ac.uk"
+          }
+        },
+        "type": "object",
+        "title": "GraylogConfig"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -954,12 +1032,69 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "LoggingConfig": {
+        "properties": {
+          "stream": {
+            "$ref": "#/components/schemas/LoggingHandlerConfig"
+          },
+          "graylog": {
+            "$ref": "#/components/schemas/GraylogConfig"
+          }
+        },
+        "type": "object",
+        "title": "LoggingConfig"
+      },
+      "LoggingHandlerConfig": {
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DEBUG",
+                  "INFO",
+                  "WARNING",
+                  "ERROR",
+                  "CRITICAL"
+                ]
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Level",
+            "default": 20
+          }
+        },
+        "type": "object",
+        "title": "LoggingHandlerConfig"
+      },
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider"
+            "description": "URL to fetch OIDC config from the provider",
+            "deprecated": true
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer",
+            "description": "URL of OIDC provider"
           },
           "client_id": {
             "type": "string",
@@ -982,7 +1117,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
@@ -992,7 +1126,8 @@
         "enum": [
           "Pause requested by user",
           "Paused as queue completed",
-          "Paused as last task errored"
+          "Paused as last task errored",
+          "Pause requested by plugin"
         ],
         "title": "PauseReason"
       },
@@ -1004,6 +1139,17 @@
           },
           "last_pause_reason": {
             "$ref": "#/components/schemas/PauseReason"
+          },
+          "estimated_runtime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Runtime"
           }
         },
         "type": "object",
@@ -1050,6 +1196,24 @@
         "additionalProperties": false,
         "type": "object",
         "title": "RestConfig"
+      },
+      "RuntimeEstimationConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "RuntimeEstimationConfig"
       },
       "Sample": {
         "properties": {
@@ -1278,6 +1442,28 @@
                 "type": "null"
               }
             ]
+          },
+          "estimated_runtime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Runtime"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
           }
         },
         "type": "object",
@@ -1288,7 +1474,9 @@
           "blueapi_calls",
           "position",
           "kind",
-          "user"
+          "user",
+          "estimated_runtime",
+          "runtime"
         ],
         "title": "TaskWithPosition"
       },

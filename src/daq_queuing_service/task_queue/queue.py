@@ -16,11 +16,19 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCallResponse,
     CallStatus,
 )
+from daq_queuing_service.external_interaction.runtime_estimator.client import (
+    RuntimeEstimatorClient,
+)
 from daq_queuing_service.external_interaction.tiled.tiled import (
     get_tiled_and_scan_ids,
     get_tiled_client,
 )
-from daq_queuing_service.log import LOGGER
+from daq_queuing_service.log import (
+    LOGGER,
+    add_session_to_logger,
+    get_session_filter,
+    notify,
+)
 from daq_queuing_service.plugins import QueuePlugin
 from daq_queuing_service.plugins.utils import PluginError
 from daq_queuing_service.task_queue.queue_utils import (
@@ -49,6 +57,7 @@ class PauseReason(StrEnum):
 class QueueState(BaseModel):
     paused: bool
     last_pause_reason: PauseReason
+    estimated_runtime: int | None = None
 
 
 class QueueContents(TypedDict):
@@ -118,7 +127,14 @@ QUEUE_EVENTS = Literal[
 
 
 class TaskQueue:
-    def __init__(self, plugin: QueuePlugin, broadcaster: Broadcaster[QUEUE_EVENTS]):
+    def __init__(
+        self,
+        plugin: QueuePlugin,
+        broadcaster: Broadcaster[QUEUE_EVENTS],
+        runtime_estimator_client: RuntimeEstimatorClient | None = None,
+        instrument: str | None = None,
+    ):
+        self.instrument = instrument
         self._tasks: TaskRegistry = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
@@ -137,14 +153,17 @@ class TaskQueue:
             on_exit=self._sync,
             on_error=self._restore_latest_good_contents,
         )
+        self._runtime_client = runtime_estimator_client
 
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
         tasks to a queue of blueapi calls. This is called every time the queue is
         modified, and also right before a call is popped off the front of the queue.
         """
-        LOGGER.debug("Syncing")
-        LOGGER.debug(f"Queue before sync: {self._queue}")
+        assert get_session_filter(LOGGER).instrument_session_var.get() is None, (
+            "Logger instrument session should not be set at this point"
+        )
+        LOGGER.debug(f"Syncing. Queue before sync: {self._queue}")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
             if task.status in (Status.COMPLETE, Status.ERROR):
@@ -205,7 +224,11 @@ class TaskQueue:
 
         try:
             new_calls = self._plugin.construct_blueapi_calls(
-                [task for task in self._get_queue() if task.status == Status.QUEUED],
+                [
+                    task
+                    for task in self._get_queue_with_positions()
+                    if task.status == Status.QUEUED
+                ],
                 self._get_history(),
                 self._queue_history,
             )
@@ -221,6 +244,8 @@ class TaskQueue:
 
         if not self._call_queue:
             self._pause_queue(PauseReason.EMPTY_QUEUE)
+
+        self._add_runtime_estimates_to_tasks()
 
         self._save_contents()
         self._broadcast_changes()
@@ -257,7 +282,7 @@ class TaskQueue:
         self._restore_from_contents(self._last_good_contents)
 
     def _broadcast_changes(self):
-        queue = self._get_queue()
+        queue = self._get_queue_with_positions()
         history = self._get_history()
 
         # broadcast only does anything if there have been changes
@@ -284,8 +309,9 @@ class TaskQueue:
                 await self._modifying.wait()
             self._sync()  # Do conversion here to ensure conditions are up to date
             call = self._call_queue[0]
-            call.claim()
-        LOGGER.info(f"Plan {call} has been claimed")
+            with add_session_to_logger(call.task_request.instrument_session):
+                call.claim()
+                LOGGER.info(f"Plan {call} has been claimed")
         return call
 
     async def wait_until_call_available(self):
@@ -293,7 +319,7 @@ class TaskQueue:
         available if it's at the top of the queue, is not already in progress or
         claimed, and the queue is not paused.
         """
-        async with self._modifying:
+        async with self._lock:
             while not self._task_available():
                 await self._modifying.wait()
 
@@ -306,6 +332,7 @@ class TaskQueue:
         Raises:
             TaskNotClaimedError: Raised if the task's status is not 'Claimed'
         """
+
         self._check_call_valid_to_be_returned(call)
         async with self._modifying:
             match call.status:
@@ -317,7 +344,8 @@ class TaskQueue:
                         f"Cannot return call {call}, "
                         + f"it's status is {call.status}."
                     )
-        LOGGER.info(f"Call {call} has been returned to the queue")
+        with add_session_to_logger(call.task_request.instrument_session):
+            LOGGER.info(f"Call {call} has been returned to the queue")
 
     async def complete_call(self, call: BlueapiCall, result: TaskResult):
         """Sets a task to complete, removes it from the queue and adds it to history
@@ -326,8 +354,12 @@ class TaskQueue:
             task (Task): Task to be completed
             result (TaskResult): The result of the task from blueapi
         """
-        tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
-        should_pause = self._plugin.pause_on_complete_blueapi_call(call, result)
+        with add_session_to_logger(call.task_request.instrument_session):
+            tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+            should_pause = self._plugin.pause_on_complete_blueapi_call(
+                call.model_copy(), result
+            )
+            LOGGER.info(f"Plan {call} completed successfully. Result: {result}")
 
         async with self._modifying:
             call.tiled_ids = tiled_ids
@@ -337,7 +369,6 @@ class TaskQueue:
             self._call_history.append(call)
             if should_pause:
                 self._pause_queue(reason=PauseReason.PLUGIN_REQUESTED)
-        LOGGER.info(f"Plan {call} has been completed successfully: {result}")
 
     async def fail_call(
         self, call: BlueapiCall, errors: list[str | TaskError] | None = None
@@ -349,16 +380,19 @@ class TaskQueue:
             errors (list[str  |  TaskError] | None, optional): A list of errors that
             occurred when trying to run the task. Defaults to None.
         """
-        should_pause = self._plugin.pause_on_fail_blueapi_call(
-            call.to_response(), errors
-        )
-        tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
-        LOGGER.error(f"Call {call} has failed with the following errors: {errors}")
+        with add_session_to_logger(call.task_request.instrument_session):
+            should_pause = self._plugin.pause_on_fail_blueapi_call(
+                call.model_copy(), errors
+            )
+            tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+            LOGGER.error(f"Plan {call} has failed with the following errors: {errors}")
+
         async with self._modifying:
             call.tiled_ids = tiled_ids
             call.scan_ids = scan_ids
             if should_pause:
                 self._pause_queue(PauseReason.ERROR)
+
             else:
                 LOGGER.warning(
                     "Call failed but queue not paused due to plugin decision"
@@ -416,7 +450,7 @@ class TaskQueue:
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._lock:
-            return self._get_queue()
+            return self._get_queue_with_positions()
 
     async def get_history(self) -> list[TaskWithPosition]:
         """Get the history list.
@@ -438,7 +472,7 @@ class TaskQueue:
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._lock:
-            return self._get_history() + self._get_queue()
+            return self._get_history() + self._get_queue_with_positions()
 
     async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
         """Add tasks to the queue. Can specify a position to add the tasks in at.
@@ -521,8 +555,10 @@ class TaskQueue:
             if reason == PauseReason.ERROR or not self._state.paused
             else self._state.last_pause_reason
         )
-        self._state = QueueState(paused=True, last_pause_reason=reason)
+        self._state.paused = True
+        self._state.last_pause_reason = reason
         self._broadcaster.broadcast(Event(type="state_update", data=self._state))
+        notify(f"Queue paused: {reason}", "INFO")
 
     async def pause_queue(self, reason: PauseReason) -> QueueState:
         """Pause the queue if running.
@@ -535,7 +571,7 @@ class TaskQueue:
         """
         async with self._modifying:
             self._pause_queue(reason)
-        LOGGER.info(f"Successfully paused queue due to {reason}")
+
         return self._state
 
     async def resume_queue(self) -> QueueState:
@@ -544,12 +580,10 @@ class TaskQueue:
         Returns:
             QueueState: The new state of the queue.
         """
+        LOGGER.info("Resuming queue")
         async with self._modifying:
-            self._state = QueueState(
-                paused=False, last_pause_reason=self._state.last_pause_reason
-            )
+            self._state.paused = False
             self._broadcaster.broadcast(Event(type="state_update", data=self._state))
-        LOGGER.info("Successfully resumed queue")
         return self._state
 
     @property
@@ -660,7 +694,10 @@ class TaskQueue:
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )
 
-    def _get_queue(self) -> list[TaskWithPosition]:
+    def _get_queue(self) -> list[Task]:
+        return [self._tasks[task_id] for task_id in self._queue]
+
+    def _get_queue_with_positions(self) -> list[TaskWithPosition]:
         return [
             TaskWithPosition.from_task(self._tasks[task_id], i)
             for i, task_id in enumerate(self._queue)
@@ -690,6 +727,26 @@ class TaskQueue:
         current_task = self._get_task_by_position(0)
         if current_task and current_task.status == Status.IN_PROGRESS:
             return current_task
+
+    def _add_runtime_estimates_to_tasks(self):
+        if self._runtime_client and self.instrument:
+            tasks = self._get_queue()
+            experiments = [task.experiment for task in tasks]
+            try:
+                total_runtime = self._runtime_client.estimate_runtime(
+                    experiments, self.instrument
+                )
+                runtimes = self._runtime_client.estimate_runtime_per_task(
+                    experiments, self.instrument
+                )
+            except Exception as e:
+                # This shouldn't prevent syncing so catch and log
+                LOGGER.exception(e)
+                return
+            self._state.estimated_runtime = total_runtime
+            for task, runtime in zip(tasks, runtimes, strict=True):
+                if task.status == Status.QUEUED:
+                    task.estimated_runtime = runtime
 
     @cached_property
     def _tiled_client(self) -> Container:

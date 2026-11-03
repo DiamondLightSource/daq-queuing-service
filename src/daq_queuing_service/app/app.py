@@ -25,12 +25,16 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_adapter import (
 from daq_queuing_service.external_interaction.blueapi.get_client import (
     get_blueapi_client,
 )
+from daq_queuing_service.external_interaction.blueapi.token_source import UDCTokenSource
+from daq_queuing_service.external_interaction.runtime_estimator.client import (
+    RuntimeEstimatorClient,
+)
 from daq_queuing_service.log import LOGGER
 from daq_queuing_service.plugins import get_queue_plugin
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 
-from ._config import AppConfig
+from .config import AppConfig
 
 # pyright: reportUnusedFunction=false
 
@@ -103,10 +107,18 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
         dependencies.append(Depends(get_current_user))
         dependencies.append(Depends(whitelist_check))
 
-    app.state.queue = TaskQueue(plugin, broadcaster)
+    token_source = UDCTokenSource()
 
-    blueapi_client = get_blueapi_client(config.blueapi)
+    blueapi_client = get_blueapi_client(config.blueapi, token_source)
     blueapi_client_adapter = BlueapiClientAdapter(blueapi_client)
+
+    runtime_client = (
+        RuntimeEstimatorClient(config.runtime_estimation.url, token_source)
+        if config.runtime_estimation and config.runtime_estimation.enabled
+        else None
+    )
+
+    app.state.queue = TaskQueue(plugin, broadcaster, runtime_client, config.instrument)
 
     app.state.worker = QueueWorker(
         queue=app.state.queue,
