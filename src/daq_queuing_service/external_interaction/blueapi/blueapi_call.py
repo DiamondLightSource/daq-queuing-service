@@ -3,7 +3,7 @@ from enum import StrEnum
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class CallStatus(StrEnum):
@@ -35,8 +35,8 @@ class BlueapiCall(BaseModel):
     task_request: TaskRequest
     parent_task_id: str
     status: CallStatus = CallStatus.WAITING
-    time_started: str | None = None
-    time_completed: str | None = None
+    time_started: datetime | None = None
+    time_completed: datetime | None = None
     result: TaskResult | None = None
     errors: list[str | TaskError] = Field(default_factory=list[str | TaskError])
     blueapi_id: str | None = None
@@ -74,7 +74,7 @@ class BlueapiCall(BaseModel):
         current time
         """
         self._update_status(CallStatus.IN_PROGRESS)
-        self.time_started = datetime.now().isoformat()
+        self.time_started = datetime.now()
 
     def succeed(self, result: TaskResult):
         """Updates the task status to SUCCESS, sets the time_completed field to the
@@ -85,7 +85,7 @@ class BlueapiCall(BaseModel):
         """
         self._update_status(CallStatus.SUCCESS)
         self.result = result
-        self.time_completed = datetime.now().isoformat()
+        self.time_completed = datetime.now()
 
     def fail(self, errors: list[str | TaskError] | None = None):
         """Updates the task status to ERROR, sets the time_completed field to the
@@ -96,7 +96,7 @@ class BlueapiCall(BaseModel):
             occurred when trying to run the task. Defaults to None.
         """
         self._update_status(CallStatus.ERROR)
-        self.time_completed = datetime.now().isoformat()
+        self.time_completed = datetime.now()
         if errors:
             self.errors.extend(errors)
 
@@ -106,18 +106,25 @@ class BlueapiCall(BaseModel):
     def to_response(self) -> "BlueapiCallResponse":
         return BlueapiCallResponse.from_blueapi_call(self)
 
+    @computed_field
+    @property
+    def runtime(self) -> float | None:
+        if self.time_completed is not None and self.time_started is not None:
+            return self.time_completed.timestamp() - self.time_started.timestamp()
+
 
 class BlueapiCallResponse(BaseModel):
     task_request: TaskRequest
     parent_task_id: str | None
     status: CallStatus
-    time_started: str | None
-    time_completed: str | None
+    time_started: datetime | None
+    time_completed: datetime | None
     result: TaskResult | None
     errors: list[str | TaskError]
     blueapi_id: str | None
     tiled_ids: list[str]
     scan_ids: list[int]
+    runtime: float | None
 
     @classmethod
     def from_blueapi_call(cls, blueapi_call: BlueapiCall):

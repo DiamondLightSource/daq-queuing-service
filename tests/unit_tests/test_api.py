@@ -120,6 +120,7 @@ def test_get_queue_state_returns_queue_state(test_client: TestClient):
     assert response.json() == {
         "paused": False,
         "last_pause_reason": "Paused as last task errored",
+        "estimated_runtime": 300,
     }
 
 
@@ -131,6 +132,7 @@ def test_resume_changes_queue_state_and_returns_new_state(
     assert response.json() == {
         "paused": False,
         "last_pause_reason": PauseReason.ERROR,
+        "estimated_runtime": 300,
     }
 
 
@@ -142,6 +144,7 @@ def test_pause_changes_queue_state_and_returns_new_state(
     assert response.json() == {
         "paused": True,
         "last_pause_reason": PauseReason.USER_REQUESTED,
+        "estimated_runtime": 300,
     }
 
 
@@ -173,18 +176,21 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                     },
                     "parent_task_id": "2",
                     "status": "In progress",
-                    "time_started": "2026-04-17T15:02:00.000000",
+                    "time_started": "2026-04-17T15:02:00",
                     "time_completed": None,
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": 0,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         },
         {
             "experiment": {
@@ -217,11 +223,14 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": 1,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         },
         {
             "experiment": {
@@ -254,11 +263,14 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": 2,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         },
     ]
 
@@ -291,18 +303,21 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                     },
                     "parent_task_id": "2",
                     "status": "In progress",
-                    "time_started": "2026-04-17T15:02:00.000000",
+                    "time_started": "2026-04-17T15:02:00",
                     "time_completed": None,
                     "result": None,
                     "errors": [],
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": 0,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         }
     ]
 
@@ -345,8 +360,8 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                     },
                     "parent_task_id": "1",
                     "status": "Success",
-                    "time_started": "2026-04-17T15:01:00.000000",
-                    "time_completed": "2026-04-17T15:01:59.000000",
+                    "time_started": "2026-04-17T15:01:00",
+                    "time_completed": "2026-04-17T15:01:59",
                     "result": {
                         "outcome": "success",
                         "result": None,
@@ -356,11 +371,14 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": 59.0,
                 }
             ],
             "position": None,
             "kind": "Experiment",
             "user": None,
+            "runtime": 59.0,
+            "estimated_runtime": 100,
         }
     ]
 
@@ -414,12 +432,15 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
                 blueapi_id=None,
                 tiled_ids=[],
                 scan_ids=[],
+                runtime=None,
             )
         ],
         position=3,
         status=Status.QUEUED,
         kind=TaskKind.PLAN,
         user=None,
+        runtime=None,
+        estimated_runtime=100,
     )
 
 
@@ -697,11 +718,14 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": None,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         },
         {
             "experiment": {
@@ -734,11 +758,14 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": None,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         },
     ]
 
@@ -850,11 +877,14 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": None,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         },
         {
             "experiment": {
@@ -894,11 +924,14 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                     "blueapi_id": None,
                     "tiled_ids": [],
                     "scan_ids": [],
+                    "runtime": None,
                 }
             ],
             "position": None,
             "kind": "Experiment",
             "user": None,
+            "runtime": None,
+            "estimated_runtime": 100,
         },
     ]
 
@@ -944,11 +977,14 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
                 "blueapi_id": None,
                 "tiled_ids": [],
                 "scan_ids": [],
+                "runtime": None,
             }
         ],
         "position": 1,
         "kind": "Experiment",
         "user": None,
+        "runtime": None,
+        "estimated_runtime": 100,
     }
 
 
@@ -993,11 +1029,14 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
                 "blueapi_id": None,
                 "tiled_ids": [],
                 "scan_ids": [],
+                "runtime": None,
             }
         ],
         "position": 1,
         "kind": "Experiment",
         "user": None,
+        "runtime": None,
+        "estimated_runtime": 100,
     }
 
 
