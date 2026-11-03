@@ -32,6 +32,10 @@ class CallStatus(StrEnum):
 
 
 class QueueBlueapiCall(BaseModel):
+    """A class representing a call to blueapi, containing the plan parameters and
+    some associated metadata. Constructed by a queue plugin.
+    """
+
     task_request: TaskRequest
     parent_task_id: str
     status: CallStatus = CallStatus.WAITING
@@ -51,6 +55,10 @@ class QueueBlueapiCall(BaseModel):
 
 
 class BlueapiCall(QueueBlueapiCall):
+    """A QueueBlueapiCall for internal use inside the queue, with added methods for
+    state management.
+    """
+
     def _update_status(self, new_status: CallStatus):
         """Updates the status of the task, checking that the transition is valid
 

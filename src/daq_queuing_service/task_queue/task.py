@@ -64,6 +64,16 @@ T = TypeVar("T", bound=QueueBlueapiCall)
 
 
 class BaseTask(BaseModel, Generic[T]):
+    """Base class for a queue task. Contains either a ulims experiment or blueapi task
+    request, and a list of blueapi calls to be made.
+
+    Args:
+
+        Generic (QueueBlueapiCall | BlueapiCall): The type of BlueapiCall contained in
+        the blueapi_calls field. This is to differentiate between objects used by the
+        queue internally and ones copied to pass to queue plugins or the API layer.
+    """
+
     experiment: Experiment | TaskRequest
     id: str = Field(default_factory=create_uuid_str, frozen=True)
     blueapi_calls: list[T] = Field(default_factory=lambda: [])
@@ -94,6 +104,8 @@ class BaseTask(BaseModel, Generic[T]):
 
 
 class Task(BaseTask[BlueapiCall]):
+    """Internal task object held by the queue."""
+
     _cancelled: bool = PrivateAttr(False)
 
     def cancel(self):
@@ -124,6 +136,8 @@ class Task(BaseTask[BlueapiCall]):
 
 
 class QueueTask(BaseTask[QueueBlueapiCall]):
+    """Task object with a position field, for passing to a queue plugin or API layer."""
+
     position: int | None
     status: Status
 
