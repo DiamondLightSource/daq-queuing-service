@@ -30,7 +30,6 @@ from daq_queuing_service.app.authentication import User
 from daq_queuing_service.app.config import load_config
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
-    BlueapiCall,
     CallStatus,
     QueueBlueapiCall,
 )
@@ -42,7 +41,6 @@ from daq_queuing_service.task_queue.task import (
     QueueTask,
     Status,
     Task,
-    TaskKind,
 )
 
 
@@ -432,14 +430,11 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
                 blueapi_id=None,
                 tiled_ids=[],
                 scan_ids=[],
-                runtime=None,
             )
         ],
         position=3,
         status=Status.QUEUED,
-        kind=TaskKind.PLAN,
         user=None,
-        runtime=None,
         estimated_runtime=100,
     )
 
@@ -499,7 +494,7 @@ async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
         current_task: QueueTask | None,
         queue: list[Task],
         history: list[QueueTask],
-        call_history: list[BlueapiCall],
+        call_history: list[QueueBlueapiCall],
     ):
         raise SomeError("Conversion failed because xyz")
 
