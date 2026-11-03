@@ -199,7 +199,7 @@ class TaskQueue:
         self._queue.extend(task.id for task in new_tasks)
 
         # This is needed because pre_process could remove tasks
-        self._remove_tasks_from_registry(list(self._tasks.keys()))
+        self._prune_tasks_from_registry()
 
         self._call_queue = [
             # Persist calls which aren't complete but who's parent task is in progress
@@ -682,8 +682,8 @@ class TaskQueue:
 
         return removed_ids
 
-    def _remove_tasks_from_registry(self, task_ids: list[str]) -> None:
-        # Only removes tasks not present in the queue or history
+    def _prune_tasks_from_registry(self):
+        # Removes tasks not present in the queue or history
         # So should remove tasks from queue/history before removing from registry
         queue_set = set(self._queue)
         history_set = set(self._history)
@@ -696,7 +696,7 @@ class TaskQueue:
                 and task_id not in history_set
             )
 
-        removed_ids = [task_id for task_id in task_ids if should_be_removed(task_id)]
+        removed_ids = [task_id for task_id in self._tasks if should_be_removed(task_id)]
         self._tasks = TaskRegistry(
             {
                 task_id: task
