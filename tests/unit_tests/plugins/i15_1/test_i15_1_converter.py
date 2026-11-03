@@ -77,10 +77,7 @@ def make_background_task(capillary: STANDARD_CAPILLARY, time_per_pdf: int) -> Ta
 
 def assert_tasks_equal(task1: Task | QueueTask, task2: Task | QueueTask):
     # Check two tasks are equal other than the generated UUID
-    copy1 = type(task1).model_validate(task1)
-    copy2 = type(task2).model_validate(task2)
-    copy1.id = copy2.id = ""
-    assert task1 == task2
+    assert task1.model_dump(exclude={"id"}) == task2.model_dump(exclude={"id"})
 
 
 def create_task_dict(task_id: str, experiment: dict[str, Any]) -> dict[str, Any]:
@@ -353,9 +350,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         status=Status.QUEUED,
         blueapi_calls=[],
         position=None,
-        kind=TaskKind.EXPERIMENT,
         user=None,
-        runtime=None,
         estimated_runtime=100,
     )
     call_list = I151Converter().construct_blueapi_calls([task], [], [])
@@ -527,9 +522,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         status=Status.QUEUED,
         blueapi_calls=[],
         position=None,
-        kind=TaskKind.EXPERIMENT,
         user=None,
-        runtime=None,
         estimated_runtime=100,
     )
 
@@ -540,7 +533,6 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     bad_task.experiment = BadExperiment()  # type: ignore
     plan_task = deepcopy(good_task)
     plan_task.experiment = TaskRequest(name="", instrument_session="")
-    plan_task.kind = TaskKind.PLAN
     tasks = [good_task, bad_task, plan_task, good_task]
     call_list = I151Converter().construct_blueapi_calls(tasks, [], [])
     assert len(call_list) == 13

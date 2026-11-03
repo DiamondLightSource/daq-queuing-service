@@ -356,7 +356,7 @@ class TaskQueue:
         with add_session_to_logger(call.task_request.instrument_session):
             tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
             should_pause = self._converter.pause_on_complete_blueapi_call(
-                call.to_response(), result
+                call.to_parent(), result
             )
             LOGGER.info(f"Plan {call} completed successfully. Result: {result}")
 
@@ -381,7 +381,7 @@ class TaskQueue:
         """
         with add_session_to_logger(call.task_request.instrument_session):
             should_pause = self._converter.pause_on_fail_blueapi_call(
-                call.to_response(), errors
+                call.to_parent(), errors
             )
             tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
             LOGGER.error(f"Plan {call} has failed with the following errors: {errors}")
@@ -710,14 +710,14 @@ class TaskQueue:
             return self._get_call_queue()
 
     def _get_call_queue(self) -> list[QueueBlueapiCall]:
-        return [call.to_response() for call in self._call_queue]
+        return [call.to_parent() for call in self._call_queue]
 
     async def get_call_history(self) -> list[QueueBlueapiCall]:
         async with self._lock:
             return self._get_call_history()
 
     def _get_call_history(self) -> list[QueueBlueapiCall]:
-        return [call.to_response() for call in self._call_history]
+        return [call.to_parent() for call in self._call_history]
 
     def _get_running_task(self) -> QueueTask | None:
         current_task = self._get_task_by_position(0)

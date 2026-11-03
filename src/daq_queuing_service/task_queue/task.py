@@ -1,9 +1,9 @@
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Generic, Self, TypeVar
 from uuid import uuid4
 
 from blueapi.service.model import TaskRequest
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
@@ -60,13 +60,41 @@ class TaskKind(StrEnum):
     PLAN = "Plan"
 
 
-class Task(BaseModel):
+T = TypeVar("T", bound=QueueBlueapiCall)
+
+
+class BaseTask(BaseModel, Generic[T]):
     experiment: Experiment | TaskRequest
-    id: str = Field(default_factory=create_uuid_str)
-    blueapi_calls: list[BlueapiCall] = Field(default_factory=lambda: [])
-    user: User | None = None
+    id: str = Field(default_factory=create_uuid_str, frozen=True)
+    blueapi_calls: list[T] = Field(default_factory=lambda: [])
+    user: User | None = Field(default=None, frozen=True)
     estimated_runtime: int | None = None
-    _cancelled: bool = False
+
+    @computed_field
+    @property
+    def kind(self) -> TaskKind:
+        match self.experiment:
+            case Experiment():
+                return TaskKind.EXPERIMENT
+            case TaskRequest():
+                return TaskKind.PLAN
+
+    @computed_field
+    @property
+    def runtime(self) -> float | None:
+        # This should get nicer once we have separate types for queued, in progress and
+        # complete tasks.
+        if runtimes := [blueapi_call.runtime for blueapi_call in self.blueapi_calls]:
+            total = 0
+            for runtime in runtimes:
+                if runtime is None:
+                    return
+                total += runtime
+            return total
+
+
+class Task(BaseTask[BlueapiCall]):
+    _cancelled: bool = PrivateAttr(False)
 
     def cancel(self):
         self._cancelled = True
@@ -94,39 +122,10 @@ class Task(BaseModel):
             return Status.IN_PROGRESS
         return Status.QUEUED
 
-    @computed_field
-    @property
-    def kind(self) -> TaskKind:
-        match self.experiment:
-            case Experiment():
-                return TaskKind.EXPERIMENT
-            case TaskRequest():
-                return TaskKind.PLAN
 
-    @computed_field
-    @property
-    def runtime(self) -> float | None:
-        # This should get nicer once we have separate types for queued, in progress and
-        # complete tasks.
-        if runtimes := [blueapi_call.runtime for blueapi_call in self.blueapi_calls]:
-            total = 0
-            for runtime in runtimes:
-                if runtime is None:
-                    return
-                total += runtime
-            return total
-
-
-class QueueTask(BaseModel):
-    experiment: Experiment | TaskRequest
-    id: str
-    status: Status
-    blueapi_calls: list[QueueBlueapiCall]
+class QueueTask(BaseTask[QueueBlueapiCall]):
     position: int | None
-    kind: TaskKind
-    user: User | None
-    estimated_runtime: int | None
-    runtime: float | None
+    status: Status
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:

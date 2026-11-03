@@ -37,7 +37,6 @@ from daq_queuing_service.task_queue.task import (
     ExperimentDefinition,
     Status,
     Task,
-    TaskKind,
 )
 
 from .conftest import make_sample
@@ -307,13 +306,10 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=None,
                 )
             ],
             position=0,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=None,
             estimated_runtime=100,
         ),
         QueueTask(
@@ -339,13 +335,10 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=None,
                 )
             ],
             position=1,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=None,
             estimated_runtime=100,
         ),
         QueueTask(
@@ -371,13 +364,10 @@ async def test_get_queue_only_returns_tasks_in_queue(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=None,
                 )
             ],
             position=2,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=None,
             estimated_runtime=100,
         ),
     ]
@@ -418,13 +408,10 @@ async def test_get_history_only_returns_tasks_in_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=59,
                 )
             ],
             position=None,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=59,
             estimated_runtime=100,
         ),
         QueueTask(
@@ -450,13 +437,10 @@ async def test_get_history_only_returns_tasks_in_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=59,
                 )
             ],
             position=None,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=59,
             estimated_runtime=100,
         ),
     ]
@@ -498,13 +482,10 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=59,
                 )
             ],
             position=None,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=59,
             estimated_runtime=100,
         ),
         QueueTask(
@@ -530,13 +511,10 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=59,
                 )
             ],
             position=None,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=59,
             estimated_runtime=100,
         ),
         QueueTask(
@@ -562,13 +540,10 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=None,
                 )
             ],
             position=0,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=None,
             estimated_runtime=100,
         ),
         QueueTask(
@@ -594,13 +569,10 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=None,
                 )
             ],
             position=1,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=None,
             estimated_runtime=100,
         ),
         QueueTask(
@@ -626,13 +598,10 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
                     blueapi_id=None,
                     tiled_ids=[],
                     scan_ids=[],
-                    runtime=None,
                 )
             ],
             position=2,
-            kind=TaskKind.EXPERIMENT,
             user=None,
-            runtime=None,
             estimated_runtime=100,
         ),
     ]
@@ -976,7 +945,6 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
-            runtime=None,
         ),
         QueueBlueapiCall(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -989,7 +957,6 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
-            runtime=None,
         ),
         QueueBlueapiCall(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -1002,7 +969,6 @@ async def test_get_call_queue_returns_calls_in_call_queue(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
-            runtime=None,
         ),
     ]
 
@@ -1027,7 +993,6 @@ async def test_get_call_history_returns_calls_in_call_history(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
-            runtime=59,
         ),
         QueueBlueapiCall(
             task_request=TaskRequest(name="test", params={}, instrument_session=""),
@@ -1040,7 +1005,6 @@ async def test_get_call_history_returns_calls_in_call_history(
             blueapi_id=None,
             tiled_ids=[],
             scan_ids=[],
-            runtime=59,
         ),
     ]
 

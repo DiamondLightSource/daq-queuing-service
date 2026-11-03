@@ -31,7 +31,7 @@ class CallStatus(StrEnum):
         return allowed_transitions[self]
 
 
-class BlueapiCall(BaseModel):
+class QueueBlueapiCall(BaseModel):
     task_request: TaskRequest
     parent_task_id: str
     status: CallStatus = CallStatus.WAITING
@@ -43,6 +43,14 @@ class BlueapiCall(BaseModel):
     tiled_ids: list[str] = Field(default_factory=list)
     scan_ids: list[int] = Field(default_factory=list[int])
 
+    @computed_field
+    @property
+    def runtime(self) -> float | None:
+        if self.time_completed is not None and self.time_started is not None:
+            return self.time_completed.timestamp() - self.time_started.timestamp()
+
+
+class BlueapiCall(QueueBlueapiCall):
     def _update_status(self, new_status: CallStatus):
         """Updates the status of the task, checking that the transition is valid
 
@@ -103,29 +111,5 @@ class BlueapiCall(BaseModel):
     def skip(self):
         self._update_status(CallStatus.SKIPPED)
 
-    def to_response(self) -> "QueueBlueapiCall":
-        return QueueBlueapiCall.from_blueapi_call(self)
-
-    @computed_field
-    @property
-    def runtime(self) -> float | None:
-        if self.time_completed is not None and self.time_started is not None:
-            return self.time_completed.timestamp() - self.time_started.timestamp()
-
-
-class QueueBlueapiCall(BaseModel):
-    task_request: TaskRequest
-    parent_task_id: str | None
-    status: CallStatus
-    time_started: datetime | None
-    time_completed: datetime | None
-    result: TaskResult | None
-    errors: list[str | TaskError]
-    blueapi_id: str | None
-    tiled_ids: list[str]
-    scan_ids: list[int]
-    runtime: float | None
-
-    @classmethod
-    def from_blueapi_call(cls, blueapi_call: BlueapiCall):
-        return cls.model_validate({**blueapi_call.model_dump()})
+    def to_parent(self) -> "QueueBlueapiCall":
+        return QueueBlueapiCall.model_validate(self.model_dump())

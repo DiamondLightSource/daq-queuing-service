@@ -998,18 +998,12 @@
             "$ref": "#/components/schemas/TaskRequest"
           },
           "parent_task_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Parent Task Id"
           },
           "status": {
-            "$ref": "#/components/schemas/CallStatus"
+            "$ref": "#/components/schemas/CallStatus",
+            "default": "Waiting"
           },
           "time_started": {
             "anyOf": [
@@ -1093,21 +1087,14 @@
                 "type": "null"
               }
             ],
-            "title": "Runtime"
+            "title": "Runtime",
+            "readOnly": true
           }
         },
         "type": "object",
         "required": [
           "task_request",
           "parent_task_id",
-          "status",
-          "time_started",
-          "time_completed",
-          "result",
-          "errors",
-          "blueapi_id",
-          "tiled_ids",
-          "scan_ids",
           "runtime"
         ],
         "title": "QueueBlueapiCall"
@@ -1170,29 +1157,12 @@
             "type": "string",
             "title": "Id"
           },
-          "status": {
-            "$ref": "#/components/schemas/Status"
-          },
           "blueapi_calls": {
             "items": {
               "$ref": "#/components/schemas/QueueBlueapiCall"
             },
             "type": "array",
             "title": "Blueapi Calls"
-          },
-          "position": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Position"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/TaskKind"
           },
           "user": {
             "anyOf": [
@@ -1215,6 +1185,24 @@
             ],
             "title": "Estimated Runtime"
           },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TaskKind",
+            "readOnly": true
+          },
           "runtime": {
             "anyOf": [
               {
@@ -1224,19 +1212,16 @@
                 "type": "null"
               }
             ],
-            "title": "Runtime"
+            "title": "Runtime",
+            "readOnly": true
           }
         },
         "type": "object",
         "required": [
           "experiment",
-          "id",
-          "status",
-          "blueapi_calls",
           "position",
+          "status",
           "kind",
-          "user",
-          "estimated_runtime",
           "runtime"
         ],
         "title": "QueueTask"
