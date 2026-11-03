@@ -1214,7 +1214,7 @@ async def test_if_error_during_conversion_then_error_handled_and_contents_restor
     def convert(
         queue: list[QueueTask],
         history: list[QueueTask],
-        call_history: list[BlueapiCall],
+        call_history: list[QueueBlueapiCall],
     ):
         for task_id in task_queue._queue:
             del task_queue._tasks[task_id]
@@ -1237,7 +1237,7 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
     def convert(
         queue: list[QueueTask],
         history: list[QueueTask],
-        call_history: list[BlueapiCall],
+        call_history: list[QueueBlueapiCall],
     ):
         raise ValueError("Conversion failed")
 
