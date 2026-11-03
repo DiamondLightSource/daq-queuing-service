@@ -5,6 +5,7 @@ from blueapi.worker.event import TaskError, TaskResult
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.task_queue.task import (
     Experiment,
@@ -44,7 +45,7 @@ class Converter:
         current_task: QueueTask | None,
         queue: list[Task],
         history: list[QueueTask],
-        call_history: list[BlueapiCall],
+        call_history: list[QueueBlueapiCall],
     ) -> list[Task]:
         """This gets run whenever something changes in the queue, before
         'construct_blueapi_calls'. It is an opportunity to automatically modify the
@@ -61,7 +62,7 @@ class Converter:
                 exists.
             queue (list[Task]): List of tasks currently in the queue
             history (list[QueueTask]): List of completed tasks
-            call_history (list[BlueapiCall]): List of completed blueapi calls
+            call_history (list[QueueBlueapiCall]): List of completed blueapi calls
 
         Returns:
             list[Task]: The new list of tasks in the queue
@@ -72,7 +73,7 @@ class Converter:
         self,
         queue: list[QueueTask],
         history: list[QueueTask],
-        call_history: list[BlueapiCall],
+        call_history: list[QueueBlueapiCall],
     ) -> list[BlueapiCall]:
         """Converts the list of queued tasks into a list of blueapi calls. This is
         needed if the queue contains ulims experiments, as these must be mapped onto
@@ -83,7 +84,7 @@ class Converter:
         Args:
             queue (list[QueueTask]): List of tasks in the queue
             history (list[QueueTask]): List of completed tasks
-            call_history (list[BlueapiCall]): List of completed blueapi calls
+            call_history (list[QueueBlueapiCall]): List of completed blueapi calls
 
         Returns:
             list[BlueapiCall]: List of blueapi calls to execute.
