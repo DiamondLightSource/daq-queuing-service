@@ -607,8 +607,8 @@
           "blueapi": {
             "$ref": "#/components/schemas/BlueapiConfig"
           },
-          "converter": {
-            "$ref": "#/components/schemas/ConverterConfig"
+          "plugin": {
+            "$ref": "#/components/schemas/PluginConfig"
           },
           "oidc": {
             "anyOf": [
@@ -662,7 +662,7 @@
         "type": "object",
         "required": [
           "blueapi",
-          "converter"
+          "plugin"
         ],
         "title": "AppConfig"
       },
@@ -904,24 +904,6 @@
         ],
         "title": "ContainerPosition"
       },
-      "ConverterConfig": {
-        "properties": {
-          "path": {
-            "type": "string",
-            "title": "Path"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "path",
-          "name"
-        ],
-        "title": "ConverterConfig"
-      },
       "Experiment": {
         "properties": {
           "name": {
@@ -1072,29 +1054,9 @@
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider",
-            "deprecated": true
-          },
-          "issuer": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Issuer",
-            "description": "URL of OIDC provider"
+            "description": "URL to fetch OIDC config from the provider"
           },
           "client_id": {
             "type": "string",
@@ -1117,6 +1079,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
@@ -1130,6 +1093,24 @@
           "Pause requested by plugin"
         ],
         "title": "PauseReason"
+      },
+      "PluginConfig": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "name"
+        ],
+        "title": "PluginConfig"
       },
       "QueueState": {
         "properties": {
