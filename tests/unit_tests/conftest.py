@@ -26,7 +26,7 @@ from daq_queuing_service.external_interaction.runtime_estimator.client import (
 )
 from daq_queuing_service.external_interaction.tiled.tiled import cache
 from daq_queuing_service.log import LOGGER, setup_logger
-from daq_queuing_service.plugins.converter import Converter
+from daq_queuing_service.plugins.base_plugin import QueuePlugin
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
     Container,
@@ -117,11 +117,8 @@ def mock_runtime_estimator_client():
 
 
 @pytest.fixture
-async def task_queue_no_runtime(
-    tasks: list[Task],
-    converter: Converter,
-):
-    queue = TaskQueue(converter=converter, broadcaster=Broadcaster(), instrument="ixx")
+async def task_queue_no_runtime(tasks: list[Task], queue_plugin: QueuePlugin):
+    queue = TaskQueue(plugin=queue_plugin, broadcaster=Broadcaster(), instrument="ixx")
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
@@ -160,10 +157,10 @@ async def task_queue_one_to_many(tasks: list[Task]):
                 )
         return call_list
 
-    converter = Converter()
-    converter.construct_blueapi_calls = construct_blueapi_calls
+    plugin = QueuePlugin()
+    plugin.construct_blueapi_calls = construct_blueapi_calls
 
-    queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
+    queue = TaskQueue(plugin=plugin, broadcaster=Broadcaster())
     await queue.add_tasks(tasks)
     await queue.resume_queue()
     return queue
@@ -209,8 +206,8 @@ async def task_queue_with_history(task_queue: TaskQueue):
 
 
 @pytest.fixture()
-def converter():
-    class DNConverter(Converter):
+def queue_plugin():
+    class DNPlugin(QueuePlugin):
         def _construct_blueapi_task_request(
             self,
             experiment: Experiment | TaskRequest,
@@ -225,7 +222,7 @@ def converter():
                         params=experiment.experiment_definition.data,
                     )
 
-    return DNConverter()
+    return DNPlugin()
 
 
 @pytest.fixture

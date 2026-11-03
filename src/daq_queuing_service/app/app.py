@@ -30,7 +30,7 @@ from daq_queuing_service.external_interaction.runtime_estimator.client import (
     RuntimeEstimatorClient,
 )
 from daq_queuing_service.log import LOGGER
-from daq_queuing_service.plugins.converter import get_converter
+from daq_queuing_service.plugins import get_queue_plugin
 from daq_queuing_service.task_queue.queue import QUEUE_EVENTS, TaskQueue
 from daq_queuing_service.worker.worker import QueueWorker
 
@@ -62,9 +62,9 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
 
     broadcaster: Broadcaster[QUEUE_EVENTS] = Broadcaster()
 
-    converter_path = config.converter.path
-    converter_name = config.converter.name
-    converter = get_converter(converter_path, converter_name)
+    plugin_path = config.plugin.path
+    plugin_name = config.plugin.name
+    plugin = get_queue_plugin(plugin_path, plugin_name)
 
     app = FastAPI(lifespan=lifespan)
 
@@ -118,9 +118,7 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
         else None
     )
 
-    app.state.queue = TaskQueue(
-        converter, broadcaster, runtime_client, config.instrument
-    )
+    app.state.queue = TaskQueue(plugin, broadcaster, runtime_client, config.instrument)
 
     app.state.worker = QueueWorker(
         queue=app.state.queue,
@@ -130,7 +128,7 @@ def create_app(config: AppConfig, dev: bool = False) -> FastAPI:
     register_exception_handlers(app)
     app.include_router(public_routes(app.state.queue))
     app.include_router(
-        protected_routes(app.state.queue, broadcaster, config, converter),
+        protected_routes(app.state.queue, broadcaster, config, plugin),
         dependencies=dependencies,
     )
 

@@ -21,7 +21,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Plugin
 from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
@@ -69,9 +69,7 @@ def make_background_task(capillary: STANDARD_CAPILLARY, time_per_pdf: int) -> Ta
         time_per_pdf=time_per_pdf,
     )
     return Task(
-        experiment=I151Converter()._construct_auxiliary_experiment(
-            background, "cm12345-1"
-        )
+        experiment=I151Plugin()._construct_auxiliary_experiment(background, "cm12345-1")
     )
 
 
@@ -197,7 +195,7 @@ def standard_sample_task(
 async def queue_with_i15_1_plugin(
     i15_1_tasks: list[Task], background_not_found_in_tiled: MagicMock
 ):
-    queue = TaskQueue(converter=I151Converter(), broadcaster=Broadcaster())
+    queue = TaskQueue(plugin=I151Plugin(), broadcaster=Broadcaster())
 
     await queue.add_tasks(i15_1_tasks)
     await queue.resume_queue()
@@ -233,10 +231,10 @@ def background_not_found_in_tiled():
 
 
 @pytest.fixture
-def i15_1_converter():
-    converter = I151Converter()
-    converter._tiled_client = MagicMock()
-    return converter
+def i15_1_plugin():
+    plugin = I151Plugin()
+    plugin._tiled_client = MagicMock()
+    return plugin
 
 
 def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
@@ -248,7 +246,7 @@ def test_given_sample_name_in_correct_format_then_correct_sample_loaded():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[0].name == "robot_load"
     assert tasks[0].params["position"] == 2
     assert tasks[0].params["puck"] == 2
@@ -266,7 +264,7 @@ def test_centre_sample_at_room_temperature_uses_correct_params_from_queue_params
         instrument_session="cm12345-1",
     )
     centring_params = queue_params.room_temperature_centring_params
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "centre_sample"
     assert tasks[2].params == {
         "start_z": centring_params.start_z,
@@ -300,7 +298,7 @@ def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[2].name == "centre_sample"
     assert tasks[2].params == {
         "start_z": queue_params.blower_centring_params.start_z,
@@ -332,7 +330,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert len(tasks) == 6
     for task in tasks:
         assert task.instrument_session == "cm12345-1"
@@ -358,7 +356,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         runtime=None,
         estimated_runtime=100,
     )
-    call_list = I151Converter().construct_blueapi_calls([task], [], [])
+    call_list = I151Plugin().construct_blueapi_calls([task], [], [])
     assert len(call_list) == 6
 
 
@@ -371,7 +369,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[4].name == "data_collection"
     assert tasks[4].params["full_collection_time"] == 100
     assert tasks[4].params["exposure_time_per_frame"] == 1.0
@@ -402,7 +400,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[4].name == "blower_collection"
     assert tasks[4].params["time_per_collection"] == 100
     assert tasks[4].params["exposure_time_per_frame"] == 1.0
@@ -429,7 +427,7 @@ def test_experiment_with_no_sample_converts_to_air_scan():
         sample=None,
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert len(tasks) == 2
     assert tasks[0].name == "wait_for_beam"
     assert tasks[1].name == "data_collection"
@@ -446,7 +444,7 @@ def test_experiment_with_no_sample_converts_to_air_scan():
     }
 
 
-def test_wait_for_beam_plans_added_by_converter():
+def test_wait_for_beam_plans_added_by_plugin():
     experiment_definition = ExperimentDefinition(
         name="",
         id="",
@@ -464,14 +462,14 @@ def test_wait_for_beam_plans_added_by_converter():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = I151Plugin()._construct_blueapi_tasks_from_experiment(experiment, "id")
     for i in (1, 3):
         assert tasks[i].name == "wait_for_beam"
 
 
 def test_tiled_backgrounds_added_to_metadata_if_present():
-    converter = I151Converter()
-    converter._tiled_auxiliary_scans["id"] = {
+    plugin = I151Plugin()
+    plugin._tiled_auxiliary_scans["id"] = {
         AuxiliaryScanType.EMPTY_CAPILLARY: TiledAuxiliary(
             instrument_session="cm12345-1",
             tiled_id="tiled_id",
@@ -494,7 +492,7 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = plugin._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
         "sample": make_sample("test_8_1", ""),
@@ -542,14 +540,14 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
     plan_task.experiment = TaskRequest(name="", instrument_session="")
     plan_task.kind = TaskKind.PLAN
     tasks = [good_task, bad_task, plan_task, good_task]
-    call_list = I151Converter().construct_blueapi_calls(tasks, [], [])
+    call_list = I151Plugin().construct_blueapi_calls(tasks, [], [])
     assert len(call_list) == 13
 
 
 def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     background_not_found_in_tiled: MagicMock, standards_puck: StandardsPuck
 ):
-    converter = I151Converter()
+    plugin = I151Plugin()
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=ExperimentDefinition(
@@ -562,7 +560,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         experiment=experiment,
         id="1",
     )
-    tasks = converter.pre_process(None, [task], [], [])
+    tasks = plugin.pre_process(None, [task], [], [])
     assert len(tasks) == 4
     assert tasks[0].model_dump() == air_task(tasks[0].id, "cm12345-1", 100.0)
     assert tasks[1].model_dump() == empty_capillary_task(
@@ -571,11 +569,11 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
     assert tasks[2].model_dump() == standard_sample_task(
         tasks[2].id, "cm12345-1", 100.0, "fq1.0", "Silicon", standards_puck
     )
-    assert converter._tiled_auxiliary_scans == {"1": {}}
+    assert plugin._tiled_auxiliary_scans == {"1": {}}
 
 
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
-    i15_1_converter: I151Converter,
+    i15_1_plugin: I151Plugin,
     i15_1_tasks: list[Task],
     background_not_found_in_tiled: MagicMock,
 ):
@@ -591,7 +589,7 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
         time_per_pdf=15,
     )
 
-    def fake_get_required_auxiliary_scans(self: I151Converter, experiment: Experiment):
+    def fake_get_required_auxiliary_scans(self: I151Plugin, experiment: Experiment):
         # Get the same background scans every other experiment
         # Only one of each background should be added
         assert experiment.sample
@@ -602,17 +600,17 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
 
     assert len(i15_1_tasks) == 5
     with patch(
-        "daq_queuing_service.plugins.i15_1.i15_1_converter.I151Converter._get_required_auxiliary_scans",
+        "daq_queuing_service.plugins.i15_1.i15_1_converter.I151Plugin._get_required_auxiliary_scans",
         fake_get_required_auxiliary_scans,
     ):
-        new_tasks = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
+        new_tasks = i15_1_plugin._add_required_auxiliary_scans(None, i15_1_tasks)
 
     assert len(new_tasks) == 8
 
     assert_tasks_equal(
         new_tasks[0],
         Task(
-            experiment=I151Converter()._construct_auxiliary_experiment(
+            experiment=I151Plugin()._construct_auxiliary_experiment(
                 bg_1, instrument_session="cm12345-1"
             ),
         ),
@@ -620,7 +618,7 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
     assert_tasks_equal(
         new_tasks[1],
         Task(
-            experiment=I151Converter()._construct_auxiliary_experiment(
+            experiment=I151Plugin()._construct_auxiliary_experiment(
                 bg_2, instrument_session="cm12345-1"
             ),
         ),
@@ -629,7 +627,7 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
     assert_tasks_equal(
         new_tasks[3],
         Task(
-            experiment=I151Converter()._construct_auxiliary_experiment(
+            experiment=I151Plugin()._construct_auxiliary_experiment(
                 bg_3, instrument_session="cm12345-1"
             ),
         ),
@@ -637,13 +635,13 @@ def test_add_required_background_scans_does_not_add_the_same_background_twice(
 
 
 def test_add_required_background_scans_combines_similar_background_requirements(
-    i15_1_converter: I151Converter,
+    i15_1_plugin: I151Plugin,
     i15_1_tasks: list[Task],
     background_not_found_in_tiled: MagicMock,
 ):
 
     assert len(i15_1_tasks) == 5
-    new_tasks = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
+    new_tasks = i15_1_plugin._add_required_auxiliary_scans(None, i15_1_tasks)
     assert len(new_tasks) == 8
     assert (
         isinstance(new_tasks[0].experiment, Experiment)
@@ -666,7 +664,7 @@ def test_add_required_background_scans_combines_similar_background_requirements(
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_in_each(
-    i15_1_converter: I151Converter,
+    i15_1_plugin: I151Plugin,
     i15_1_tasks: list[Task],
     background_not_found_in_tiled: MagicMock,
     standards_puck: StandardsPuck,
@@ -676,7 +674,7 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
     assert len(i15_1_tasks) == 5
 
-    new_tasks = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
+    new_tasks = i15_1_plugin._add_required_auxiliary_scans(None, i15_1_tasks)
 
     assert len(new_tasks) == 14
 
@@ -708,18 +706,18 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
 
 
 def test_add_required_background_scans_if_found_in_tiled_then_no_background_added(
-    i15_1_converter: I151Converter,
+    i15_1_plugin: I151Plugin,
     i15_1_tasks: list[Task],
     background_found_in_tiled: MagicMock,
 ):
-    assert i15_1_converter._tiled_auxiliary_scans == {}
+    assert i15_1_plugin._tiled_auxiliary_scans == {}
 
-    tasks_after = i15_1_converter._add_required_auxiliary_scans(None, i15_1_tasks)
+    tasks_after = i15_1_plugin._add_required_auxiliary_scans(None, i15_1_tasks)
 
     assert tasks_after == i15_1_tasks
     # Tiled backgrounds info should be saved in state
-    assert len(i15_1_converter._tiled_auxiliary_scans.keys()) == 5
-    assert i15_1_converter._tiled_auxiliary_scans == {
+    assert len(i15_1_plugin._tiled_auxiliary_scans.keys()) == 5
+    assert i15_1_plugin._tiled_auxiliary_scans == {
         task.id: {
             AuxiliaryScanType.EMPTY_CAPILLARY: TiledAuxiliary(
                 instrument_session="cm12345-1",
@@ -735,7 +733,7 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     }
 
 
-async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: TaskQueue):
+async def test_queue_with_i15_1_plugin_can_sync(queue_with_i15_1_plugin: TaskQueue):
     for i, task in enumerate(queue_with_i15_1_plugin._tasks.values()):
         task.experiment.instrument_session = str(i)
     first_task = await queue_with_i15_1_plugin.get_task_by_position(0)
@@ -746,7 +744,7 @@ async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: Task
 
 
 def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(
-    i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
+    i15_1_plugin: I151Plugin, background_not_found_in_tiled: MagicMock
 ):
     background = AuxiliaryScan(
         instrument_session="cm12345-1",
@@ -754,14 +752,14 @@ def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued
         time_per_pdf=25,
     )
     new_tasks = [make_background_task("fq1.0", 25)]
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+    result = i15_1_plugin._ensure_auxiliary_in_queue_or_tiled(
         background, None, new_tasks, "task_id", "cm12345-1"
     )
     assert result == new_tasks
 
 
 def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitable(
-    i15_1_converter: I151Converter,
+    i15_1_plugin: I151Plugin,
 ):
     background = AuxiliaryScan(
         instrument_session="cm12345-1",
@@ -769,7 +767,7 @@ def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitabl
         time_per_pdf=25,
     )
     new_tasks: list[Task] = []
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+    result = i15_1_plugin._ensure_auxiliary_in_queue_or_tiled(
         background,
         TaskWithPosition.from_task(make_background_task("fq1.0", 25)),
         new_tasks,
@@ -780,7 +778,7 @@ def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitabl
 
 
 def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_possible(
-    i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
+    i15_1_plugin: I151Plugin, background_not_found_in_tiled: MagicMock
 ):
     background = AuxiliaryScan(
         instrument_session="cm12345-1",
@@ -792,7 +790,7 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
     assert isinstance(current_task.experiment, Experiment)
     current_task.experiment.experiment_definition.name = "Not a background"
     new_tasks = [make_background_task("fq1.0", 10)]
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+    result = i15_1_plugin._ensure_auxiliary_in_queue_or_tiled(
         background, current_task, new_tasks, "task_id", "cm12345-1"
     )
     assert len(result) == 1
@@ -800,7 +798,7 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
 
 
 def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_in_queue(
-    i15_1_converter: I151Converter,
+    i15_1_plugin: I151Plugin,
     background_not_found_in_tiled: MagicMock,
 ):
     background = AuxiliaryScan(
@@ -808,7 +806,7 @@ def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_i
         pin=StandardsPin(capillary="fq1.0", contents=None),
         time_per_pdf=25,
     )
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+    result = i15_1_plugin._ensure_auxiliary_in_queue_or_tiled(
         background, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 1
@@ -816,20 +814,20 @@ def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_i
 
 
 def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
-    i15_1_converter: I151Converter,
+    i15_1_plugin: I151Plugin,
     background_found_in_tiled: MagicMock,
 ):
-    i15_1_converter._tiled_auxiliary_scans["task_id"] = {}
+    i15_1_plugin._tiled_auxiliary_scans["task_id"] = {}
     background = AuxiliaryScan(
         instrument_session="cm12345-1",
         pin=StandardsPin(capillary="fq1.0", contents=None),
         time_per_pdf=25,
     )
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+    result = i15_1_plugin._ensure_auxiliary_in_queue_or_tiled(
         background, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 0
-    assert i15_1_converter._tiled_auxiliary_scans == {
+    assert i15_1_plugin._tiled_auxiliary_scans == {
         "task_id": {
             AuxiliaryScanType.EMPTY_CAPILLARY: TiledAuxiliary(
                 instrument_session="cm12345-1",
@@ -870,8 +868,8 @@ async def test_queued_data_collections_have_correct_scan_type_parameter(
 
 
 def test_i15_1_tasks_can_be_serialised():
-    converter = I151Converter()
-    converter._tiled_auxiliary_scans["id"] = {
+    plugin = I151Plugin()
+    plugin._tiled_auxiliary_scans["id"] = {
         AuxiliaryScanType.EMPTY_CAPILLARY: TiledAuxiliary(
             instrument_session="cm12345-1",
             tiled_id="tiled_id",
@@ -894,14 +892,14 @@ def test_i15_1_tasks_can_be_serialised():
         sample=make_sample("test_8_1", ""),
         instrument_session="cm12345-1",
     )
-    tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
+    tasks = plugin._construct_blueapi_tasks_from_experiment(experiment, "id")
     serialised = serialise(tasks)
     json.dumps(serialised)
 
 
-def test_i15_1_converter_does_not_pause_queue_if_sample_not_found_error():
-    converter = I151Converter()
-    should_pause = converter.pause_on_fail_blueapi_call(
+def test_i15_1_plugin_does_not_pause_queue_if_sample_not_found_error():
+    plugin = I151Plugin()
+    should_pause = plugin.pause_on_fail_blueapi_call(
         MagicMock(),
         [
             TaskError(
@@ -920,7 +918,7 @@ def test_no_auxiliary_scans_added_if_turned_off_in_queue_params(
 ):
     queue_params.add_auxiliary_scans = False
     task = i15_1_tasks[0]
-    new_tasks = I151Converter().pre_process(None, [task], [], [])
+    new_tasks = I151Plugin().pre_process(None, [task], [], [])
     assert len(new_tasks) == 1
     assert new_tasks == [task]
 
@@ -931,7 +929,7 @@ def test_no_robot_load_queued_if_turned_off_in_queue_params(
     queue_params.add_auxiliary_scans = False
     queue_params.do_robot_load = False
 
-    blueapi_calls = I151Converter().construct_blueapi_calls(
+    blueapi_calls = I151Plugin().construct_blueapi_calls(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "robot_load" for call in blueapi_calls)
@@ -944,7 +942,7 @@ def test_no_centring_queued_if_turned_off_in_queue_params(
     queue_params.add_auxiliary_scans = False
     queue_params.do_centring = False
 
-    blueapi_calls = I151Converter().construct_blueapi_calls(
+    blueapi_calls = I151Plugin().construct_blueapi_calls(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "centre_sample" for call in blueapi_calls)
@@ -960,7 +958,7 @@ def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
     queue_params.add_auxiliary_scans = False
     queue_params.do_wait_for_beam = False
 
-    blueapi_calls = I151Converter().construct_blueapi_calls(
+    blueapi_calls = I151Plugin().construct_blueapi_calls(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)

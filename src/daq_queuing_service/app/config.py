@@ -13,7 +13,7 @@ TEST_CONFIG_PATH = "tests/test_data/test_config.yaml"
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
-class ConverterConfig(BaseModel):
+class PluginConfig(BaseModel):
     path: str
     name: str
 
@@ -46,7 +46,7 @@ class LoggingConfig(BaseModel):
 
 class AppConfig(BaseModel):
     blueapi: BlueapiConfig
-    converter: ConverterConfig
+    plugin: PluginConfig
     oidc: OIDCConfig | None = None
     authorisation_whitelist: list[str] | None = None
     runtime_estimation: RuntimeEstimationConfig | None = None
