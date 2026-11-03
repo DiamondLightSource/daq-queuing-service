@@ -106,7 +106,7 @@ class Task(BaseModel):
     @computed_field
     @property
     def runtime(self) -> float | None:
-        # This should get nicer once we have seperate types for queued, in progress and
+        # This should get nicer once we have separate types for queued, in progress and
         # complete tasks.
         if runtimes := [blueapi_call.runtime for blueapi_call in self.blueapi_calls]:
             total = 0
