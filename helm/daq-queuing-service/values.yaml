@@ -69,6 +69,9 @@ config:
       level: "INFO"
     stream:
       level: "DEBUG"
+  runtime_estimation:
+    enabled: true
+    url: "daq-runtime-estimator.diamond.ac.uk"
 
 volumeMounts: []
 volumes: []
