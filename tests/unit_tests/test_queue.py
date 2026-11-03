@@ -266,16 +266,21 @@ async def test_cancel_all_tasks_cancels_all_queued_tasks(
     assert task_queue_in_progress._queue == ["0"]  # This one is in progress
 
 
-async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_history(
+async def test__prune_tasks_from_registry_removes_tasks_not_in_queue_or_history(
     task_queue_with_history: TaskQueue,
 ):
-    assert "0" in task_queue_with_history._history
-    assert "4" in task_queue_with_history._queue
+    assert task_queue_with_history._history == ["0", "1"]
+    assert task_queue_with_history._queue == ["2", "3", "4"]
 
-    task_queue_with_history._remove_tasks_from_registry(["0", "4"])
+    task_queue_with_history._prune_tasks_from_registry()
 
-    assert "0" in task_queue_with_history._tasks
-    assert "4" in task_queue_with_history._tasks
+    assert list(task_queue_with_history._tasks.keys()) == ["0", "1", "2", "3", "4"]
+
+    task_queue_with_history._history.remove("0")
+    task_queue_with_history._queue.remove("3")
+    task_queue_with_history._prune_tasks_from_registry()
+
+    assert list(task_queue_with_history._tasks.keys()) == ["1", "2", "4"]
 
 
 async def test_get_queue_only_returns_tasks_in_queue(
