@@ -140,7 +140,6 @@ class TaskQueue:
         self._call_queue: list[BlueapiCall] = []
         self._call_history: list[BlueapiCall] = []
         self._save_contents()
-        self._queue_history: list[BlueapiCall] = []
         self._state: QueueState = QueueState(
             paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE
         )
@@ -187,7 +186,7 @@ class TaskQueue:
                     if self._tasks[task_id].status == Status.QUEUED
                 ],
                 self._get_history(),
-                self._queue_history,
+                self._get_call_history(),
             )
         except Exception as e:
             raise ConverterError(e) from e
@@ -229,7 +228,7 @@ class TaskQueue:
                     if task.status == Status.QUEUED
                 ],
                 self._get_history(),
-                self._queue_history,
+                self._get_call_history(),
             )
         except Exception as e:
             raise ConverterError(e) from e

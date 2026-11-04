@@ -1254,7 +1254,7 @@ async def test_if_error_during_conversion_then_error_handled_and_contents_restor
     def convert(
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ):
         for task_id in task_queue._queue:
             del task_queue._tasks[task_id]
@@ -1277,7 +1277,7 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
     def convert(
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ):
         raise ValueError("Conversion failed")
 
@@ -1350,10 +1350,13 @@ async def test__sync_calls_converter_pre_process_with_expected_args(
         for task_id in task_queue_with_history._queue[1:]
     ]
     history = task_queue_with_history._get_history()
+    call_history = task_queue_with_history._get_call_history()
 
     task_queue_with_history._sync()
 
-    converter.pre_process.assert_called_once_with(first_task, other_tasks, history, [])
+    converter.pre_process.assert_called_once_with(
+        first_task, other_tasks, history, call_history
+    )
 
 
 async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
