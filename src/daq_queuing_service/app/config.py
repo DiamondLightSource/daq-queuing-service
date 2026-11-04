@@ -23,6 +23,11 @@ class BlueapiConfig(BaseModel):
     api: RestConfig = Field(default_factory=RestConfig)
 
 
+class RuntimeEstimationConfig(BaseModel):
+    enabled: bool = True
+    url: str
+
+
 class LoggingHandlerConfig(BaseModel):
     level: LogLevel | int = logging.INFO
 
@@ -44,6 +49,7 @@ class AppConfig(BaseModel):
     converter: ConverterConfig
     oidc: OIDCConfig | None = None
     authorisation_whitelist: list[str] | None = None
+    runtime_estimation: RuntimeEstimationConfig | None = None
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     instrument: str | None = None
 
