@@ -68,7 +68,6 @@ class BaseTask(BaseModel, Generic[T]):
     request, and a list of blueapi calls to be made.
 
     Args:
-
         Generic (QueueBlueapiCall | BlueapiCall): The type of BlueapiCall contained in
         the blueapi_calls field. This is to differentiate between objects used by the
         queue internally and ones copied to pass to queue plugins or the API layer.
