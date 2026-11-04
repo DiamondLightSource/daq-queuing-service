@@ -10,6 +10,9 @@ blueapi:
     auth:
       username: guest
       password: guest
+runtime_estimation:
+  enabled: true
+  url: http://localhost:8002
 logging:
   graylog:
     enabled: false

@@ -634,6 +634,16 @@
             ],
             "title": "Authorisation Whitelist"
           },
+          "runtime_estimation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuntimeEstimationConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "logging": {
             "$ref": "#/components/schemas/LoggingConfig"
           },
@@ -700,7 +710,8 @@
           "time_started": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -711,7 +722,8 @@
           "time_completed": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -767,6 +779,17 @@
             },
             "type": "array",
             "title": "Scan Ids"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
           }
         },
         "type": "object",
@@ -780,7 +803,8 @@
           "errors",
           "blueapi_id",
           "tiled_ids",
-          "scan_ids"
+          "scan_ids",
+          "runtime"
         ],
         "title": "BlueapiCallResponse"
       },
@@ -1048,9 +1072,29 @@
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider"
+            "description": "URL to fetch OIDC config from the provider",
+            "deprecated": true
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer",
+            "description": "URL of OIDC provider"
           },
           "client_id": {
             "type": "string",
@@ -1073,7 +1117,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
@@ -1096,6 +1139,17 @@
           },
           "last_pause_reason": {
             "$ref": "#/components/schemas/PauseReason"
+          },
+          "estimated_runtime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Runtime"
           }
         },
         "type": "object",
@@ -1142,6 +1196,24 @@
         "additionalProperties": false,
         "type": "object",
         "title": "RestConfig"
+      },
+      "RuntimeEstimationConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "RuntimeEstimationConfig"
       },
       "Sample": {
         "properties": {
@@ -1370,6 +1442,28 @@
                 "type": "null"
               }
             ]
+          },
+          "estimated_runtime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Runtime"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
           }
         },
         "type": "object",
@@ -1380,7 +1474,9 @@
           "blueapi_calls",
           "position",
           "kind",
-          "user"
+          "user",
+          "estimated_runtime",
+          "runtime"
         ],
         "title": "TaskWithPosition"
       },
