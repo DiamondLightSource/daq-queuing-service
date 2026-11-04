@@ -9,6 +9,7 @@ from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
+    BlueapiCallResponse,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import (
@@ -89,7 +90,7 @@ class I151Converter(Converter):
         current_task: TaskWithPosition | None,
         queue: list[Task],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ) -> list[Task]:
         self._config_client.reset_cache()
         if self._queue_params.add_auxiliary_scans:
@@ -100,7 +101,7 @@ class I151Converter(Converter):
         self,
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
 
