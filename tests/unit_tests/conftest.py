@@ -20,7 +20,10 @@ from daq_queuing_service.app.config import (
     load_config,
 )
 from daq_queuing_service.broadcaster import Broadcaster
-from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+)
 from daq_queuing_service.external_interaction.runtime_estimator.client import (
     RuntimeEstimatorClient,
 )
@@ -142,7 +145,7 @@ async def task_queue_one_to_many(tasks: list[Task]):
     def construct_blueapi_calls(
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
         for task in queue:
