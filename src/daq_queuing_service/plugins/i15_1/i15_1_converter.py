@@ -8,8 +8,7 @@ from daq_config_server.models.i15_1 import QueueParameters, StandardsPin, Standa
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
-    BlueapiCall,
-    BlueapiCallResponse,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import (
@@ -38,9 +37,9 @@ from daq_queuing_service.task_queue.task import (
     ContainerPosition,
     Experiment,
     ExperimentDefinition,
+    QueueTask,
     Sample,
     Task,
-    TaskWithPosition,
 )
 
 CONFIG_SERVER_URL = "https://i15-1-daq-config.diamond.ac.uk"
@@ -87,10 +86,10 @@ class I151Converter(Converter):
 
     def pre_process(
         self,
-        current_task: TaskWithPosition | None,
+        current_task: QueueTask | None,
         queue: list[Task],
-        history: list[TaskWithPosition],
-        call_history: list[BlueapiCallResponse],
+        history: list[QueueTask],
+        call_history: list[QueueBlueapiCall],
     ) -> list[Task]:
         self._config_client.reset_cache()
         if self._queue_params.add_auxiliary_scans:
@@ -99,25 +98,25 @@ class I151Converter(Converter):
 
     def construct_blueapi_calls(
         self,
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
-        call_history: list[BlueapiCallResponse],
-    ) -> list[BlueapiCall]:
-        call_list: list[BlueapiCall] = []
+        queue: list[QueueTask],
+        history: list[QueueTask],
+        call_history: list[QueueBlueapiCall],
+    ) -> list[QueueBlueapiCall]:
+        call_list: list[QueueBlueapiCall] = []
 
         for task in queue:
             with add_session_to_logger(task.experiment.instrument_session):
                 match task.experiment:
                     case TaskRequest():
                         call_list.append(
-                            BlueapiCall(
+                            QueueBlueapiCall(
                                 task_request=task.experiment, parent_task_id=task.id
                             )
                         )
                     case Experiment():
                         call_list.extend(
                             [
-                                BlueapiCall(
+                                QueueBlueapiCall(
                                     task_request=b_api_task, parent_task_id=task.id
                                 )
                                 for b_api_task in (
@@ -130,7 +129,7 @@ class I151Converter(Converter):
         return call_list
 
     def pause_on_fail_blueapi_call(
-        self, call: BlueapiCall, errors: list[str | TaskError] | None
+        self, call: QueueBlueapiCall, errors: list[str | TaskError] | None
     ) -> bool:
 
         for error in errors or []:
@@ -180,13 +179,13 @@ class I151Converter(Converter):
         return plans
 
     def _add_required_auxiliary_scans(
-        self, current_task: TaskWithPosition | None, tasks: list[Task]
+        self, current_task: QueueTask | None, tasks: list[Task]
     ) -> list[Task]:
         """Adds auxiliary scan tasks to the queue. They will be added directly
         in front of the first task in the queue that requires them.
 
         Args:
-            current_task (TaskWithPosition | None): Current running task, if one exists.
+            current_task (QueueTask | None): Current running task, if one exists.
             tasks (list[Task]): Current list of tasks
 
         Returns:
@@ -224,7 +223,7 @@ class I151Converter(Converter):
     def _ensure_auxiliary_in_queue_or_tiled(
         self,
         required_auxiliary: AuxiliaryScan,
-        current_task: TaskWithPosition | None,
+        current_task: QueueTask | None,
         new_tasks: list[Task],
         task_id: str,
         instrument_session: str,

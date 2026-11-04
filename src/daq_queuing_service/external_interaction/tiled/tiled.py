@@ -9,7 +9,9 @@ from tiled.client import from_uri
 from tiled.client.container import Container
 from tiled.queries import Eq
 
-from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+)
 from daq_queuing_service.log import LOGGER
 
 # Ignoring the following rule as the tiled client is poorly typed

@@ -13,8 +13,8 @@ from tiled.client.container import Container
 from daq_queuing_service.broadcaster import Broadcaster, Event
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
-    BlueapiCallResponse,
     CallStatus,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.external_interaction.runtime_estimator.client import (
     RuntimeEstimatorClient,
@@ -38,7 +38,7 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotFoundError,
     TaskNotInQueueError,
 )
-from daq_queuing_service.task_queue.task import Status, Task, TaskWithPosition
+from daq_queuing_service.task_queue.task import QueueTask, Status, Task
 
 
 class TaskRegistry(dict[str, Task]):
@@ -62,8 +62,8 @@ class QueueState(BaseModel):
 class QueueContents(TypedDict):
     """A class to represent the contents of the queue
 
-    tasks (dict[str, Task]): A dict containing all the tasks contained in the queue,
-        including history, with the task ID as the key.
+    tasks (dict[str, Task]): A dict containing all the tasks contained in the
+        queue, including history, with the task ID as the key.
 
     queue (list[str]): A list of the task IDs of the tasks in the queue. The order of
         the list represents the order of the queue.
@@ -221,21 +221,24 @@ class TaskQueue:
         ]
 
         try:
-            new_calls = self._converter.construct_blueapi_calls(
-                [
-                    task
-                    for task in self._get_queue_with_positions()
-                    if task.status == Status.QUEUED
-                ],
-                self._get_history(),
-                self._get_call_history(),
-            )
+            new_blueapi_calls = [
+                BlueapiCall.from_parent(call)
+                for call in self._converter.construct_blueapi_calls(
+                    [
+                        task
+                        for task in self._get_queue_with_positions()
+                        if task.status == Status.QUEUED
+                    ],
+                    self._get_history(),
+                    self._get_call_history(),
+                )
+            ]
         except Exception as e:
             raise ConverterError(e) from e
 
-        self._call_queue.extend(new_calls)
+        self._call_queue.extend(new_blueapi_calls)
 
-        for call in new_calls:
+        for call in new_blueapi_calls:
             # Add children to parent tasks
             if call.parent_task_id:
                 self._tasks[call.parent_task_id].blueapi_calls.append(call)
@@ -399,14 +402,14 @@ class TaskQueue:
             call.fail(errors)
             self._call_history.append(call)
 
-    async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
+    async def get_task_by_id(self, task_id: str) -> QueueTask:
         """Returns a task based on it's task ID
 
         Args:
             task_id (str): Task ID of the task
 
         Returns:
-            TaskWithPosition: A copy of the task with a position field.
+            QueueTask: A copy of the task with a position field.
 
         Raises:
             TaskNotFoundError: Raised if the no task exists with the requested task ID.
@@ -415,57 +418,57 @@ class TaskQueue:
         async with self._lock:
             return self._get_task_by_id(task_id)
 
-    def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
+    def _get_task_by_id(self, task_id: str) -> QueueTask:
         task = self._tasks[task_id]
         position = self._queue.index(task.id) if task.id in self._queue else None
-        return TaskWithPosition.from_task(task, position)
+        return QueueTask.from_task(task, position)
 
-    async def get_task_by_position(self, position: int) -> TaskWithPosition | None:
+    async def get_task_by_position(self, position: int) -> QueueTask | None:
         """Return a task based on it's position in the queue
 
         Args:
             position (int): The position of the task to be returned.
 
         Returns:
-            TaskWithPosition | None: A copy of the task with a position field, or None
+            QueueTask | None: A copy of the task with a position field, or None
             if no task exists at the requested position.
         """
         # Returns copy so don't have to be worried about caller modifying task.
         async with self._lock:
             return self._get_task_by_position(position)
 
-    def _get_task_by_position(self, position: int) -> TaskWithPosition | None:
+    def _get_task_by_position(self, position: int) -> QueueTask | None:
         if position < -self.length or position >= self.length:
             return
         return self._get_task_by_id(self._queue[position])
 
-    async def get_queue(self) -> list[TaskWithPosition]:
+    async def get_queue(self) -> list[QueueTask]:
         """Get the entire queue (not including history)
 
         Returns:
-            list[TaskWithPosition]: A list of the tasks in the queue, in the order they
+            list[QueueTask]: A list of the tasks in the queue, in the order they
             will be run in.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._lock:
             return self._get_queue_with_positions()
 
-    async def get_history(self) -> list[TaskWithPosition]:
+    async def get_history(self) -> list[QueueTask]:
         """Get the history list.
 
         Returns:
-            list[TaskWithPosition]: A list of the tasks in the history list, in
+            list[QueueTask]: A list of the tasks in the history list, in
             chronological order.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
         async with self._lock:
             return self._get_history()
 
-    async def get_tasks(self) -> list[TaskWithPosition]:
+    async def get_tasks(self) -> list[QueueTask]:
         """Get all the tasks in the queue and history list.
 
         Returns:
-            list[TaskWithPosition]: A list of tasks in chronological order, starting
+            list[QueueTask]: A list of tasks in chronological order, starting
             with the history.
         """
         # Returns copies so don't have to be worried about caller modifying tasks.
@@ -511,7 +514,7 @@ class TaskQueue:
         LOGGER.info(f"Successfully moved task {task_id} to position {new_position}")
         return new_position
 
-    async def cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
+    async def cancel_tasks(self, task_ids: Sequence[str]) -> list[QueueTask]:
         """Remove tasks from the queue. If one or more of the requested tasks cannot be
         cancelled as they are complete or in progress, an error will be raised and none
         of the requested tasks will be cancelled.
@@ -520,7 +523,7 @@ class TaskQueue:
             task_ids (Sequence[str]): List of task IDs to cancel
 
         Returns:
-            list[TaskWithPosition]: List of the task objects that were removed from the
+            list[QueueTask]: List of the task objects that were removed from the
             queue.
         """
         async with self._modifying:
@@ -528,7 +531,7 @@ class TaskQueue:
         LOGGER.info(f"Successfully cancelled tasks: {task_ids}")
         return cancelled_tasks
 
-    async def cancel_all_tasks(self) -> list[TaskWithPosition]:
+    async def cancel_all_tasks(self) -> list[QueueTask]:
         async with self._modifying:
             task_ids = [
                 id
@@ -640,14 +643,14 @@ class TaskQueue:
         for task in tasks:
             self._tasks[task.id] = task
 
-    def _cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
+    def _cancel_tasks(self, task_ids: Sequence[str]) -> list[QueueTask]:
         task_ids = list(task_ids)
         self._validate_tasks_for_move_or_deletion(task_ids)
         self._remove_tasks_from_queue(task_ids)
         tasks = [self._tasks[task_id] for task_id in task_ids]
         for task in tasks:
             task.cancel()
-        return [TaskWithPosition.from_task(task) for task in tasks]
+        return [QueueTask.from_task(task) for task in tasks]
 
     def _remove_tasks_from_queue(self, task_ids: list[str]) -> list[str]:
         #  Only removes tasks in the queue (not history or registry)
@@ -695,33 +698,30 @@ class TaskQueue:
     def _get_queue(self) -> list[Task]:
         return [self._tasks[task_id] for task_id in self._queue]
 
-    def _get_queue_with_positions(self) -> list[TaskWithPosition]:
+    def _get_queue_with_positions(self) -> list[QueueTask]:
         return [
-            TaskWithPosition.from_task(self._tasks[task_id], i)
+            QueueTask.from_task(self._tasks[task_id], i)
             for i, task_id in enumerate(self._queue)
         ]
 
-    def _get_history(self) -> list[TaskWithPosition]:
-        return [
-            TaskWithPosition.from_task(self._tasks[task_id])
-            for task_id in self._history
-        ]
+    def _get_history(self) -> list[QueueTask]:
+        return [QueueTask.from_task(self._tasks[task_id]) for task_id in self._history]
 
-    async def get_call_queue(self) -> list[BlueapiCallResponse]:
+    async def get_call_queue(self) -> list[QueueBlueapiCall]:
         async with self._lock:
             return self._get_call_queue()
 
-    def _get_call_queue(self) -> list[BlueapiCallResponse]:
-        return [call.to_response() for call in self._call_queue]
+    def _get_call_queue(self) -> list[QueueBlueapiCall]:
+        return [call.to_parent() for call in self._call_queue]
 
-    async def get_call_history(self) -> list[BlueapiCallResponse]:
+    async def get_call_history(self) -> list[QueueBlueapiCall]:
         async with self._lock:
             return self._get_call_history()
 
-    def _get_call_history(self) -> list[BlueapiCallResponse]:
-        return [call.to_response() for call in self._call_history]
+    def _get_call_history(self) -> list[QueueBlueapiCall]:
+        return [call.to_parent() for call in self._call_history]
 
-    def _get_running_task(self) -> TaskWithPosition | None:
+    def _get_running_task(self) -> QueueTask | None:
         current_task = self._get_task_by_position(0)
         if current_task and current_task.status == Status.IN_PROGRESS:
             return current_task

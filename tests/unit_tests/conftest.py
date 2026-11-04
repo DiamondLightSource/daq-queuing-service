@@ -21,8 +21,7 @@ from daq_queuing_service.app.config import (
 )
 from daq_queuing_service.broadcaster import Broadcaster
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
-    BlueapiCall,
-    BlueapiCallResponse,
+    QueueBlueapiCall,
 )
 from daq_queuing_service.external_interaction.runtime_estimator.client import (
     RuntimeEstimatorClient,
@@ -36,9 +35,9 @@ from daq_queuing_service.task_queue.task import (
     ContainerPosition,
     Experiment,
     ExperimentDefinition,
+    QueueTask,
     Sample,
     Task,
-    TaskWithPosition,
 )
 from daq_queuing_service.worker.worker import LOGGER as WORKER_LOGGER
 
@@ -143,16 +142,16 @@ async def task_queue(
 @pytest.fixture
 async def task_queue_one_to_many(tasks: list[Task]):
     def construct_blueapi_calls(
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
-        call_history: list[BlueapiCallResponse],
-    ) -> list[BlueapiCall]:
-        call_list: list[BlueapiCall] = []
+        queue: list[QueueTask],
+        history: list[QueueTask],
+        call_history: list[QueueBlueapiCall],
+    ) -> list[QueueBlueapiCall]:
+        call_list: list[QueueBlueapiCall] = []
         for task in queue:
             for _ in range(2):
                 assert isinstance(task.experiment, Experiment)
                 call_list.append(
-                    BlueapiCall(
+                    QueueBlueapiCall(
                         parent_task_id=task.id,
                         task_request=TaskRequest(
                             name=task.experiment.experiment_definition.name,
