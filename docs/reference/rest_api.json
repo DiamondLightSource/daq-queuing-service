@@ -1097,7 +1097,8 @@
           "parent_task_id",
           "runtime"
         ],
-        "title": "QueueBlueapiCall"
+        "title": "QueueBlueapiCall",
+        "description": "A class representing a call to blueapi, containing the plan parameters and\nsome associated metadata. Constructed by a queue plugin."
       },
       "QueueState": {
         "properties": {
@@ -1224,7 +1225,8 @@
           "kind",
           "runtime"
         ],
-        "title": "QueueTask"
+        "title": "QueueTask",
+        "description": "Task object with a position field, for passing to a queue plugin or API layer."
       },
       "RestConfig": {
         "properties": {
