@@ -1,10 +1,49 @@
+include: 
+  - ./dev-environment/daq-services/compose.yaml
+
 services:
-  rabbitmq:
-    image: docker.io/rabbitmq:4.0-management
-    ports:
-      - "1883:1883"
-      - "5672:5672"
-      - "15672:15672"
-      - "61613:61613"
+  blueapi:
+    image: ghcr.io/diamondlightsource/blueapi:1.18.0
+    network_mode: host # 8000
     volumes:
-      - ./services/rabbitmq_plugins:/etc/rabbitmq/enabled_plugins:ro,Z
+      - ./services/blueapi:/blueapi
+    entrypoint:  "sh /blueapi/start.sh"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    security_opt:
+      - label=disable
+    # Might be not required 
+    # don't know if daq-queing-service make a call to blueapi at startup
+    # healthcheck:
+    #   test: curl https://localhost/healthz
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 10s
+    profiles:
+      - test
+     
+  daq-queuing-service:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    volumes: 
+      - ./services/daq_queuing_service.yaml:/etc/config/config.yaml
+    security_opt:
+      - label=disable
+    profiles:
+      - test
+  nexus:
+    image: gitlab.diamond.ac.uk:5050/daq/d2acq/services/nexus-file-converter:4.1.6
+    environment:
+      - BEAMLINE=i15-1
+    security_opt:
+      - label=disable
+    profiles:
+      - diamond
+  
+  # A container with just puts bundler data for OPA
+  # and creates any keycloak clients that are required
+
+  #configure_beamline:
