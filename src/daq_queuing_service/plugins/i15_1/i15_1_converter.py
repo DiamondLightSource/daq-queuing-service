@@ -330,11 +330,14 @@ class I151Converter(Converter):
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
         data: dict[str, Any] = {"time_per_pdf": auxiliary_scan.time_per_pdf}
         if auxiliary_scan.list_of_temperatures:
-            settle_time = self._queue_params.blower_collection_params.settle_time_s
+            settle_time = (
+                self._queue_params.blower_auxiliary_collection_params.settle_time_s
+            )
+            ramp_rate = self._queue_params.blower_auxiliary_collection_params.ramp_rate
             data.update(
                 {
                     "list_of_temperatures": auxiliary_scan.list_of_temperatures,
-                    "ramp_rate": self._queue_params.blower_collection_params.ramp_rate,
+                    "ramp_rate": ramp_rate,
                     "settle_time": settle_time,
                 }
             )
