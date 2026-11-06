@@ -3,7 +3,7 @@ from typing import Any, Self, TypeAlias
 from uuid import uuid4
 
 from blueapi.service.model import TaskRequest
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 from daq_queuing_service.app.authentication import User
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
@@ -67,6 +67,15 @@ class TaskRules(BaseModel):
     movable: bool = True
     run_before: set[TaskID] = Field(default_factory=set)
     run_after: set[TaskID] = Field(default_factory=set)
+
+    @model_validator(mode="after")
+    def ensure_rules_do_not_contradict(self) -> Self:
+        if in_both := self.run_before.intersection(self.run_after):
+            raise ValueError(
+                f"{in_both} appear in both run_before and run_after. "
+                + "This is an impossible requirement."
+            )
+        return self
 
 
 class Task(BaseModel):
@@ -137,6 +146,7 @@ class TaskWithPosition(BaseModel):
     user: User | None
     estimated_runtime: int | None
     runtime: float | None
+    rules: TaskRules
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:
