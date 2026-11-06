@@ -119,8 +119,7 @@ class QueueWorker:
         error: InvalidParametersError
         | UnknownPlanError
         | ServiceUnavailableError
-        | BlueskyRemoteControlError
-        | ServiceUnavailableError,
+        | BlueskyRemoteControlError,
     ):
         match error:
             case InvalidParametersError():
