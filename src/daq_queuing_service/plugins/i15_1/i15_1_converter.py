@@ -40,6 +40,8 @@ from daq_queuing_service.task_queue.task import (
     ExperimentDefinition,
     Sample,
     Task,
+    TaskID,
+    TaskRules,
     TaskWithPosition,
 )
 
@@ -52,9 +54,11 @@ QUEUE_PARAMS_CONFIG_PATH = (
 )
 
 
-def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
+def _filter_auxiliary_scans(
+    tasks: list[Task],
+) -> list[tuple[int, TaskID, AuxiliaryScan]]:
     return [
-        (i, AuxiliaryScan.from_experiment(task.experiment))
+        (i, task.id, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
         and is_auxiliary_experiment(task.experiment)
@@ -63,9 +67,8 @@ def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]
 
 class I151Converter(Converter):
     def __init__(self):
-        # First key is the ID of the task using the auxiliary scan
         self._tiled_auxiliary_scans: dict[
-            str, dict[AuxiliaryScanType, TiledAuxiliary]
+            TaskID, dict[AuxiliaryScanType, TiledAuxiliary]
         ] = {}
         self._config_client = ConfigClient.from_url(CONFIG_SERVER_URL)
 
@@ -144,7 +147,7 @@ class I151Converter(Converter):
         return True
 
     def _construct_blueapi_tasks_from_experiment(
-        self, experiment: Experiment, task_id: str
+        self, experiment: Experiment, task_id: TaskID
     ) -> list[TaskRequest]:
         LOGGER.debug(f"Converting to blueapi calls, experiment = {experiment}")
 
@@ -214,7 +217,7 @@ class I151Converter(Converter):
                             required_auxiliary,
                             current_task,
                             new_tasks,
-                            task.id,
+                            task,
                             instrument_session,
                         )
 
@@ -226,7 +229,7 @@ class I151Converter(Converter):
         required_auxiliary: AuxiliaryScan,
         current_task: TaskWithPosition | None,
         new_tasks: list[Task],
-        task_id: str,
+        task: Task,
         instrument_session: str,
     ) -> list[Task]:
         if (
@@ -237,13 +240,19 @@ class I151Converter(Converter):
                 required_auxiliary
             )
         ):
+            task.rules.run_after.add(current_task.id)
             return new_tasks
 
         queued_auxiliary_scans = _filter_auxiliary_scans(new_tasks)
-        if any(
-            queued_auxiliary.is_suitable(required_auxiliary)
-            for _, queued_auxiliary in queued_auxiliary_scans
+        if suitable_task_id := next(
+            (
+                task_id
+                for _, task_id, auxiliary_scan in queued_auxiliary_scans
+                if auxiliary_scan.is_suitable(required_auxiliary)
+            ),
+            None,
         ):
+            task.rules.run_after.add(suitable_task_id)
             return new_tasks
 
         if tiled_scan := get_suitable_tiled_scan(
@@ -251,7 +260,7 @@ class I151Converter(Converter):
             required_auxiliary,
             self._queue_params.tiled_stale_time_s,
         ):
-            self._tiled_auxiliary_scans[task_id][tiled_scan.kind] = tiled_scan
+            self._tiled_auxiliary_scans[task.id][tiled_scan.kind] = tiled_scan
             return new_tasks
 
         LOGGER.info(
@@ -261,6 +270,7 @@ class I151Converter(Converter):
         return self._add_or_replace_auxiliary_scan(
             required_auxiliary,
             new_tasks,
+            task,
             queued_auxiliary_scans,
             instrument_session,
         )
@@ -269,26 +279,38 @@ class I151Converter(Converter):
         self,
         required_auxiliary: AuxiliaryScan,
         new_tasks: list[Task],
-        queued_auxiliary_scans: list[tuple[int, AuxiliaryScan]],
+        task: Task,
+        queued_auxiliary_scans: list[tuple[int, TaskID, AuxiliaryScan]],
         instrument_session: str,
     ) -> list[Task]:
         combined_auxiliary_scan = None
         index = None
+        aux_task_id = None
 
-        for i, auxiliary_scan in queued_auxiliary_scans:
+        for i, task_id, auxiliary_scan in queued_auxiliary_scans:
             if combined_auxiliary_scan := auxiliary_scan.attempt_to_combine_with(
                 required_auxiliary
             ):
+                aux_task_id = task_id
                 index = i
                 break
 
         aux_experiment = self._construct_auxiliary_experiment(
             combined_auxiliary_scan or required_auxiliary, instrument_session
         )
-        if index is None:
-            new_tasks.append(Task(experiment=aux_experiment))
+        if index is None or aux_task_id is None:
+            new_tasks.append(
+                Task(experiment=aux_experiment, rules=TaskRules(movable=False))
+            )
+            aux_task_id = new_tasks[-1].id
         else:
-            new_tasks[index] = Task(experiment=aux_experiment)
+            new_tasks[index] = Task(
+                experiment=aux_experiment,
+                id=aux_task_id,
+                rules=TaskRules(movable=False),
+            )
+
+        task.rules.run_after.add(aux_task_id)
         return new_tasks
 
     def _get_required_auxiliary_scans(
