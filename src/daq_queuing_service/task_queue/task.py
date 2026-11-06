@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Self, TypeAlias
 from uuid import uuid4
 
 from blueapi.service.model import TaskRequest
@@ -47,6 +47,9 @@ def create_uuid_str() -> str:
     return str(uuid4())
 
 
+TaskID: TypeAlias = str
+
+
 class Status(StrEnum):
     QUEUED = "Queued"
     IN_PROGRESS = "In progress"
@@ -60,12 +63,19 @@ class TaskKind(StrEnum):
     PLAN = "Plan"
 
 
+class TaskRules(BaseModel):
+    movable: bool = True
+    run_before: set[TaskID] = Field(default_factory=set)
+    run_after: set[TaskID] = Field(default_factory=set)
+
+
 class Task(BaseModel):
     experiment: Experiment | TaskRequest
-    id: str = Field(default_factory=create_uuid_str)
+    id: TaskID = Field(default_factory=create_uuid_str)
     blueapi_calls: list[BlueapiCall] = Field(default_factory=lambda: [])
     user: User | None = None
     estimated_runtime: int | None = None
+    rules: TaskRules = Field(default_factory=TaskRules)
     _cancelled: bool = False
 
     def cancel(self):

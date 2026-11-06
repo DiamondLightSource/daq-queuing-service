@@ -37,8 +37,10 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotClaimedError,
     TaskNotFoundError,
     TaskNotInQueueError,
+    TaskNotMovableError,
+    validate_task_position,
 )
-from daq_queuing_service.task_queue.task import Status, Task, TaskWithPosition
+from daq_queuing_service.task_queue.task import Status, Task, TaskID, TaskWithPosition
 
 
 class TaskRegistry(dict[str, Task]):
@@ -65,10 +67,10 @@ class QueueContents(TypedDict):
     tasks (dict[str, Task]): A dict containing all the tasks contained in the queue,
         including history, with the task ID as the key.
 
-    queue (list[str]): A list of the task IDs of the tasks in the queue. The order of
+    queue (list[TaskID]): A list of the task IDs of the tasks in the queue. The order of
         the list represents the order of the queue.
 
-    history (list[str]): A list of the task IDs of any completed tasks.
+    history (list[TaskID]): A list of the task IDs of any completed tasks.
 
     call_queue: (list[BlueapiCall]): A list of blueapi calls that will be executed in
         order to complete the queued tasks.
@@ -77,8 +79,8 @@ class QueueContents(TypedDict):
     """
 
     tasks: dict[str, Task]
-    queue: list[str]
-    history: list[str]
+    queue: list[TaskID]
+    history: list[TaskID]
     call_queue: list[BlueapiCall]
     call_history: list[BlueapiCall]
 
@@ -135,8 +137,8 @@ class TaskQueue:
     ):
         self.instrument = instrument
         self._tasks: TaskRegistry = TaskRegistry()
-        self._queue: list[str] = []
-        self._history: list[str] = []
+        self._queue: list[TaskID] = []
+        self._history: list[TaskID] = []
         self._call_queue: list[BlueapiCall] = []
         self._call_history: list[BlueapiCall] = []
         self._save_contents()
@@ -203,6 +205,9 @@ class TaskQueue:
             if not self._tasks[task_id].status == Status.QUEUED
         ]
         self._queue.extend(task.id for task in new_tasks)
+
+        # Ensure new task positions don't break any rules
+        self._validate_queue_positions()
 
         # This is needed because pre_process could remove tasks
         self._remove_tasks_from_registry(list(self._tasks.keys()))
@@ -503,8 +508,8 @@ class TaskQueue:
             int: The new position of the task (may be different to what was requested)
         """
         async with self._modifying:
-            self._validate_tasks_for_move_or_deletion([task_id])
             position = self._get_valid_position(position)
+            self._validate_task_for_move(task_id, position)
             self._remove_tasks_from_queue([task_id])
             self._queue[position:position] = [task_id]
             new_position = self._queue.index(task_id)
@@ -649,7 +654,7 @@ class TaskQueue:
             task.cancel()
         return [TaskWithPosition.from_task(task) for task in tasks]
 
-    def _remove_tasks_from_queue(self, task_ids: list[str]) -> list[str]:
+    def _remove_tasks_from_queue(self, task_ids: list[TaskID]) -> list[TaskID]:
         #  Only removes tasks in the queue (not history or registry)
         def should_be_removed(task_id: str):
             return (
@@ -662,7 +667,7 @@ class TaskQueue:
 
         return removed_ids
 
-    def _remove_tasks_from_registry(self, task_ids: list[str]) -> None:
+    def _remove_tasks_from_registry(self, task_ids: list[TaskID]) -> None:
         # Only removes tasks not present in the queue or history
         # So should remove tasks from queue/history before removing from registry
         def should_be_removed(task_id: str) -> bool:
@@ -682,7 +687,7 @@ class TaskQueue:
             }
         )
 
-    def _validate_tasks_for_move_or_deletion(self, task_ids: list[str]):
+    def _validate_tasks_for_move_or_deletion(self, task_ids: list[TaskID]):
         for task_id in task_ids:
             task = self._tasks[task_id]
             if task_id not in self._queue:
@@ -691,6 +696,31 @@ class TaskQueue:
                 raise TaskInProgressError(
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )
+
+    def _validate_task_for_move(self, task_id: TaskID, position: int):
+        task = self._tasks[task_id]
+        if not task.rules.movable:
+            raise TaskNotMovableError(
+                "Task isn't movable. See the following rules for task "
+                + f"{task_id}: {task.rules}"
+            )
+        self._validate_task_in_position(task_id, position)
+        self._validate_tasks_for_move_or_deletion([task_id])
+
+    def _validate_task_in_position(self, task_id: TaskID, position: int):
+        task = self._tasks[task_id]
+        queue_without_task = [_id for _id in self._queue if _id != task_id]
+        queue_after_move = (
+            queue_without_task[:position] + [task_id] + queue_without_task[position:]
+        )
+        positions = {_id: i for i, _id in enumerate(queue_after_move)}
+        validate_task_position(task, positions)
+
+    def _validate_queue_positions(self):
+        positions = {_id: i for i, _id in enumerate(self._queue)}
+        for task_id in self._queue:
+            task = self._tasks[task_id]
+            validate_task_position(task, positions)
 
     def _get_queue(self) -> list[Task]:
         return [self._tasks[task_id] for task_id in self._queue]
@@ -749,3 +779,5 @@ class TaskQueue:
     @cached_property
     def _tiled_client(self) -> Container:
         return get_tiled_client()
+
+    def _check_rules(self): ...
