@@ -20,10 +20,15 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     AuxiliaryScanType,
     TiledAuxiliary,
+    is_auxiliary_experiment,
 )
 from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
 from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
+from daq_queuing_service.task_queue.queue_utils import (
+    TaskNotMovableError,
+    TaskPositionError,
+)
 from daq_queuing_service.task_queue.task import (
     Container,
     ContainerPosition,
@@ -1117,3 +1122,24 @@ def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)
+
+
+async def test_auxiliary_scans_cannot_be_moved(queue_with_i15_1_plugin: TaskQueue):
+    for i in range(len(queue_with_i15_1_plugin._queue)):
+        task = await queue_with_i15_1_plugin.get_task_by_position(i)
+        assert task and isinstance(task.experiment, Experiment)
+        if is_auxiliary_experiment(task.experiment):
+            with pytest.raises(TaskNotMovableError):
+                await queue_with_i15_1_plugin.move_task(task.id, 4)
+
+
+async def test_scans_cannot_be_moved_before_auxiliaries(
+    queue_with_i15_1_plugin: TaskQueue,
+):
+    for i in range(len(queue_with_i15_1_plugin._queue)):
+        task = await queue_with_i15_1_plugin.get_task_by_position(i)
+        assert task and isinstance(task.experiment, Experiment)
+        if not is_auxiliary_experiment(task.experiment):
+            for j in range(3):
+                with pytest.raises(TaskPositionError):
+                    await queue_with_i15_1_plugin.move_task(task.id, j)
