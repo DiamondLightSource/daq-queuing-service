@@ -115,7 +115,8 @@ class AuxiliaryScan(BaseModel):
         temperature_step: int = DEFAULT_TEMPERATURE_STEP,
     ) -> "AuxiliaryScan | None":
         """Creates a background that combines the requirements of this background object
-        and a provided required background, if possible.
+        and a provided required background, if possible. Anything that previously deemed
+        this scan as suitable should also deem the combined scan suitable.
 
         Args:
             required_background (AuxiliaryScan): The required background

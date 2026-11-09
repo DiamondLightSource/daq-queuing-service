@@ -781,19 +781,19 @@ def test_add_required_background_scans_combines_similar_background_requirements(
     assert (
         isinstance(new_tasks[2].experiment, Experiment)
         and new_tasks[2].experiment.sample
-        and new_tasks[2].experiment.sample.name == "Silicon fq1.0"
+        and new_tasks[2].experiment.sample.name == "Empty fq1.0"
     )
     assert (
-        isinstance(new_tasks[6].experiment, Experiment)
-        and new_tasks[6].experiment.sample
-        and new_tasks[6].experiment.sample.name == "Empty fq1.0"
+        isinstance(new_tasks[3].experiment, Experiment)
+        and new_tasks[3].experiment.sample
+        and new_tasks[3].experiment.sample.name == "Silicon fq1.0"
     )
     # Should have the maximum time_per_pdf of i15_1_tasks
     assert new_tasks[0].experiment.experiment_definition.data["time_per_pdf"] == 25
     assert new_tasks[1].experiment.experiment_definition.data["time_per_pdf"] == 25
-    assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 25
+    assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 20
+    assert new_tasks[3].experiment.experiment_definition.data["time_per_pdf"] == 25
     # This one isn't a temperature experiment so needs a separate empty capillary
-    assert new_tasks[6].experiment.experiment_definition.data["time_per_pdf"] == 20
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_in_each(
@@ -820,29 +820,29 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
         "fq1.0",
         standards_puck,
     )
-    assert new_tasks[2].model_dump() == standard_sample_task(
-        new_tasks[2].id, "cm12345-1", 25.0, "fq1.0", "Silicon", standards_puck
+    assert new_tasks[2].model_dump() == empty_capillary_task(
+        new_tasks[2].id, "cm12345-1", 20.0, None, "fq1.0", standards_puck
+    )
+    assert new_tasks[3].model_dump() == standard_sample_task(
+        new_tasks[3].id, "cm12345-1", 25.0, "fq1.0", "Silicon", standards_puck
     )
 
-    assert new_tasks[4].model_dump() == air_task(new_tasks[4].id, "different", 10.0)
-    assert new_tasks[5].model_dump() == empty_capillary_task(
-        new_tasks[5].id, "different", 10.0, [100, 200], "fq1.0", standards_puck
+    assert new_tasks[5].model_dump() == air_task(new_tasks[5].id, "different", 10.0)
+    assert new_tasks[6].model_dump() == empty_capillary_task(
+        new_tasks[6].id, "different", 10.0, [100, 200], "fq1.0", standards_puck
     )
-    assert new_tasks[6].model_dump() == standard_sample_task(
-        new_tasks[6].id, "different", 10.0, "fq1.0", "Silicon", standards_puck
+    assert new_tasks[7].model_dump() == standard_sample_task(
+        new_tasks[7].id, "different", 10.0, "fq1.0", "Silicon", standards_puck
     )
 
-    assert new_tasks[8].model_dump() == air_task(
-        new_tasks[8].id, "also_different", 10.0
+    assert new_tasks[9].model_dump() == air_task(
+        new_tasks[9].id, "also_different", 10.0
     )
-    assert new_tasks[9].model_dump() == empty_capillary_task(
-        new_tasks[9].id, "also_different", 10.0, [200, 300], "fq1.0", standards_puck
+    assert new_tasks[10].model_dump() == empty_capillary_task(
+        new_tasks[10].id, "also_different", 10.0, [200, 300], "fq1.0", standards_puck
     )
-    assert new_tasks[10].model_dump() == standard_sample_task(
-        new_tasks[10].id, "also_different", 10.0, "fq1.0", "Silicon", standards_puck
-    )
-    assert new_tasks[12].model_dump() == empty_capillary_task(
-        new_tasks[12].id, "cm12345-1", 20.0, None, "fq1.0", standards_puck
+    assert new_tasks[11].model_dump() == standard_sample_task(
+        new_tasks[11].id, "also_different", 10.0, "fq1.0", "Silicon", standards_puck
     )
 
 
@@ -993,12 +993,10 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
         # 5 is wait_for_beam
         (6, ScanType.EMPTY_CAPILLARY),
         # 7 is robot unload
-        # 8 is robot load
-        # 9 is wait_for_beam
-        # 10 is centring
-        # 11 is wait_for_beam
-        (12, ScanType.STANDARD_SAMPLE),
-        (18, ScanType.DATA_COLLECTION),
+        # etc
+        (12, ScanType.EMPTY_CAPILLARY),
+        (18, ScanType.STANDARD_SAMPLE),
+        (24, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(

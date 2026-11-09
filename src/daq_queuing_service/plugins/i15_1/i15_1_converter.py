@@ -260,6 +260,7 @@ class I151Converter(Converter):
         )
         return self._add_or_replace_auxiliary_scan(
             required_auxiliary,
+            current_task,
             new_tasks,
             queued_auxiliary_scans,
             instrument_session,
@@ -268,10 +269,13 @@ class I151Converter(Converter):
     def _add_or_replace_auxiliary_scan(
         self,
         required_auxiliary: AuxiliaryScan,
+        current_task: TaskWithPosition | None,
         new_tasks: list[Task],
         queued_auxiliary_scans: list[tuple[int, AuxiliaryScan]],
         instrument_session: str,
     ) -> list[Task]:
+        # It is assumed every scan in queued_auxiliary_scans has already added their
+        # requirements before for them
         combined_auxiliary_scan = None
         index = None
 
@@ -285,10 +289,25 @@ class I151Converter(Converter):
         aux_experiment = self._construct_auxiliary_experiment(
             combined_auxiliary_scan or required_auxiliary, instrument_session
         )
+        aux_task = Task(experiment=aux_experiment)
+
         if index is None:
-            new_tasks.append(Task(experiment=aux_experiment))
+            prefix = new_tasks
+            suffix = []
         else:
-            new_tasks[index] = Task(experiment=aux_experiment)
+            prefix = new_tasks[:index]
+            suffix = new_tasks[index + 1 :]
+
+        for required in required_auxiliary.requires:
+            prefix = self._ensure_auxiliary_in_queue_or_tiled(
+                required,
+                current_task,
+                prefix,
+                aux_task.id,
+                instrument_session,
+            )
+        new_tasks = prefix + [aux_task] + suffix
+
         return new_tasks
 
     def _get_required_auxiliary_scans(
