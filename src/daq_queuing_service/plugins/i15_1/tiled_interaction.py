@@ -76,9 +76,7 @@ def get_suitable_tiled_scan(
 
             requires = [
                 TiledAuxiliary.model_validate(auxiliary_scan)
-                for auxiliary_scan in start_doc["experiment_definition"]["data"]
-                .get("auxiliary_scans", {})
-                .values()
+                for auxiliary_scan in start_doc.get("auxiliary_scans", {}).values()
             ]
 
             auxiliary_scan = TiledAuxiliary(
