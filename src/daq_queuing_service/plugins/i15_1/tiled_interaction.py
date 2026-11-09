@@ -74,6 +74,13 @@ def get_suitable_tiled_scan(
                 "list_of_temperatures"
             )
 
+            requires = [
+                TiledAuxiliary.model_validate(auxiliary_scan)
+                for auxiliary_scan in start_doc["experiment_definition"]["data"]
+                .get("auxiliary_scans", {})
+                .values()
+            ]
+
             auxiliary_scan = TiledAuxiliary(
                 tiled_id=tiled_id,
                 instrument_session=instrument_session,
@@ -83,6 +90,7 @@ def get_suitable_tiled_scan(
                 pin=pin,
                 time_per_pdf=time_per_pdf,
                 list_of_temperatures=list_of_temperatures,
+                requires=requires,
             )
             if auxiliary_scan.kind != start_doc["scan_type"]:
                 LOGGER.warning(

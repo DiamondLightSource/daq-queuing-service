@@ -1,5 +1,7 @@
+from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
+from typing import Self
 
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -33,7 +35,7 @@ def get_background_temperatures(
 
 
 def combine_auxiliary_requirements(
-    required_auxiliaries_1: list["AuxiliaryScan"],
+    required_auxiliaries_1: Sequence["AuxiliaryScan"],
     required_auxiliaries_2: list["AuxiliaryScan"],
 ) -> list["AuxiliaryScan"]:
     result: list[AuxiliaryScan] = []
@@ -62,7 +64,7 @@ class AuxiliaryScan(BaseModel):
     pin: StandardsPin | None
     time_per_pdf: float
     list_of_temperatures: list[int] | None = None
-    requires: list["AuxiliaryScan"] = Field(default_factory=lambda: [])
+    requires: list[Self] = Field(default_factory=lambda: [])
 
     @computed_field
     @property
