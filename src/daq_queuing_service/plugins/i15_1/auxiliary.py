@@ -1,6 +1,5 @@
 from enum import StrEnum
 from pathlib import Path
-from typing import Self
 
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -33,6 +32,25 @@ def get_background_temperatures(
     )
 
 
+def combine_auxiliary_requirements(
+    required_auxiliaries_1: list["AuxiliaryScan"],
+    required_auxiliaries_2: list["AuxiliaryScan"],
+) -> list["AuxiliaryScan"]:
+    result: list[AuxiliaryScan] = []
+    remaining = required_auxiliaries_2.copy()
+    for aux1 in required_auxiliaries_1:
+        for aux2 in remaining:
+            if combined := aux1.attempt_to_combine_with(aux2):
+                result.append(combined)
+                remaining.remove(aux2)
+
+                break
+        else:
+            result.append(aux1)
+
+    return result + remaining
+
+
 class AuxiliaryScan(BaseModel):
     """Auxiliary scans are scans added automatically by the queue, such as background
     scans and standard sample calibration scans. They are needed for analysis of user
@@ -44,7 +62,7 @@ class AuxiliaryScan(BaseModel):
     pin: StandardsPin | None
     time_per_pdf: float
     list_of_temperatures: list[int] | None = None
-    requires: list[Self] = Field(default_factory=lambda: [])
+    requires: list["AuxiliaryScan"] = Field(default_factory=lambda: [])
 
     @computed_field
     @property
@@ -149,7 +167,9 @@ class AuxiliaryScan(BaseModel):
             pin=self.pin,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
             list_of_temperatures=list_of_temperatures,
-            requires=self.requires + required_background.requires,
+            requires=combine_auxiliary_requirements(
+                self.requires, required_background.requires
+            ),
         )
         assert result.is_suitable(required_background)
         return result
@@ -174,6 +194,9 @@ class AuxiliaryScan(BaseModel):
             time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
             list_of_temperatures=experiment.experiment_definition.data.get(
                 "list_of_temperatures"
+            ),
+            requires=experiment.experiment_definition.data.get(
+                "required_auxiliary_scans", []
             ),
         )
 
