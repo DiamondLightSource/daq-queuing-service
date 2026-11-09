@@ -1,8 +1,9 @@
 from enum import StrEnum
 from pathlib import Path
+from typing import Self
 
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from daq_queuing_service.task_queue.task import Experiment
 
@@ -43,6 +44,7 @@ class AuxiliaryScan(BaseModel):
     pin: StandardsPin | None
     time_per_pdf: float
     list_of_temperatures: list[int] | None = None
+    requires: list[Self] = Field(default_factory=lambda: [])
 
     @computed_field
     @property
@@ -74,6 +76,10 @@ class AuxiliaryScan(BaseModel):
                 return False
         elif self.list_of_temperatures:
             return False
+
+        for required in required_background.requires:
+            if not any(r.is_suitable(required) for r in self.requires):
+                return False
 
         return (
             self.instrument_session == required_background.instrument_session
@@ -142,6 +148,7 @@ class AuxiliaryScan(BaseModel):
             pin=self.pin,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
             list_of_temperatures=list_of_temperatures,
+            requires=self.requires + required_background.requires,
         )
         assert result.is_suitable(required_background)
         return result

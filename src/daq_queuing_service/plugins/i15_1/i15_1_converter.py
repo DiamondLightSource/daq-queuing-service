@@ -302,28 +302,31 @@ class I151Converter(Converter):
             list_of_temperatures = get_background_temperatures(list_of_temperatures)
 
         assert experiment.sample
-        return [
-            AuxiliaryScan(
-                instrument_session=experiment.instrument_session,
-                pin=None,
-                time_per_pdf=time_per_pdf,
+
+        air = AuxiliaryScan(
+            instrument_session=experiment.instrument_session,
+            pin=None,
+            time_per_pdf=time_per_pdf,
+        )
+        empty_capillary = AuxiliaryScan(
+            instrument_session=experiment.instrument_session,
+            pin=StandardsPin(
+                capillary=experiment.sample.data["capillary"], contents=None
             ),
-            AuxiliaryScan(
-                instrument_session=experiment.instrument_session,
-                pin=StandardsPin(
-                    capillary=experiment.sample.data["capillary"], contents=None
-                ),
-                time_per_pdf=time_per_pdf,
-                list_of_temperatures=list_of_temperatures,
+            time_per_pdf=time_per_pdf,
+            list_of_temperatures=list_of_temperatures,
+            requires=[air],
+        )
+        standard_sample = AuxiliaryScan(
+            instrument_session=experiment.instrument_session,
+            pin=StandardsPin(
+                capillary=experiment.sample.data["capillary"], contents="Silicon"
             ),
-            AuxiliaryScan(
-                instrument_session=experiment.instrument_session,
-                pin=StandardsPin(
-                    capillary=experiment.sample.data["capillary"], contents="Silicon"
-                ),
-                time_per_pdf=time_per_pdf,
-            ),
-        ]
+            time_per_pdf=time_per_pdf,
+            requires=[air, empty_capillary],
+        )
+
+        return [standard_sample, empty_capillary, air]
 
     def _construct_auxiliary_experiment(
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str

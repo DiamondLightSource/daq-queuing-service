@@ -1103,3 +1103,11 @@ def test_no_wait_for_beam_queued_if_turned_off_in_queue_params(
         [TaskWithPosition.from_task(i15_1_tasks[0])], [], []
     )
     assert not any(call.task_request.name == "wait_for_beam" for call in blueapi_calls)
+
+
+async def test_i15_converter_adds_auxiliary(queue_with_i15_1_plugin: TaskQueue):
+    queue = await queue_with_i15_1_plugin.get_queue()
+    a = [task.experiment.name for task in queue]
+
+    with open("test.txt", "w") as f:
+        f.write(json.dumps(a, indent=2))
