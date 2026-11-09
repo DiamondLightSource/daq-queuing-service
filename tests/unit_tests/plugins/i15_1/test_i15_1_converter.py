@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
-from blueapi.worker.event import TaskError
+from blueapi.worker.event import TaskError, TaskResult
 from daq_config_server.models.i15_1.queue_parameters import QueueParameters
 from daq_config_server.models.i15_1.standards_puck import (
     STANDARD_CAPILLARY,
@@ -66,7 +66,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="c5786b54-fd88-4088-8952-8d087cb47028",
+            id="0",
             blueapi_calls=[],
             user=None,
         ),
@@ -94,7 +94,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="7a23c7f6-eecf-4376-a5f3-40b0f221635b",
+            id="1",
             blueapi_calls=[],
             user=None,
         ),
@@ -122,7 +122,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="c96a85c3-cc4b-41e4-b0b5-7292956b6f7c",
+            id="2",
             blueapi_calls=[],
             user=None,
         ),
@@ -143,7 +143,7 @@ def i15_1_tasks():
                     name="", id="", data={"time_per_pdf": 20}
                 ),
             ),
-            id="5e2571d9-2f87-45b2-ac3b-b486e83a92d6",
+            id="3",
             blueapi_calls=[],
             user=None,
         ),
@@ -171,7 +171,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="098d3c5a-5bcb-43a3-acc6-c7e2ae050587",
+            id="4",
             blueapi_calls=[],
             user=None,
         ),
@@ -404,7 +404,7 @@ def background_found_in_tiled():
 def background_not_found_in_tiled():
     with patch(
         "daq_queuing_service.plugins.i15_1.i15_1_converter.get_suitable_tiled_scan",
-        MagicMock(return_value=None),
+        return_value=None,
     ) as mock_get_suitable_tiled_background:
         yield mock_get_suitable_tiled_background
 
@@ -955,6 +955,60 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
         }
         for task in i15_1_tasks
     }
+
+
+async def test_auxiliary_scans_have_their_own_required_tiled_auxiliaries_added_to_data(
+    queue_with_i15_1_plugin: TaskQueue,
+    queue_params: QueueParameters,
+    background_not_found_in_tiled: MagicMock,
+):
+    queue_params.do_wait_for_beam = False
+    queue = await queue_with_i15_1_plugin.get_queue()
+    assert [task.experiment.experiment_definition.name for task in queue[:4]] == [  # type: ignore
+        # Auxiliaries added to queue
+        ScanType.AIR,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.STANDARD_SAMPLE,
+    ]
+
+    air_scan = await queue_with_i15_1_plugin.get_next_call_once_available()
+    air_scan.put_in_progress()
+
+    air_tiled_scan = TiledAuxiliary(
+        instrument_session="cm12345-1",
+        tiled_id="fake_tiled_id",
+        pin=None,
+        time_per_pdf=25,
+        filepath=Path(""),
+        instrument_session_directory=Path(""),
+        filename="air_scan.nxs",
+    )
+    background_not_found_in_tiled.return_value = air_tiled_scan
+
+    await queue_with_i15_1_plugin.complete_call(
+        air_scan, TaskResult(outcome="success", result=None, type="None")
+    )
+    async with queue_with_i15_1_plugin._modifying:
+        queue_with_i15_1_plugin._sync()
+
+    queue = await queue_with_i15_1_plugin.get_queue()
+
+    assert [task.experiment.experiment_definition.name for task in queue[:3]] == [  # type: ignore
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.STANDARD_SAMPLE,
+    ]
+    converter = queue_with_i15_1_plugin._converter
+    assert isinstance(converter, I151Converter)
+    for task in queue:
+        assert (
+            converter._tiled_auxiliary_scans[task.id][AuxiliaryScanType.AIR]
+            == air_tiled_scan
+        )
+        assert task.blueapi_calls[2].task_request.params["metadata"][
+            "auxiliary_scans"
+        ] == {AuxiliaryScanType.AIR: air_tiled_scan.model_dump()}
 
 
 async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: TaskQueue):

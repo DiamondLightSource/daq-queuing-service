@@ -52,9 +52,9 @@ QUEUE_PARAMS_CONFIG_PATH = (
 )
 
 
-def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
+def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, str, AuxiliaryScan]]:
     return [
-        (i, AuxiliaryScan.from_experiment(task.experiment))
+        (i, task.id, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
         and is_auxiliary_experiment(task.experiment)
@@ -200,9 +200,7 @@ class I151Converter(Converter):
         for task in tasks:
             with add_session_to_logger(task.experiment.instrument_session):
                 experiment = task.experiment
-                if isinstance(experiment, Experiment) and not is_auxiliary_experiment(
-                    experiment
-                ):
+                if isinstance(experiment, Experiment):
                     instrument_session = experiment.instrument_session
 
                     required_auxiliary_scans = self._get_required_auxiliary_scans(
@@ -242,7 +240,7 @@ class I151Converter(Converter):
         queued_auxiliary_scans = _filter_auxiliary_scans(new_tasks)
         if any(
             queued_auxiliary.is_suitable(required_auxiliary)
-            for _, queued_auxiliary in queued_auxiliary_scans
+            for _, _, queued_auxiliary in queued_auxiliary_scans
         ):
             return new_tasks
 
@@ -271,34 +269,39 @@ class I151Converter(Converter):
         required_auxiliary: AuxiliaryScan,
         current_task: TaskWithPosition | None,
         new_tasks: list[Task],
-        queued_auxiliary_scans: list[tuple[int, AuxiliaryScan]],
+        queued_auxiliary_scans: list[tuple[int, str, AuxiliaryScan]],
         instrument_session: str,
     ) -> list[Task]:
         # It is assumed every scan in queued_auxiliary_scans has already added their
         # requirements before for them
         combined_auxiliary_scan = None
         index = None
+        combined_task_id = None
 
-        for i, auxiliary_scan in queued_auxiliary_scans:
+        for i, task_id, auxiliary_scan in queued_auxiliary_scans:
             if combined_auxiliary_scan := auxiliary_scan.attempt_to_combine_with(
                 required_auxiliary
             ):
                 index = i
+                combined_task_id = task_id
                 break
 
         aux_experiment = self._construct_auxiliary_experiment(
             combined_auxiliary_scan or required_auxiliary, instrument_session
         )
-        aux_task = Task(experiment=aux_experiment)
 
-        if index is None:
+        if index is None or combined_task_id is None or combined_auxiliary_scan is None:
+            aux_task = Task(experiment=aux_experiment)
             prefix = new_tasks
             suffix = []
+            additional_required = required_auxiliary.requires
         else:
+            aux_task = Task(experiment=aux_experiment, id=combined_task_id)
             prefix = new_tasks[:index]
             suffix = new_tasks[index + 1 :]
+            additional_required = combined_auxiliary_scan.requires
 
-        for required in required_auxiliary.requires:
+        for required in additional_required:
             prefix = self._ensure_auxiliary_in_queue_or_tiled(
                 required,
                 current_task,
