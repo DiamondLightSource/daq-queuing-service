@@ -1,3 +1,4 @@
+from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import Any
 
@@ -52,9 +53,16 @@ QUEUE_PARAMS_CONFIG_PATH = (
 )
 
 
-def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, str, AuxiliaryScan]]:
+@dataclass(frozen=True)
+class QueuedAuxiliary:
+    index: int
+    task_id: str
+    auxiliary: AuxiliaryScan
+
+
+def _filter_auxiliary_scans(tasks: list[Task]) -> list[QueuedAuxiliary]:
     return [
-        (i, task.id, AuxiliaryScan.from_experiment(task.experiment))
+        QueuedAuxiliary(i, task.id, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
         and is_auxiliary_experiment(task.experiment)
@@ -239,8 +247,8 @@ class I151Converter(Converter):
 
         queued_auxiliary_scans = _filter_auxiliary_scans(new_tasks)
         if any(
-            queued_auxiliary.is_suitable(required_auxiliary)
-            for _, _, queued_auxiliary in queued_auxiliary_scans
+            queued_auxiliary.auxiliary.is_suitable(required_auxiliary)
+            for queued_auxiliary in queued_auxiliary_scans
         ):
             return new_tasks
 
@@ -269,37 +277,40 @@ class I151Converter(Converter):
         required_auxiliary: AuxiliaryScan,
         current_task: TaskWithPosition | None,
         new_tasks: list[Task],
-        queued_auxiliary_scans: list[tuple[int, str, AuxiliaryScan]],
+        queued_auxiliary_scans: list[QueuedAuxiliary],
         instrument_session: str,
     ) -> list[Task]:
         # It is assumed every scan in queued_auxiliary_scans has already added their
         # requirements before for them
-        combined_auxiliary_scan = None
-        index = None
-        combined_task_id = None
+        combined_auxiliary = None
 
-        for i, task_id, auxiliary_scan in queued_auxiliary_scans:
-            if combined_auxiliary_scan := auxiliary_scan.attempt_to_combine_with(
-                required_auxiliary
+        for queued_auxiliary in queued_auxiliary_scans:
+            if (
+                combined_auxiliary_scan
+                := queued_auxiliary.auxiliary.attempt_to_combine_with(
+                    required_auxiliary
+                )
             ):
-                index = i
-                combined_task_id = task_id
+                combined_auxiliary = replace(
+                    queued_auxiliary, auxiliary=combined_auxiliary_scan
+                )
                 break
 
         aux_experiment = self._construct_auxiliary_experiment(
-            combined_auxiliary_scan or required_auxiliary, instrument_session
+            combined_auxiliary.auxiliary if combined_auxiliary else required_auxiliary,
+            instrument_session,
         )
 
-        if index is None or combined_task_id is None or combined_auxiliary_scan is None:
+        if combined_auxiliary is None:
             aux_task = Task(experiment=aux_experiment)
             prefix = new_tasks
             suffix = []
             additional_required = required_auxiliary.requires
         else:
-            aux_task = Task(experiment=aux_experiment, id=combined_task_id)
-            prefix = new_tasks[:index]
-            suffix = new_tasks[index + 1 :]
-            additional_required = combined_auxiliary_scan.requires
+            aux_task = Task(experiment=aux_experiment, id=combined_auxiliary.task_id)
+            prefix = new_tasks[: combined_auxiliary.index]
+            suffix = new_tasks[combined_auxiliary.index + 1 :]
+            additional_required = combined_auxiliary.auxiliary.requires
 
         for required in additional_required:
             prefix = self._ensure_auxiliary_in_queue_or_tiled(
