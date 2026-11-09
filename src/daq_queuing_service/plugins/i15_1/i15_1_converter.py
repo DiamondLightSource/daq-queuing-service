@@ -282,19 +282,9 @@ class I151Converter(Converter):
     ) -> list[Task]:
         # It is assumed every scan in queued_auxiliary_scans has already added their
         # requirements before for them
-        combined_auxiliary = None
-
-        for queued_auxiliary in queued_auxiliary_scans:
-            if (
-                combined_auxiliary_scan
-                := queued_auxiliary.auxiliary.attempt_to_combine_with(
-                    required_auxiliary
-                )
-            ):
-                combined_auxiliary = replace(
-                    queued_auxiliary, auxiliary=combined_auxiliary_scan
-                )
-                break
+        combined_auxiliary = self._find_combinable_auxiliary(
+            required_auxiliary, queued_auxiliary_scans
+        )
 
         aux_experiment = self._construct_auxiliary_experiment(
             combined_auxiliary.auxiliary if combined_auxiliary else required_auxiliary,
@@ -323,6 +313,20 @@ class I151Converter(Converter):
         new_tasks = prefix + [aux_task] + suffix
 
         return new_tasks
+
+    def _find_combinable_auxiliary(
+        self,
+        required_auxiliary: AuxiliaryScan,
+        queued_auxiliary_scans: list[QueuedAuxiliary],
+    ):
+        for queued_auxiliary in queued_auxiliary_scans:
+            if (
+                combined_auxiliary_scan
+                := queued_auxiliary.auxiliary.attempt_to_combine_with(
+                    required_auxiliary
+                )
+            ):
+                return replace(queued_auxiliary, auxiliary=combined_auxiliary_scan)
 
     def _get_required_auxiliary_scans(
         self, experiment: Experiment
