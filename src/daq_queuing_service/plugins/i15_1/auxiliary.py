@@ -81,7 +81,9 @@ class AuxiliaryScan(BaseModel):
         temperature_step: int = DEFAULT_TEMPERATURE_STEP,
     ) -> bool:
         """Determine if this background is suitable compared to an experiment's required
-        background.
+        background. This includes checking that scans in required_background.requires
+        have a suitable pairing in self.requires, to ensure nested requirements are
+        taken into account.
 
         Args:
             required_background (AuxiliaryScan): The required background
