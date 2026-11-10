@@ -2,7 +2,7 @@ import json
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
