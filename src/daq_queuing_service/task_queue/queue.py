@@ -293,6 +293,7 @@ class TaskQueue:
         self._broadcaster.broadcast(
             Event(type="call_history_update", data=self._get_call_history())
         )
+        self._broadcaster.broadcast(Event(type="state_update", data=self._state))
 
     async def get_next_call_once_available(self) -> BlueapiCall:
         """Waits until a call is available before returning the call. A call is
@@ -555,7 +556,6 @@ class TaskQueue:
         )
         self._state.paused = True
         self._state.last_pause_reason = reason
-        self._broadcaster.broadcast(Event(type="state_update", data=self._state))
         notify(f"Queue paused: {reason}", "INFO")
 
     async def pause_queue(self, reason: PauseReason) -> QueueState:
@@ -581,7 +581,6 @@ class TaskQueue:
         LOGGER.info("Resuming queue")
         async with self._modifying:
             self._state.paused = False
-            self._broadcaster.broadcast(Event(type="state_update", data=self._state))
         return self._state
 
     @property
