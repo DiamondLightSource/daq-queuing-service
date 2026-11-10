@@ -302,6 +302,7 @@ class I151Converter(Converter):
             suffix = new_tasks[combined_auxiliary.index + 1 :]
             additional_required = combined_auxiliary.auxiliary.requires
 
+        self._tiled_auxiliary_scans[aux_task.id] = {}
         for required in additional_required:
             prefix = self._ensure_auxiliary_in_queue_or_tiled(
                 required,
