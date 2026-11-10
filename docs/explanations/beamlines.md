@@ -4,5 +4,5 @@
 :maxdepth: 1
 :glob:
 
-beamlines <beamlines/beamlines>
+beamlines <beamlines/i15-1/i15-1>
 ```

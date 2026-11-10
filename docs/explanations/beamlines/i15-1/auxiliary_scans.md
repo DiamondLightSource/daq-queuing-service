@@ -1,4 +1,4 @@
-# I15-1 Auxiliary Scans
+# i15-1 Auxiliary Scans
 
 I15-1 PDF experiments require some scans to be run before hand, for use during analysis. These are added to the queue automatically by the i15-1 queue plugin. For each experiment, we need:
 
