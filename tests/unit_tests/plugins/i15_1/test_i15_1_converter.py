@@ -2,7 +2,7 @@ import json
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
@@ -755,7 +755,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         [empty_capillary_auxiliary_scan("cm12345-1", 100.0, None, "fq1.0")],
     )
 
-    assert converter._tiled_auxiliary_scans == {"1": {}}
+    assert list(converter._tiled_auxiliary_scans.values()) == [{}, {}, {}, {}]
 
 
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
