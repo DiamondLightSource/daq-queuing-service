@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>daq_queuing_service.task_queue.queue &#8212; daq-queuing-service 0.1.22.dev18+g12403b775 documentation</title>
+    <title>daq_queuing_service.task_queue.queue &#8212; daq-queuing-service 0.2.1.dev1+g65a337d6a documentation</title>
   
   
   
@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=237b6124"></script>
+    <script src="../../../_static/documentation_options.js?v=198a507c"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -759,6 +759,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span>
             <span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"call_history_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_call_history</span><span class="p">())</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"state_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="p">))</span>
 
 <div class="viewcode-block" id="TaskQueue.get_next_call_once_available">
 <a class="viewcode-back" href="../../../reference/queue.html#daq_queuing_service.task_queue.queue.TaskQueue.get_next_call_once_available">[docs]</a>
@@ -1066,7 +1067,6 @@
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">paused</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">last_pause_reason</span> <span class="o">=</span> <span class="n">reason</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"state_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="p">))</span>
         <span class="n">notify</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Queue paused: </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"INFO"</span><span class="p">)</span>
 
 <div class="viewcode-block" id="TaskQueue.pause_queue">
@@ -1097,7 +1097,6 @@
         <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Resuming queue"</span><span class="p">)</span>
         <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modifying</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">paused</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_broadcaster</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">Event</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"state_update"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span></div>
 
 
