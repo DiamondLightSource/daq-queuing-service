@@ -21,3 +21,5 @@ To add auxiliary scans, we build a new queue that includes the tasks along with 
 - If a suitable existing does not exist, we will see if we can combine the required auxiliary scan with an existing scan. This, for example, could involve expanding the temperature range of a queued auxiliary scan. Combining these auxiliary scans also combines the requirements of both scans, so no requirement information is lost, but we also don't duplicate similar requirements. We then go to the beginning of this checklist, and repeat for the required auxiliary scans of the combined auxiliary scan, inserting the results before the combined scan in the queue.
 - If we cannot combine the required auxiliary scan, we will add the auxiliary scan to the queue. However, right before we do this, we will go through the required auxiliary scans of the auxiliary scan we added, and repeat this checklist for them. This ensures the auxiliary scan is added behind its requirements.
 - Once all the recursive adding of required auxiliary scans is complete, we add the task itself to the new queue.
+
+![Auxiliary scan logic flowchart](./i15-1_aux_scans.drawio.png)
