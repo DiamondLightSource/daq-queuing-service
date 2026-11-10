@@ -1,10 +1,10 @@
 # I15-1 Auxiliary Scans
 
-I15-1 PDF experiments require some scans to be run before hand, for use during analysis. For each experiment, we also need
+I15-1 PDF experiments require some scans to be run before hand, for use during analysis. These are added to the queue automatically by the i15-1 queue plugin. For each experiment, we need:
 
-- air scan, at room temperature
-- empty capillary scan, matching the capillary type and temperature range to the experiment
-- standard sample, at room temperature, matching the capillary type to the experiment
+- an air scan, at room temperature
+- an empty capillary scan, matching the capillary type and temperature range to the experiment
+- a standard sample scan, at room temperature, matching the capillary type to the experiment
 
 These must happen in this order, as the analysis process is layered - i.e, the empty capillary scan needs the air scan to be processed, the standard sample needs the empty capillary, and therefore the air, and the actual experiment needs all three. Additionally, to save time, we can merge these auxiliary scans together, to avoid queuing up three additional scans for every experiment. For example, experiments can always share an air scan (as it's always the same); empty capillary scans can be shared as long as the temperature range spans the range of the experiment, and the capillary type is the same; and standard sample scans can be shared as long as the capillary type is the same.
 
