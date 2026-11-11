@@ -64,7 +64,7 @@ class AuxiliaryScan(BaseModel):
     pin: StandardsPin | None
     time_per_pdf: float
     list_of_temperatures: list[int] | None = None
-    requires: list[Self] = Field(default_factory=lambda: [])
+    requires: list[Self] = Field(default_factory=lambda: [], exclude=True)
 
     @computed_field
     @property

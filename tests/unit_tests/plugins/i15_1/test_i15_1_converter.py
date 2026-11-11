@@ -251,7 +251,6 @@ def empty_capillary_task(
                 "pin": None,
                 "time_per_pdf": time_per_pdf,
                 "list_of_temperatures": None,
-                "requires": [],
                 "kind": AuxiliaryScanType.AIR,
             },
         ],
@@ -300,7 +299,6 @@ def air_auxiliary_scan(instrument_session: str, time_per_pdf: float) -> dict[str
         "pin": None,
         "time_per_pdf": time_per_pdf,
         "list_of_temperatures": None,
-        "requires": [],
         "kind": AuxiliaryScanType.AIR,
     }
 
@@ -319,7 +317,6 @@ def empty_capillary_auxiliary_scan(
         },
         "time_per_pdf": time_per_pdf,
         "list_of_temperatures": list_of_temperatures,
-        "requires": [air_auxiliary_scan(instrument_session, time_per_pdf)],
         "kind": AuxiliaryScanType.EMPTY_CAPILLARY,
     }
 

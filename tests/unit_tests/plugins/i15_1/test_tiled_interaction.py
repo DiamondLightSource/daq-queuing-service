@@ -35,7 +35,7 @@ def mock_tiled_searches(
     result_1.metadata = {
         "start": {
             "time": 1,
-            "experiment_definition": {"data": {"time_per_pdf": 10}},
+            "experiment_definition": {"data": {"time_per_pdf": 25}},
             "sample_info": None,
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10000",
@@ -58,9 +58,9 @@ def mock_tiled_searches(
                     "time_per_pdf": 25.0,
                     "list_of_temperatures": None,
                     "tiled_id": "tiled_id_1",
-                    "filename": "i15-1-10000",
+                    "filename": "i15-1-10000.nxs",
                     "instrument_session_directory": "/path/to/data/2026/cm12345-1",
-                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
                 }
             },
         }
@@ -81,9 +81,9 @@ def mock_tiled_searches(
                     "time_per_pdf": 25.0,
                     "list_of_temperatures": None,
                     "tiled_id": "tiled_id_1",
-                    "filename": "i15-1-10000",
+                    "filename": "i15-1-10000.nxs",
                     "instrument_session_directory": "/path/to/data/2026/cm12345-1",
-                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
                 }
             },
         }
@@ -104,9 +104,9 @@ def mock_tiled_searches(
                     "time_per_pdf": 25.0,
                     "list_of_temperatures": None,
                     "tiled_id": "tiled_id_1",
-                    "filename": "i15-1-10000",
+                    "filename": "i15-1-10000.nxs",
                     "instrument_session_directory": "/path/to/data/2026/cm12345-1",
-                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
                 }
             },
         }
@@ -134,9 +134,9 @@ def mock_tiled_searches(
                     "time_per_pdf": 25.0,
                     "list_of_temperatures": None,
                     "tiled_id": "tiled_id_1",
-                    "filename": "i15-1-10000",
+                    "filename": "i15-1-10000.nxs",
                     "instrument_session_directory": "/path/to/data/2026/cm12345-1",
-                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
                 }
             },
         }
@@ -227,8 +227,8 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                         list_of_temperatures=None,
                         requires=[],
                         tiled_id="tiled_id_1",
-                        filename="i15-1-10000",
-                        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10000"),
+                        filename="i15-1-10000.nxs",
+                        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10000.nxs"),
                         instrument_session_directory=Path(
                             "/path/to/data/2026/cm12345-1"
                         ),
@@ -260,8 +260,8 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                         list_of_temperatures=None,
                         requires=[],
                         tiled_id="tiled_id_1",
-                        filename="i15-1-10000",
-                        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10000"),
+                        filename="i15-1-10000.nxs",
+                        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10000.nxs"),
                         instrument_session_directory=Path(
                             "/path/to/data/2026/cm12345-1"
                         ),
