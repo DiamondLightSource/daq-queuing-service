@@ -1,8 +1,10 @@
+from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
+from typing import Self
 
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from daq_queuing_service.task_queue.task import Experiment
 
@@ -32,6 +34,25 @@ def get_background_temperatures(
     )
 
 
+def combine_auxiliary_requirements(
+    required_auxiliaries_1: Sequence["AuxiliaryScan"],
+    required_auxiliaries_2: list["AuxiliaryScan"],
+) -> list["AuxiliaryScan"]:
+    result: list[AuxiliaryScan] = []
+    remaining = required_auxiliaries_2.copy()
+    for aux1 in required_auxiliaries_1:
+        for aux2 in remaining:
+            if combined := aux1.attempt_to_combine_with(aux2):
+                result.append(combined)
+                remaining.remove(aux2)
+
+                break
+        else:
+            result.append(aux1)
+
+    return result + remaining
+
+
 class AuxiliaryScan(BaseModel):
     """Auxiliary scans are scans added automatically by the queue, such as background
     scans and standard sample calibration scans. They are needed for analysis of user
@@ -43,6 +64,7 @@ class AuxiliaryScan(BaseModel):
     pin: StandardsPin | None
     time_per_pdf: float
     list_of_temperatures: list[int] | None = None
+    requires: list[Self] = Field(default_factory=lambda: [], exclude=True)
 
     @computed_field
     @property
@@ -59,7 +81,9 @@ class AuxiliaryScan(BaseModel):
         temperature_step: int = DEFAULT_TEMPERATURE_STEP,
     ) -> bool:
         """Determine if this background is suitable compared to an experiment's required
-        background.
+        background. This includes checking that scans in required_background.requires
+        have a suitable pairing in self.requires, to ensure nested requirements are
+        taken into account.
 
         Args:
             required_background (AuxiliaryScan): The required background
@@ -74,6 +98,10 @@ class AuxiliaryScan(BaseModel):
                 return False
         elif self.list_of_temperatures:
             return False
+
+        for required in required_background.requires:
+            if not any(r.is_suitable(required) for r in self.requires):
+                return False
 
         return (
             self.instrument_session == required_background.instrument_session
@@ -109,7 +137,8 @@ class AuxiliaryScan(BaseModel):
         temperature_step: int = DEFAULT_TEMPERATURE_STEP,
     ) -> "AuxiliaryScan | None":
         """Creates a background that combines the requirements of this background object
-        and a provided required background, if possible.
+        and a provided required background, if possible. Anything that previously deemed
+        this scan as suitable should also deem the combined scan suitable.
 
         Args:
             required_background (AuxiliaryScan): The required background
@@ -142,6 +171,9 @@ class AuxiliaryScan(BaseModel):
             pin=self.pin,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
             list_of_temperatures=list_of_temperatures,
+            requires=combine_auxiliary_requirements(
+                self.requires, required_background.requires
+            ),
         )
         assert result.is_suitable(required_background)
         return result
@@ -166,6 +198,9 @@ class AuxiliaryScan(BaseModel):
             time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
             list_of_temperatures=experiment.experiment_definition.data.get(
                 "list_of_temperatures"
+            ),
+            requires=experiment.experiment_definition.data.get(
+                "required_auxiliary_scans", []
             ),
         )
 

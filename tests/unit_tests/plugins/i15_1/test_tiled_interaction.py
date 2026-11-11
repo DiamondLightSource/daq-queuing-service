@@ -10,6 +10,7 @@ from tiled.queries import Comparison, Eq, In, KeyPresent
 
 from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
+    AuxiliaryScanType,
     TiledAuxiliary,
 )
 from daq_queuing_service.plugins.i15_1.tiled_interaction import (
@@ -34,7 +35,7 @@ def mock_tiled_searches(
     result_1.metadata = {
         "start": {
             "time": 1,
-            "experiment_definition": {"data": {"time_per_pdf": 10}},
+            "experiment_definition": {"data": {"time_per_pdf": 25}},
             "sample_info": None,
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10000",
@@ -50,6 +51,18 @@ def mock_tiled_searches(
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10001",
             "scan_type": "Empty Capillary",
+            "auxiliary_scans": {
+                AuxiliaryScanType.AIR.value: {
+                    "instrument_session": "cm12345-1",
+                    "pin": None,
+                    "time_per_pdf": 25.0,
+                    "list_of_temperatures": None,
+                    "tiled_id": "tiled_id_1",
+                    "filename": "i15-1-10000.nxs",
+                    "instrument_session_directory": "/path/to/data/2026/cm12345-1",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
+                }
+            },
         }
     }
     result_3 = MagicMock()
@@ -61,6 +74,18 @@ def mock_tiled_searches(
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10002",
             "scan_type": "Empty Capillary",
+            "auxiliary_scans": {
+                AuxiliaryScanType.AIR.value: {
+                    "instrument_session": "cm12345-1",
+                    "pin": None,
+                    "time_per_pdf": 25.0,
+                    "list_of_temperatures": None,
+                    "tiled_id": "tiled_id_1",
+                    "filename": "i15-1-10000.nxs",
+                    "instrument_session_directory": "/path/to/data/2026/cm12345-1",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
+                }
+            },
         }
     }
     result_4 = MagicMock()
@@ -72,6 +97,18 @@ def mock_tiled_searches(
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10003",
             "scan_type": "Empty Capillary",
+            "auxiliary_scans": {
+                AuxiliaryScanType.AIR.value: {
+                    "instrument_session": "cm12345-1",
+                    "pin": None,
+                    "time_per_pdf": 25.0,
+                    "list_of_temperatures": None,
+                    "tiled_id": "tiled_id_1",
+                    "filename": "i15-1-10000.nxs",
+                    "instrument_session_directory": "/path/to/data/2026/cm12345-1",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
+                }
+            },
         }
     }
     result_5 = MagicMock()
@@ -90,6 +127,18 @@ def mock_tiled_searches(
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10004",
             "scan_type": "Empty Capillary",
+            "auxiliary_scans": {
+                AuxiliaryScanType.AIR.value: {
+                    "instrument_session": "cm12345-1",
+                    "pin": None,
+                    "time_per_pdf": 25.0,
+                    "list_of_temperatures": None,
+                    "tiled_id": "tiled_id_1",
+                    "filename": "i15-1-10000.nxs",
+                    "instrument_session_directory": "/path/to/data/2026/cm12345-1",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
+                }
+            },
         }
     }
 
@@ -170,6 +219,21 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                 filename="i15-1-10001.nxs",
                 instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
                 filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
+                requires=[
+                    TiledAuxiliary(
+                        instrument_session="cm12345-1",
+                        pin=None,
+                        time_per_pdf=25.0,
+                        list_of_temperatures=None,
+                        requires=[],
+                        tiled_id="tiled_id_1",
+                        filename="i15-1-10000.nxs",
+                        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10000.nxs"),
+                        instrument_session_directory=Path(
+                            "/path/to/data/2026/cm12345-1"
+                        ),
+                    )
+                ],
             ),
         ),
         (
@@ -188,6 +252,21 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                 instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
                 filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10004.nxs"),
                 list_of_temperatures=[100, 200, 300],
+                requires=[
+                    TiledAuxiliary(
+                        instrument_session="cm12345-1",
+                        pin=None,
+                        time_per_pdf=25.0,
+                        list_of_temperatures=None,
+                        requires=[],
+                        tiled_id="tiled_id_1",
+                        filename="i15-1-10000.nxs",
+                        filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10000.nxs"),
+                        instrument_session_directory=Path(
+                            "/path/to/data/2026/cm12345-1"
+                        ),
+                    )
+                ],
             ),
         ),
     ],

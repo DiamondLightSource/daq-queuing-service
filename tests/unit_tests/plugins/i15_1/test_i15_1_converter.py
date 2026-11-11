@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
-from blueapi.worker.event import TaskError
+from blueapi.worker.event import TaskError, TaskResult
 from daq_config_server.models.i15_1.queue_parameters import QueueParameters
 from daq_config_server.models.i15_1.standards_puck import (
     STANDARD_CAPILLARY,
@@ -66,7 +66,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="c5786b54-fd88-4088-8952-8d087cb47028",
+            id="0",
             blueapi_calls=[],
             user=None,
         ),
@@ -94,7 +94,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="7a23c7f6-eecf-4376-a5f3-40b0f221635b",
+            id="1",
             blueapi_calls=[],
             user=None,
         ),
@@ -122,7 +122,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="c96a85c3-cc4b-41e4-b0b5-7292956b6f7c",
+            id="2",
             blueapi_calls=[],
             user=None,
         ),
@@ -143,7 +143,7 @@ def i15_1_tasks():
                     name="", id="", data={"time_per_pdf": 20}
                 ),
             ),
-            id="5e2571d9-2f87-45b2-ac3b-b486e83a92d6",
+            id="3",
             blueapi_calls=[],
             user=None,
         ),
@@ -171,7 +171,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="098d3c5a-5bcb-43a3-acc6-c7e2ae050587",
+            id="4",
             blueapi_calls=[],
             user=None,
         ),
@@ -226,7 +226,10 @@ def air_task(
             "experiment_definition": {
                 "name": "Air",
                 "id": "",
-                "data": {"time_per_pdf": time_per_pdf},
+                "data": {
+                    "time_per_pdf": time_per_pdf,
+                    "required_auxiliary_scans": [],
+                },
             },
         },
     )
@@ -240,7 +243,18 @@ def empty_capillary_task(
     capillary: STANDARD_CAPILLARY,
     standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
-    data: dict[str, Any] = {"time_per_pdf": time_per_pdf}
+    data: dict[str, Any] = {
+        "time_per_pdf": time_per_pdf,
+        "required_auxiliary_scans": [
+            {
+                "instrument_session": instrument_session,
+                "pin": None,
+                "time_per_pdf": time_per_pdf,
+                "list_of_temperatures": None,
+                "kind": AuxiliaryScanType.AIR,
+            },
+        ],
+    }
     if list_of_temperatures is not None:
         data.update(
             {
@@ -279,6 +293,34 @@ def empty_capillary_task(
     )
 
 
+def air_auxiliary_scan(instrument_session: str, time_per_pdf: float) -> dict[str, Any]:
+    return {
+        "instrument_session": instrument_session,
+        "pin": None,
+        "time_per_pdf": time_per_pdf,
+        "list_of_temperatures": None,
+        "kind": AuxiliaryScanType.AIR,
+    }
+
+
+def empty_capillary_auxiliary_scan(
+    instrument_session: str,
+    time_per_pdf: float,
+    list_of_temperatures: list[float] | None,
+    capillary: STANDARD_CAPILLARY,
+) -> dict[str, Any]:
+    return {
+        "instrument_session": instrument_session,
+        "pin": {
+            "capillary": capillary,
+            "contents": None,
+        },
+        "time_per_pdf": time_per_pdf,
+        "list_of_temperatures": list_of_temperatures,
+        "kind": AuxiliaryScanType.EMPTY_CAPILLARY,
+    }
+
+
 def standard_sample_task(
     task_id: str,
     instrument_session: str,
@@ -286,7 +328,9 @@ def standard_sample_task(
     capillary: STANDARD_CAPILLARY,
     contents: STANDARD_SAMPLE,
     standards_puck: StandardsPuck,
+    required_empty_capillaries: list[dict[str, Any]],
 ) -> dict[str, Any]:
+
     return create_task_dict(
         task_id,
         {
@@ -311,7 +355,13 @@ def standard_sample_task(
             "experiment_definition": {
                 "name": "Standard Sample",
                 "id": "",
-                "data": {"time_per_pdf": time_per_pdf},
+                "data": {
+                    "time_per_pdf": time_per_pdf,
+                    "required_auxiliary_scans": [
+                        air_auxiliary_scan(instrument_session, time_per_pdf)
+                    ]
+                    + required_empty_capillaries,
+                },
             },
         },
     )
@@ -351,7 +401,7 @@ def background_found_in_tiled():
 def background_not_found_in_tiled():
     with patch(
         "daq_queuing_service.plugins.i15_1.i15_1_converter.get_suitable_tiled_scan",
-        MagicMock(return_value=None),
+        return_value=None,
     ) as mock_get_suitable_tiled_background:
         yield mock_get_suitable_tiled_background
 
@@ -693,9 +743,16 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         tasks[1].id, "cm12345-1", 100.0, None, "fq1.0", standards_puck
     )
     assert tasks[2].model_dump() == standard_sample_task(
-        tasks[2].id, "cm12345-1", 100.0, "fq1.0", "Silicon", standards_puck
+        tasks[2].id,
+        "cm12345-1",
+        100.0,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [empty_capillary_auxiliary_scan("cm12345-1", 100.0, None, "fq1.0")],
     )
-    assert converter._tiled_auxiliary_scans == {"1": {}}
+
+    assert list(converter._tiled_auxiliary_scans.values()) == [{}, {}, {}, {}]
 
 
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
@@ -781,19 +838,19 @@ def test_add_required_background_scans_combines_similar_background_requirements(
     assert (
         isinstance(new_tasks[2].experiment, Experiment)
         and new_tasks[2].experiment.sample
-        and new_tasks[2].experiment.sample.name == "Silicon fq1.0"
+        and new_tasks[2].experiment.sample.name == "Empty fq1.0"
     )
     assert (
-        isinstance(new_tasks[6].experiment, Experiment)
-        and new_tasks[6].experiment.sample
-        and new_tasks[6].experiment.sample.name == "Empty fq1.0"
+        isinstance(new_tasks[3].experiment, Experiment)
+        and new_tasks[3].experiment.sample
+        and new_tasks[3].experiment.sample.name == "Silicon fq1.0"
     )
     # Should have the maximum time_per_pdf of i15_1_tasks
     assert new_tasks[0].experiment.experiment_definition.data["time_per_pdf"] == 25
     assert new_tasks[1].experiment.experiment_definition.data["time_per_pdf"] == 25
-    assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 25
+    assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 20
+    assert new_tasks[3].experiment.experiment_definition.data["time_per_pdf"] == 25
     # This one isn't a temperature experiment so needs a separate empty capillary
-    assert new_tasks[6].experiment.experiment_definition.data["time_per_pdf"] == 20
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_in_each(
@@ -820,29 +877,52 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
         "fq1.0",
         standards_puck,
     )
-    assert new_tasks[2].model_dump() == standard_sample_task(
-        new_tasks[2].id, "cm12345-1", 25.0, "fq1.0", "Silicon", standards_puck
+    assert new_tasks[2].model_dump() == empty_capillary_task(
+        new_tasks[2].id, "cm12345-1", 20.0, None, "fq1.0", standards_puck
+    )
+    assert new_tasks[3].model_dump() == standard_sample_task(
+        new_tasks[3].id,
+        "cm12345-1",
+        25.0,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [
+            empty_capillary_auxiliary_scan(
+                "cm12345-1", 25.0, [0, 100, 200, 300, 400, 500], "fq1.0"
+            ),
+            empty_capillary_auxiliary_scan("cm12345-1", 20.0, None, "fq1.0"),
+        ],
     )
 
-    assert new_tasks[4].model_dump() == air_task(new_tasks[4].id, "different", 10.0)
-    assert new_tasks[5].model_dump() == empty_capillary_task(
-        new_tasks[5].id, "different", 10.0, [100, 200], "fq1.0", standards_puck
+    assert new_tasks[5].model_dump() == air_task(new_tasks[5].id, "different", 10.0)
+    assert new_tasks[6].model_dump() == empty_capillary_task(
+        new_tasks[6].id, "different", 10.0, [100, 200], "fq1.0", standards_puck
     )
-    assert new_tasks[6].model_dump() == standard_sample_task(
-        new_tasks[6].id, "different", 10.0, "fq1.0", "Silicon", standards_puck
+    assert new_tasks[7].model_dump() == standard_sample_task(
+        new_tasks[7].id,
+        "different",
+        10.0,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [empty_capillary_auxiliary_scan("different", 10.0, [100, 200], "fq1.0")],
     )
 
-    assert new_tasks[8].model_dump() == air_task(
-        new_tasks[8].id, "also_different", 10.0
+    assert new_tasks[9].model_dump() == air_task(
+        new_tasks[9].id, "also_different", 10.0
     )
-    assert new_tasks[9].model_dump() == empty_capillary_task(
-        new_tasks[9].id, "also_different", 10.0, [200, 300], "fq1.0", standards_puck
+    assert new_tasks[10].model_dump() == empty_capillary_task(
+        new_tasks[10].id, "also_different", 10.0, [200, 300], "fq1.0", standards_puck
     )
-    assert new_tasks[10].model_dump() == standard_sample_task(
-        new_tasks[10].id, "also_different", 10.0, "fq1.0", "Silicon", standards_puck
-    )
-    assert new_tasks[12].model_dump() == empty_capillary_task(
-        new_tasks[12].id, "cm12345-1", 20.0, None, "fq1.0", standards_puck
+    assert new_tasks[11].model_dump() == standard_sample_task(
+        new_tasks[11].id,
+        "also_different",
+        10.0,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [empty_capillary_auxiliary_scan("also_different", 10.0, [200, 300], "fq1.0")],
     )
 
 
@@ -872,6 +952,60 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
         }
         for task in i15_1_tasks
     }
+
+
+async def test_auxiliary_scans_have_their_own_required_tiled_auxiliaries_added_to_data(
+    queue_with_i15_1_plugin: TaskQueue,
+    queue_params: QueueParameters,
+    background_not_found_in_tiled: MagicMock,
+):
+    queue_params.do_wait_for_beam = False
+    queue = await queue_with_i15_1_plugin.get_queue()
+    assert [task.experiment.experiment_definition.name for task in queue[:4]] == [  # type: ignore
+        # Auxiliaries added to queue
+        ScanType.AIR,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.STANDARD_SAMPLE,
+    ]
+
+    air_scan = await queue_with_i15_1_plugin.get_next_call_once_available()
+    air_scan.put_in_progress()
+
+    air_tiled_scan = TiledAuxiliary(
+        instrument_session="cm12345-1",
+        tiled_id="fake_tiled_id",
+        pin=None,
+        time_per_pdf=25,
+        filepath=Path(""),
+        instrument_session_directory=Path(""),
+        filename="air_scan.nxs",
+    )
+    background_not_found_in_tiled.return_value = air_tiled_scan
+
+    await queue_with_i15_1_plugin.complete_call(
+        air_scan, TaskResult(outcome="success", result=None, type="None")
+    )
+    async with queue_with_i15_1_plugin._modifying:
+        queue_with_i15_1_plugin._sync()
+
+    queue = await queue_with_i15_1_plugin.get_queue()
+
+    assert [task.experiment.experiment_definition.name for task in queue[:3]] == [  # type: ignore
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.STANDARD_SAMPLE,
+    ]
+    converter = queue_with_i15_1_plugin._converter
+    assert isinstance(converter, I151Converter)
+    for task in queue:
+        assert (
+            converter._tiled_auxiliary_scans[task.id][AuxiliaryScanType.AIR]
+            == air_tiled_scan
+        )
+        assert task.blueapi_calls[2].task_request.params["metadata"][
+            "auxiliary_scans"
+        ] == {AuxiliaryScanType.AIR: air_tiled_scan.model_dump()}
 
 
 async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: TaskQueue):
@@ -993,12 +1127,10 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
         # 5 is wait_for_beam
         (6, ScanType.EMPTY_CAPILLARY),
         # 7 is robot unload
-        # 8 is robot load
-        # 9 is wait_for_beam
-        # 10 is centring
-        # 11 is wait_for_beam
-        (12, ScanType.STANDARD_SAMPLE),
-        (18, ScanType.DATA_COLLECTION),
+        # etc
+        (12, ScanType.EMPTY_CAPILLARY),
+        (18, ScanType.STANDARD_SAMPLE),
+        (24, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(

@@ -1,7 +1,10 @@
 import pytest
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
 
-from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
+from daq_queuing_service.plugins.i15_1.auxiliary import (
+    AuxiliaryScan,
+    combine_auxiliary_requirements,
+)
 
 
 @pytest.mark.parametrize(
@@ -219,3 +222,158 @@ def test_attempt_to_combine_returns_none_when_auxiliaries_cannot_be_combined(
     required: AuxiliaryScan,
 ):
     assert auxiliary.attempt_to_combine_with(required) is None
+
+
+@pytest.mark.parametrize(
+    "auxiliaries_1, auxiliaries_2, expected_combined_auxiliaries",
+    [
+        (
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+            ],
+        ),
+        (
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=[100, 150],
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=[100, 150],
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+            ],
+        ),
+        (
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=[100, 200],
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=[400, 500],
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    list_of_temperatures=[100, 200, 300, 400, 500],
+                ),
+            ],
+        ),
+    ],
+)
+def test_combine_auxiliary_requirements_combines_auxiliaries_as_expected(
+    auxiliaries_1: list[AuxiliaryScan],
+    auxiliaries_2: list[AuxiliaryScan],
+    expected_combined_auxiliaries: list[AuxiliaryScan],
+):
+
+    assert (
+        combine_auxiliary_requirements(auxiliaries_1, auxiliaries_2)
+        == expected_combined_auxiliaries
+    )

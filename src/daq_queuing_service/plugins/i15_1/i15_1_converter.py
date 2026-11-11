@@ -1,3 +1,4 @@
+from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import Any
 
@@ -52,9 +53,16 @@ QUEUE_PARAMS_CONFIG_PATH = (
 )
 
 
-def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
+@dataclass(frozen=True)
+class QueuedAuxiliary:
+    index: int
+    task_id: str
+    auxiliary: AuxiliaryScan
+
+
+def _filter_auxiliary_scans(tasks: list[Task]) -> list[QueuedAuxiliary]:
     return [
-        (i, AuxiliaryScan.from_experiment(task.experiment))
+        QueuedAuxiliary(i, task.id, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
         if isinstance(task.experiment, Experiment)
         and is_auxiliary_experiment(task.experiment)
@@ -200,9 +208,7 @@ class I151Converter(Converter):
         for task in tasks:
             with add_session_to_logger(task.experiment.instrument_session):
                 experiment = task.experiment
-                if isinstance(experiment, Experiment) and not is_auxiliary_experiment(
-                    experiment
-                ):
+                if isinstance(experiment, Experiment):
                     instrument_session = experiment.instrument_session
 
                     required_auxiliary_scans = self._get_required_auxiliary_scans(
@@ -241,8 +247,8 @@ class I151Converter(Converter):
 
         queued_auxiliary_scans = _filter_auxiliary_scans(new_tasks)
         if any(
-            queued_auxiliary.is_suitable(required_auxiliary)
-            for _, queued_auxiliary in queued_auxiliary_scans
+            queued_auxiliary.auxiliary.is_suitable(required_auxiliary)
+            for queued_auxiliary in queued_auxiliary_scans
         ):
             return new_tasks
 
@@ -260,6 +266,7 @@ class I151Converter(Converter):
         )
         return self._add_or_replace_auxiliary_scan(
             required_auxiliary,
+            current_task,
             new_tasks,
             queued_auxiliary_scans,
             instrument_session,
@@ -268,32 +275,66 @@ class I151Converter(Converter):
     def _add_or_replace_auxiliary_scan(
         self,
         required_auxiliary: AuxiliaryScan,
+        current_task: TaskWithPosition | None,
         new_tasks: list[Task],
-        queued_auxiliary_scans: list[tuple[int, AuxiliaryScan]],
+        queued_auxiliary_scans: list[QueuedAuxiliary],
         instrument_session: str,
     ) -> list[Task]:
-        combined_auxiliary_scan = None
-        index = None
-
-        for i, auxiliary_scan in queued_auxiliary_scans:
-            if combined_auxiliary_scan := auxiliary_scan.attempt_to_combine_with(
-                required_auxiliary
-            ):
-                index = i
-                break
+        # It is assumed every scan in queued_auxiliary_scans has already added their
+        # requirements before for them
+        combined_auxiliary = self._find_combinable_auxiliary(
+            required_auxiliary, queued_auxiliary_scans
+        )
 
         aux_experiment = self._construct_auxiliary_experiment(
-            combined_auxiliary_scan or required_auxiliary, instrument_session
+            combined_auxiliary.auxiliary if combined_auxiliary else required_auxiliary,
+            instrument_session,
         )
-        if index is None:
-            new_tasks.append(Task(experiment=aux_experiment))
+
+        if combined_auxiliary is None:
+            aux_task = Task(experiment=aux_experiment)
+            prefix = new_tasks
+            suffix = []
+            additional_required = required_auxiliary.requires
         else:
-            new_tasks[index] = Task(experiment=aux_experiment)
+            aux_task = Task(experiment=aux_experiment, id=combined_auxiliary.task_id)
+            prefix = new_tasks[: combined_auxiliary.index]
+            suffix = new_tasks[combined_auxiliary.index + 1 :]
+            additional_required = combined_auxiliary.auxiliary.requires
+
+        self._tiled_auxiliary_scans[aux_task.id] = {}
+        for required in additional_required:
+            prefix = self._ensure_auxiliary_in_queue_or_tiled(
+                required,
+                current_task,
+                prefix,
+                aux_task.id,
+                instrument_session,
+            )
+        new_tasks = prefix + [aux_task] + suffix
+
         return new_tasks
+
+    def _find_combinable_auxiliary(
+        self,
+        required_auxiliary: AuxiliaryScan,
+        queued_auxiliary_scans: list[QueuedAuxiliary],
+    ):
+        for queued_auxiliary in queued_auxiliary_scans:
+            if (
+                combined_auxiliary_scan
+                := queued_auxiliary.auxiliary.attempt_to_combine_with(
+                    required_auxiliary
+                )
+            ):
+                return replace(queued_auxiliary, auxiliary=combined_auxiliary_scan)
 
     def _get_required_auxiliary_scans(
         self, experiment: Experiment
     ) -> list[AuxiliaryScan]:
+        if is_auxiliary_experiment(experiment):
+            return experiment.experiment_definition.data["required_auxiliary_scans"]
+
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
         list_of_temperatures = experiment.experiment_definition.data.get(
             "list_of_temperatures"
@@ -302,34 +343,40 @@ class I151Converter(Converter):
             list_of_temperatures = get_background_temperatures(list_of_temperatures)
 
         assert experiment.sample
-        return [
-            AuxiliaryScan(
-                instrument_session=experiment.instrument_session,
-                pin=None,
-                time_per_pdf=time_per_pdf,
+
+        air = AuxiliaryScan(
+            instrument_session=experiment.instrument_session,
+            pin=None,
+            time_per_pdf=time_per_pdf,
+        )
+        empty_capillary = AuxiliaryScan(
+            instrument_session=experiment.instrument_session,
+            pin=StandardsPin(
+                capillary=experiment.sample.data["capillary"], contents=None
             ),
-            AuxiliaryScan(
-                instrument_session=experiment.instrument_session,
-                pin=StandardsPin(
-                    capillary=experiment.sample.data["capillary"], contents=None
-                ),
-                time_per_pdf=time_per_pdf,
-                list_of_temperatures=list_of_temperatures,
+            time_per_pdf=time_per_pdf,
+            list_of_temperatures=list_of_temperatures,
+            requires=[air],
+        )
+        standard_sample = AuxiliaryScan(
+            instrument_session=experiment.instrument_session,
+            pin=StandardsPin(
+                capillary=experiment.sample.data["capillary"], contents="Silicon"
             ),
-            AuxiliaryScan(
-                instrument_session=experiment.instrument_session,
-                pin=StandardsPin(
-                    capillary=experiment.sample.data["capillary"], contents="Silicon"
-                ),
-                time_per_pdf=time_per_pdf,
-            ),
-        ]
+            time_per_pdf=time_per_pdf,
+            requires=[air, empty_capillary],
+        )
+
+        return [standard_sample, empty_capillary, air]
 
     def _construct_auxiliary_experiment(
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
-        data: dict[str, Any] = {"time_per_pdf": auxiliary_scan.time_per_pdf}
+        data: dict[str, Any] = {
+            "time_per_pdf": auxiliary_scan.time_per_pdf,
+            "required_auxiliary_scans": auxiliary_scan.requires,
+        }
         if auxiliary_scan.list_of_temperatures:
             settle_time = (
                 self._queue_params.blower_auxiliary_collection_params.settle_time_s
