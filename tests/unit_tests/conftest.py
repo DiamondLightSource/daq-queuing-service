@@ -59,11 +59,14 @@ CONTAINER_POSITION = ContainerPosition(position=2)
 CONTAINER = Container(id="", positionInParent=CONTAINER_POSITION)
 
 
-def make_sample(name: str, id: str):
+def make_sample(name: str, id: str, composition: str = ""):
+    data = {"capillary": "fq1.0", "composition": "chemical"}
+    if composition:
+        data["composition"] = composition
     return Sample(
         name=name,
         id=id,
-        data={"capillary": "fq1.0"},
+        data=data,
         positionInContainer=CONTAINER_POSITION,
         container=CONTAINER,
     )
@@ -79,7 +82,7 @@ def tasks() -> list[Task]:
                 experiment_definition=ExperimentDefinition(
                     name="test", id=str(i), data={}
                 ),
-                sample=make_sample(f"test_8_{i}", str(i)),
+                sample=make_sample(f"test_8_{i}", str(i), composition="chemical"),
             ),
             id=str(i),
         )

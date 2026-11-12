@@ -50,7 +50,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_0_2",
                     id="0",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -79,7 +79,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_1_2",
                     id="1",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -108,7 +108,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_2_2",
                     id="2",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -137,7 +137,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_3_2",
                     id="3",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -163,7 +163,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_4_2",
                     id="4",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -405,7 +405,7 @@ def test_centre_sample_at_room_temperature_uses_correct_params_from_queue_params
         experiment_definition=ExperimentDefinition(
             name=" ", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     centring_params = queue_params.room_temperature_centring_params
@@ -420,7 +420,7 @@ def test_centre_sample_at_room_temperature_uses_correct_params_from_queue_params
             "experiment_definition": ExperimentDefinition(
                 name=" ", id="", data={"time_per_pdf": 100, "q_max": 30}
             ),
-            "sample": make_sample("test_8_1", ""),
+            "sample": make_sample("test_8_1", "", composition="chemical"),
         },
     }
 
@@ -441,7 +441,7 @@ def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
                 "q_max": 30,
             },
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -463,7 +463,7 @@ def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
                     "q_max": 30,
                 },
             ),
-            "sample": make_sample("test_8_1", ""),
+            "sample": make_sample("test_8_1", "", composition="chemical"),
         },
     }
 
@@ -474,7 +474,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         experiment_definition=ExperimentDefinition(
             name=" ", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -489,7 +489,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     task = TaskWithPosition(
@@ -513,7 +513,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         experiment_definition=ExperimentDefinition(
             name="", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -525,7 +525,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         "experiment_definition": ExperimentDefinition(
             name="", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        "sample": make_sample("test_8_1", ""),
+        "sample": make_sample("test_8_1", "", composition="chemical"),
     }
 
 
@@ -545,7 +545,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -558,7 +558,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
     assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
-        "sample": make_sample("test_8_1", ""),
+        "sample": make_sample("test_8_1", "", composition="chemical"),
     }
 
 
@@ -610,7 +610,7 @@ def test_wait_for_beam_plans_added_by_converter():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -641,13 +641,13 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
-        "sample": make_sample("test_8_1", ""),
+        "sample": make_sample("test_8_1", "", composition="chemical"),
         "auxiliary_scans": {
             AuxiliaryScanType.EMPTY_CAPILLARY: TiledAuxiliary(
                 instrument_session="cm12345-1",
@@ -669,7 +669,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     good_task = TaskWithPosition(
@@ -706,7 +706,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={"time_per_pdf": 100, "q_max": 40}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     task = Task(
@@ -1032,16 +1032,14 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
         (2, ScanType.AIR),
         # 3 is robot load
         # 4 is wait_for_beam
-        # 5 is centring
-        # 6 is wait_for_beam
-        (7, ScanType.EMPTY_CAPILLARY),
-        # 8 is robot unload
-        # 8 is robot load
+        (5, ScanType.EMPTY_CAPILLARY),
+        # 6 is robot unload
+        # 7 is robot load
+        # 8 is wait_for_beam
+        # 9 is centring
         # 10 is wait_for_beam
-        # 11 is centring
-        # 12 is wait_for_beam
-        (13, ScanType.STANDARD_SAMPLE),
-        (19, ScanType.DATA_COLLECTION),
+        (11, ScanType.STANDARD_SAMPLE),
+        (17, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(
@@ -1074,7 +1072,7 @@ def test_i15_1_tasks_can_be_serialised():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
