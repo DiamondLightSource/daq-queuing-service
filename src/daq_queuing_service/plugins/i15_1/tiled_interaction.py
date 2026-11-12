@@ -37,6 +37,7 @@ def get_suitable_tiled_scan(
             .search(Comparison("ge", "stop.time", oldest_valid_time))
             .search(In("start.scan_type", list(AuxiliaryScanType)))
             .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
+            .search(KeyPresent("start.experiment_definition.data.q_max"))
         )
 
         items = sorted(
@@ -70,6 +71,7 @@ def get_suitable_tiled_scan(
                     contents=sample["data"].get("composition"),
                 )
             time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
+            q_max = start_doc["experiment_definition"]["data"]["q_max"]
             list_of_temperatures = start_doc["experiment_definition"]["data"].get(
                 "list_of_temperatures"
             )
@@ -82,6 +84,7 @@ def get_suitable_tiled_scan(
                 filepath=filepath,
                 pin=pin,
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
                 list_of_temperatures=list_of_temperatures,
             )
             if auxiliary_scan.kind != start_doc["scan_type"]:
