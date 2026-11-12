@@ -1,7 +1,10 @@
 import pytest
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
 
-from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
+from daq_queuing_service.plugins.i15_1.auxiliary import (
+    AuxiliaryScan,
+    combine_auxiliary_requirements,
+)
 
 
 @pytest.mark.parametrize(
@@ -12,11 +15,13 @@ from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
                 list_of_temperatures=[],
             ),
             True,
@@ -26,11 +31,29 @@ from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
+            ),
+            AuxiliaryScan(
+                instrument_session="abc",
+                pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
+                time_per_pdf=50,
+                q_max=35,
+                list_of_temperatures=[],
+            ),
+            False,
+        ),
+        (
+            AuxiliaryScan(
+                instrument_session="abc",
+                pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
+                time_per_pdf=50,
+                q_max=30,
             ),
             AuxiliaryScan(
                 instrument_session="def",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
             ),
             False,
         ),
@@ -39,11 +62,13 @@ from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.5", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
             ),
             False,
         ),
@@ -52,12 +77,14 @@ from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
                 list_of_temperatures=[100, 200, 300],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
             ),
             False,
         ),
@@ -66,12 +93,14 @@ from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
                 list_of_temperatures=[100, 200, 300],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
                 list_of_temperatures=[100, 200, 300, 400],
             ),
             False,
@@ -81,12 +110,14 @@ from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=40,
                 list_of_temperatures=[90, 290, 490],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=25,
                 list_of_temperatures=[95, 250, 300, 450],
             ),
             True,
@@ -107,18 +138,21 @@ def test_is_suitable_works_as_expected(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=10,
+                q_max=30,
                 list_of_temperatures=[150, 250, 350],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=25,
                 list_of_temperatures=[100, 200, 300],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,  # Max time_per_pdf
+                q_max=30,  # Max q_max
                 list_of_temperatures=[100, 200, 300, 400],  # Covers whole temp range
             ),
         ),
@@ -127,16 +161,19 @@ def test_is_suitable_works_as_expected(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=100,
+                q_max=40,
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=100,
+                q_max=40,
             ),
         ),
         (
@@ -144,18 +181,21 @@ def test_is_suitable_works_as_expected(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=40,
+                q_max=30,
                 list_of_temperatures=[50, 610],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=100,
+                q_max=30,
                 list_of_temperatures=[100, 200, 300],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=100,
+                q_max=30,
                 list_of_temperatures=[50, 150, 250, 350, 450, 550, 650],
             ),
         ),
@@ -177,12 +217,14 @@ def test_attempt_to_combine_with_works_as_expected(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=10,
+                q_max=30,
                 list_of_temperatures=[150, 250, 350],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Ga/In"),
                 time_per_pdf=50,
+                q_max=30,
                 list_of_temperatures=[100, 200, 300],
             ),
         ),
@@ -191,12 +233,14 @@ def test_attempt_to_combine_with_works_as_expected(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=10,
+                q_max=30,
                 list_of_temperatures=[150, 250, 350],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
                 list_of_temperatures=[],
             ),
         ),
@@ -205,11 +249,13 @@ def test_attempt_to_combine_with_works_as_expected(
                 instrument_session="def",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=10,
+                q_max=30,
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,
+                q_max=30,
             ),
         ),
     ],
@@ -219,3 +265,177 @@ def test_attempt_to_combine_returns_none_when_auxiliaries_cannot_be_combined(
     required: AuxiliaryScan,
 ):
     assert auxiliary.attempt_to_combine_with(required) is None
+
+
+@pytest.mark.parametrize(
+    "auxiliaries_1, auxiliaries_2, expected_combined_auxiliaries",
+    [
+        (
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=25,
+                    list_of_temperatures=None,
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=30,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=40,
+                    list_of_temperatures=None,
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=40,
+                    list_of_temperatures=None,
+                ),
+            ],
+        ),
+        (
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=40,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=[100, 150],
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=30,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=25,
+                    list_of_temperatures=None,
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=40,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=[100, 150],
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=25,
+                    list_of_temperatures=None,
+                ),
+            ],
+        ),
+        (
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=[100, 200],
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=[400, 500],
+                ),
+            ],
+            [
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=None,
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=None,
+                ),
+                AuxiliaryScan(
+                    instrument_session="cm12345-1",
+                    pin=StandardsPin(capillary="fq1.0", contents=None),
+                    time_per_pdf=20.0,
+                    q_max=35,
+                    list_of_temperatures=[100, 200, 300, 400, 500],
+                ),
+            ],
+        ),
+    ],
+)
+def test_combine_auxiliary_requirements_combines_auxiliaries_as_expected(
+    auxiliaries_1: list[AuxiliaryScan],
+    auxiliaries_2: list[AuxiliaryScan],
+    expected_combined_auxiliaries: list[AuxiliaryScan],
+):
+
+    assert (
+        combine_auxiliary_requirements(auxiliaries_1, auxiliaries_2)
+        == expected_combined_auxiliaries
+    )

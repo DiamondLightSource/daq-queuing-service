@@ -31,67 +31,32 @@ def get_suitable_tiled_scan(
 
         oldest_valid_time = time.time() - stale_time_s
         result: Container = (
-            tiled_client.search(Eq("start.instrument", "i15-1"))
-            .search(Eq("start.instrument_session", instrument_session))
+            tiled_client[
+                f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
+            ]
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
             .search(In("start.scan_type", list(AuxiliaryScanType)))
             .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
+            .search(KeyPresent("start.experiment_definition.data.q_max"))
         )
 
-        items = sorted(
-            ((key, value) for key, value in result.items()),
-            key=lambda item: item[1].metadata["start"]["time"],
-            reverse=True,
-        )
+        tiled_ids = [
+            item[0]
+            for item in sorted(
+                result.items(),
+                key=lambda item: item[1].metadata["start"]["time"],
+                reverse=True,
+            )
+        ]
 
         auxiliary_scans: list[TiledAuxiliary] = []
 
-        for item in items:
-            tiled_id = item[0]
-            start_doc = item[1].metadata["start"]
-            filename = f"{start_doc['scan_file']}.nxs"
-            instrument_session_directory = Path(start_doc["data_session_directory"])
-            filepath = instrument_session_directory / filename
-
-            sample = start_doc.get("sample_info")
-
-            if sample is None:
-                pin = None
-            else:
-                capillary = sample["data"].get("capillary")
-                if not capillary:
-                    LOGGER.warning(
-                        f"No capillary found for tiled scan '{tiled_id}'. Skipping."
-                    )
-                    continue
-                pin = StandardsPin(
-                    capillary=sample["data"]["capillary"],
-                    contents=sample["data"].get("composition"),
-                )
-            time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
-            list_of_temperatures = start_doc["experiment_definition"]["data"].get(
-                "list_of_temperatures"
-            )
-
-            auxiliary_scan = TiledAuxiliary(
-                tiled_id=tiled_id,
-                instrument_session=instrument_session,
-                filename=filename,
-                instrument_session_directory=instrument_session_directory,
-                filepath=filepath,
-                pin=pin,
-                time_per_pdf=time_per_pdf,
-                list_of_temperatures=list_of_temperatures,
-            )
-            if auxiliary_scan.kind != start_doc["scan_type"]:
-                LOGGER.warning(
-                    f"Inferred auxiliary type: '{auxiliary_scan.kind}' does not match "
-                    + f"scan type in metadata: '{start_doc['scan_type']}' for auxiliary"
-                    + f" scan '{tiled_id}'. Skipping."
-                )
-                continue
-            auxiliary_scans.append(auxiliary_scan)
+        for tiled_id in tiled_ids:
+            if auxiliary_scan := construct_tiled_auxiliary(
+                result, tiled_id, instrument_session
+            ):
+                auxiliary_scans.append(auxiliary_scan)
 
         LOGGER.debug(
             f"Found {len(auxiliary_scans)} auxiliary scans in tiled since "
@@ -107,3 +72,59 @@ def get_suitable_tiled_scan(
     LOGGER.info(
         f"Found no suitable auxiliary scans in tiled matching: {required_scan}."
     )
+
+
+def construct_tiled_auxiliary(
+    container: Container, tiled_id: str, instrument_session: str
+) -> TiledAuxiliary | None:
+    start_doc = container[tiled_id].metadata["start"]
+    filename = f"{start_doc['scan_file']}.nxs"
+    instrument_session_directory = Path(start_doc["data_session_directory"])
+    filepath = instrument_session_directory / filename
+
+    sample = start_doc.get("sample_info")
+
+    if sample is None:
+        pin = None
+    else:
+        capillary = sample["data"].get("capillary")
+        if not capillary:
+            LOGGER.warning(f"No capillary found for tiled scan '{tiled_id}'. Skipping.")
+            return
+        pin = StandardsPin(
+            capillary=sample["data"]["capillary"],
+            contents=sample["data"].get("composition"),
+        )
+    time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
+    q_max = start_doc["experiment_definition"]["data"]["q_max"]
+    list_of_temperatures = start_doc["experiment_definition"]["data"].get(
+        "list_of_temperatures"
+    )
+
+    requires = [
+        construct_tiled_auxiliary(
+            container, auxiliary_scan["tiled_id"], instrument_session
+        )
+        for auxiliary_scan in start_doc.get("auxiliary_scans", {}).values()
+    ]
+
+    auxiliary_scan = TiledAuxiliary(
+        tiled_id=tiled_id,
+        instrument_session=instrument_session,
+        filename=filename,
+        instrument_session_directory=instrument_session_directory,
+        filepath=filepath,
+        pin=pin,
+        time_per_pdf=time_per_pdf,
+        q_max=q_max,
+        list_of_temperatures=list_of_temperatures,
+        requires=[scan for scan in requires if scan is not None],
+    )
+    if auxiliary_scan.kind != start_doc["scan_type"]:
+        LOGGER.warning(
+            f"Inferred auxiliary type: '{auxiliary_scan.kind}' does not match "
+            + f"scan type in metadata: '{start_doc['scan_type']}' for auxiliary"
+            + f" scan '{tiled_id}'. Skipping."
+        )
+        return
+    return auxiliary_scan
