@@ -20,7 +20,7 @@ dependencies = [
     "fastapi>=0.136.0",
     "graypy>=2.1.0",
     "pydantic>=2.13.2",
-    "tiled[client]>=0.2.9",
+    "tiled[client]>=0.2.21",
 ]
 dynamic = ["version"]
 license.file = "LICENSE"
