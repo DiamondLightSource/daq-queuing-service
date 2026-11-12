@@ -173,7 +173,7 @@ class I151Converter(Converter):
         if self._queue_params.do_wait_for_beam:
             plans.append(get_wait_for_beam(session))
 
-        if sample and self._queue_params.do_centring:
+        if sample and sample.data.get("composition") and self._queue_params.do_centring:
             plans.append(get_centre_sample(centring_params, experiment))
             if self._queue_params.do_wait_for_beam:
                 plans.append(get_wait_for_beam(session))
