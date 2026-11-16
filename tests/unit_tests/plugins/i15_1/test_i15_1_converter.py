@@ -22,7 +22,10 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.plugins.i15_1.i15_1_converter import (
+    I151Converter,
+    QueuedAuxiliary,
+)
 from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
@@ -192,7 +195,7 @@ def i15_1_tasks():
 
 def make_background_task(
     capillary: STANDARD_CAPILLARY, time_per_pdf: int, q_max: Q_MAX_OPTIONS
-) -> Task:
+) -> tuple[Task, AuxiliaryScan]:
     background = AuxiliaryScan(
         instrument_session="cm12345-1",
         pin=StandardsPin(capillary=capillary, contents=None),
@@ -203,7 +206,7 @@ def make_background_task(
         experiment=I151Converter()._construct_auxiliary_experiment(
             background, "cm12345-1"
         )
-    )
+    ), background
 
 
 def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPosition):
@@ -1086,16 +1089,23 @@ async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: Task
 def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(
     i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
 ):
-    background = AuxiliaryScan(
+    required_auxiliary = AuxiliaryScan(
         instrument_session="cm12345-1",
         pin=StandardsPin(capillary="fq1.0", contents=None),
         time_per_pdf=25,
         q_max=30,
     )
-    new_tasks = [make_background_task("fq1.0", 25, 30)]
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, None, new_tasks, "task_id", "cm12345-1"
+    new_task, auxiliary_scan = make_background_task("fq1.0", 25, 30)
+    new_tasks = [new_task]
+    auxiliary_scans = {
+        0: QueuedAuxiliary(index=0, auxiliary=auxiliary_scan, task_id=new_tasks[0].id)
+    }
+    result, queued_auxiliary_tasks = (
+        i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+            required_auxiliary, auxiliary_scans, None, new_tasks, "task_id", "cm12345-1"
+        )
     )
+    assert auxiliary_scans == queued_auxiliary_tasks
     assert result == new_tasks
 
 
@@ -1111,12 +1121,13 @@ def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitabl
     new_tasks: list[Task] = []
     result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
         background,
-        TaskWithPosition.from_task(make_background_task("fq1.0", 25, q_max=40)),
+        {},
+        TaskWithPosition.from_task(make_background_task("fq1.0", 25, q_max=40)[0]),
         new_tasks,
         "task_id",
         "cm12345-1",
     )
-    assert result == new_tasks
+    assert result == ([], {})
 
 
 def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_possible(
@@ -1128,16 +1139,27 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
         time_per_pdf=25,
         q_max=40,
     )
-    current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25, 40))
+    current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25, 40)[0])
+
     # Current task is suitable but not a background
     assert isinstance(current_task.experiment, Experiment)
     current_task.experiment.experiment_definition.name = "Not a background"
-    new_tasks = [make_background_task("fq1.0", 10, 30)]
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, current_task, new_tasks, "task_id", "cm12345-1"
+    new_task, queued_auxiliary = make_background_task("fq1.0", 10, 30)
+    queued_auxiliaries = 1
+    new_tasks = [new_task]
+    queued_auxiliaries = {
+        0: QueuedAuxiliary(auxiliary=queued_auxiliary, index=0, task_id=new_tasks[0].id)
+    }
+    result, _ = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+        background,
+        queued_auxiliaries,
+        current_task,
+        new_tasks,
+        "task_id",
+        "cm12345-1",
     )
     assert len(result) == 1
-    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 40))
+    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 40)[0])
 
 
 def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_in_queue(
@@ -1150,11 +1172,11 @@ def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_i
         time_per_pdf=25,
         q_max=35,
     )
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, None, [], "task_id", "cm12345-1"
+    result, _ = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+        background, {}, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 1
-    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 35))
+    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 35)[0])
 
 
 def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
@@ -1168,8 +1190,8 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
         time_per_pdf=25,
         q_max=35,
     )
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, None, [], "task_id", "cm12345-1"
+    result, _ = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+        background, {}, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 0
     assert i15_1_converter._tiled_auxiliary_scans == {

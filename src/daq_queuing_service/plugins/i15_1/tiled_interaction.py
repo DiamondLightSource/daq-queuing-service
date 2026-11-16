@@ -30,6 +30,7 @@ def get_suitable_tiled_scan(
     def _query_tiled(instrument_session: str) -> list[TiledAuxiliary]:
 
         oldest_valid_time = time.time() - stale_time_s
+        t1 = time.monotonic()
         result: Container = (
             tiled_client[
                 f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
@@ -40,6 +41,7 @@ def get_suitable_tiled_scan(
             .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
             .search(KeyPresent("start.experiment_definition.data.q_max"))
         )
+        LOGGER.info(f"Tiled query executed in {time.monotonic() - t1}s")
 
         tiled_ids = [
             item[0]
@@ -61,6 +63,9 @@ def get_suitable_tiled_scan(
         LOGGER.debug(
             f"Found {len(auxiliary_scans)} auxiliary scans in tiled since "
             + f"{stale_time_s}s ago for visit {instrument_session}."
+        )
+        LOGGER.info(
+            f"Tiled auxiliary scans retrieved and sorted in {time.monotonic() - t1}s"
         )
         return auxiliary_scans
 

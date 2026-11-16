@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import Any
@@ -58,15 +59,6 @@ class QueuedAuxiliary:
     index: int
     task_id: str
     auxiliary: AuxiliaryScan
-
-
-def _filter_auxiliary_scans(tasks: list[Task]) -> list[QueuedAuxiliary]:
-    return [
-        QueuedAuxiliary(i, task.id, AuxiliaryScan.from_experiment(task.experiment))
-        for i, task in enumerate(tasks)
-        if isinstance(task.experiment, Experiment)
-        and is_auxiliary_experiment(task.experiment)
-    ]
 
 
 class I151Converter(Converter):
@@ -208,6 +200,7 @@ class I151Converter(Converter):
 
         new_tasks: list[Task] = []
 
+        queued_auxiliary_scans: dict[int, QueuedAuxiliary] = {}
         for task in tasks:
             with add_session_to_logger(task.experiment.instrument_session):
                 experiment = task.experiment
@@ -219,25 +212,37 @@ class I151Converter(Converter):
                     )
 
                     for required_auxiliary in required_auxiliary_scans:
-                        new_tasks = self._ensure_auxiliary_in_queue_or_tiled(
-                            required_auxiliary,
-                            current_task,
-                            new_tasks,
-                            task.id,
-                            instrument_session,
+                        new_tasks, queued_auxiliary_scans = (
+                            self._ensure_auxiliary_in_queue_or_tiled(
+                                required_auxiliary,
+                                queued_auxiliary_scans,
+                                current_task,
+                                new_tasks,
+                                task.id,
+                                instrument_session,
+                            )
+                        )
+
+                    if is_auxiliary_experiment(experiment):
+                        queued_auxiliary_scans[len(new_tasks)] = QueuedAuxiliary(
+                            index=len(new_tasks),
+                            task_id=task.id,
+                            auxiliary=AuxiliaryScan.from_experiment(experiment),
                         )
 
                 new_tasks.append(task)
+
         return new_tasks
 
     def _ensure_auxiliary_in_queue_or_tiled(
         self,
         required_auxiliary: AuxiliaryScan,
+        queued_auxiliaries: dict[int, QueuedAuxiliary],
         current_task: TaskWithPosition | None,
         new_tasks: list[Task],
         task_id: str,
         instrument_session: str,
-    ) -> list[Task]:
+    ) -> tuple[list[Task], dict[int, QueuedAuxiliary]]:
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
@@ -246,14 +251,13 @@ class I151Converter(Converter):
                 required_auxiliary
             )
         ):
-            return new_tasks
+            return new_tasks, queued_auxiliaries
 
-        queued_auxiliary_scans = _filter_auxiliary_scans(new_tasks)
         if any(
             queued_auxiliary.auxiliary.is_suitable(required_auxiliary)
-            for queued_auxiliary in queued_auxiliary_scans
+            for queued_auxiliary in queued_auxiliaries.values()
         ):
-            return new_tasks
+            return new_tasks, queued_auxiliaries
 
         if tiled_scan := get_suitable_tiled_scan(
             self._tiled_client,
@@ -261,7 +265,7 @@ class I151Converter(Converter):
             self._queue_params.tiled_stale_time_s,
         ):
             self._tiled_auxiliary_scans[task_id][tiled_scan.kind] = tiled_scan
-            return new_tasks
+            return new_tasks, queued_auxiliaries
 
         LOGGER.info(
             f"No existing suitable auxiliary scans found for {required_auxiliary}, "
@@ -269,24 +273,24 @@ class I151Converter(Converter):
         )
         return self._add_or_replace_auxiliary_scan(
             required_auxiliary,
+            queued_auxiliaries,
             current_task,
             new_tasks,
-            queued_auxiliary_scans,
             instrument_session,
         )
 
     def _add_or_replace_auxiliary_scan(
         self,
         required_auxiliary: AuxiliaryScan,
+        queued_auxiliaries: dict[int, QueuedAuxiliary],
         current_task: TaskWithPosition | None,
         new_tasks: list[Task],
-        queued_auxiliary_scans: list[QueuedAuxiliary],
         instrument_session: str,
-    ) -> list[Task]:
+    ) -> tuple[list[Task], dict[int, QueuedAuxiliary]]:
         # It is assumed every scan in queued_auxiliary_scans has already added their
         # requirements before for them
         combined_auxiliary = self._find_combinable_auxiliary(
-            required_auxiliary, queued_auxiliary_scans
+            required_auxiliary, queued_auxiliaries
         )
 
         aux_experiment = self._construct_auxiliary_experiment(
@@ -307,23 +311,31 @@ class I151Converter(Converter):
 
         self._tiled_auxiliary_scans[aux_task.id] = {}
         for required in additional_required:
-            prefix = self._ensure_auxiliary_in_queue_or_tiled(
+            prefix, queued_auxiliaries = self._ensure_auxiliary_in_queue_or_tiled(
                 required,
+                queued_auxiliaries,
                 current_task,
                 prefix,
                 aux_task.id,
                 instrument_session,
             )
+        queued_auxiliaries[len(prefix)] = QueuedAuxiliary(
+            index=len(prefix),
+            task_id=aux_task.id,
+            auxiliary=combined_auxiliary.auxiliary
+            if combined_auxiliary
+            else required_auxiliary,
+        )
         new_tasks = prefix + [aux_task] + suffix
 
-        return new_tasks
+        return new_tasks, queued_auxiliaries
 
     def _find_combinable_auxiliary(
         self,
         required_auxiliary: AuxiliaryScan,
-        queued_auxiliary_scans: list[QueuedAuxiliary],
+        queued_auxiliary_scans: dict[int, QueuedAuxiliary],
     ):
-        for queued_auxiliary in queued_auxiliary_scans:
+        for queued_auxiliary in queued_auxiliary_scans.values():
             if (
                 combined_auxiliary_scan
                 := queued_auxiliary.auxiliary.attempt_to_combine_with(
