@@ -554,10 +554,11 @@ def test_experiment_with_no_sample_converts_to_air_scan():
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert len(tasks) == 2
-    assert tasks[0].name == "wait_for_beam"
-    assert tasks[1].name == "data_collection"
-    assert tasks[1].params == {
+    assert len(tasks) == 3
+    assert tasks[0].name == "robot_unload"
+    assert tasks[1].name == "wait_for_beam"
+    assert tasks[2].name == "data_collection"
+    assert tasks[2].params == {
         "full_collection_time": 100,
         "exposure_time_per_frame": 1.0,
         "scan_type": ScanType.DATA_COLLECTION,
