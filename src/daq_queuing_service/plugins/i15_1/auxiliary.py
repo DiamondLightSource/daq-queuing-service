@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
 
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -9,6 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 from daq_queuing_service.task_queue.task import Experiment
 
 DEFAULT_TEMPERATURE_STEP = 100
+
+# Should merge with equivalent in crystallography-bluesky once
+# https://github.com/DiamondLightSource/daq-queuing-service/issues/131 is done
+Q_MAX_OPTIONS = Literal[25, 30, 35, 40]
 
 
 class AuxiliaryScanType(StrEnum):
@@ -63,6 +67,7 @@ class AuxiliaryScan(BaseModel):
     instrument_session: str
     pin: StandardsPin | None
     time_per_pdf: float
+    q_max: Q_MAX_OPTIONS
     list_of_temperatures: list[int] | None = None
     requires: list[Self] = Field(default_factory=lambda: [], exclude=True)
 
@@ -107,6 +112,7 @@ class AuxiliaryScan(BaseModel):
             self.instrument_session == required_background.instrument_session
             and self.pin == required_background.pin
             and self.time_per_pdf >= required_background.time_per_pdf
+            and self.q_max >= required_background.q_max
         )
 
     def _temperatures_match(
@@ -170,6 +176,7 @@ class AuxiliaryScan(BaseModel):
             instrument_session=self.instrument_session,
             pin=self.pin,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
+            q_max=max(self.q_max, required_background.q_max),
             list_of_temperatures=list_of_temperatures,
             requires=combine_auxiliary_requirements(
                 self.requires, required_background.requires
@@ -196,6 +203,7 @@ class AuxiliaryScan(BaseModel):
             instrument_session=experiment.instrument_session,
             pin=pin,
             time_per_pdf=experiment.experiment_definition.data["time_per_pdf"],
+            q_max=experiment.experiment_definition.data["q_max"],
             list_of_temperatures=experiment.experiment_definition.data.get(
                 "list_of_temperatures"
             ),

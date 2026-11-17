@@ -167,8 +167,11 @@ class I151Converter(Converter):
 
         plans: list[TaskRequest] = []
 
-        if sample and self._queue_params.do_robot_load:
-            plans.append(get_robot_load(sample, session))
+        if self._queue_params.do_robot_load:
+            if sample:
+                plans.append(get_robot_load(sample, session))
+            else:
+                plans.append(get_robot_unload(session))
 
         if self._queue_params.do_wait_for_beam:
             plans.append(get_wait_for_beam(session))
@@ -336,6 +339,7 @@ class I151Converter(Converter):
             return experiment.experiment_definition.data["required_auxiliary_scans"]
 
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+        q_max = experiment.experiment_definition.data["q_max"]
         list_of_temperatures = experiment.experiment_definition.data.get(
             "list_of_temperatures"
         )
@@ -348,6 +352,7 @@ class I151Converter(Converter):
             instrument_session=experiment.instrument_session,
             pin=None,
             time_per_pdf=time_per_pdf,
+            q_max=q_max,
         )
         empty_capillary = AuxiliaryScan(
             instrument_session=experiment.instrument_session,
@@ -355,6 +360,7 @@ class I151Converter(Converter):
                 capillary=experiment.sample.data["capillary"], contents=None
             ),
             time_per_pdf=time_per_pdf,
+            q_max=q_max,
             list_of_temperatures=list_of_temperatures,
             requires=[air],
         )
@@ -364,6 +370,7 @@ class I151Converter(Converter):
                 capillary=experiment.sample.data["capillary"], contents="Silicon"
             ),
             time_per_pdf=time_per_pdf,
+            q_max=q_max,
             requires=[air, empty_capillary],
         )
 
@@ -375,6 +382,7 @@ class I151Converter(Converter):
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
         data: dict[str, Any] = {
             "time_per_pdf": auxiliary_scan.time_per_pdf,
+            "q_max": auxiliary_scan.q_max,
             "required_auxiliary_scans": auxiliary_scan.requires,
         }
         if auxiliary_scan.list_of_temperatures:
