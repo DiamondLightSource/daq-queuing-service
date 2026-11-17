@@ -159,8 +159,11 @@ class I151Converter(Converter):
 
         plans: list[TaskRequest] = []
 
-        if sample and self._queue_params.do_robot_load:
-            plans.append(get_robot_load(sample, session))
+        if self._queue_params.do_robot_load:
+            if sample:
+                plans.append(get_robot_load(sample, session))
+            else:
+                plans.append(get_robot_unload(session))
 
         if self._queue_params.do_wait_for_beam:
             plans.append(get_wait_for_beam(session))
@@ -295,6 +298,7 @@ class I151Converter(Converter):
         self, experiment: Experiment
     ) -> list[AuxiliaryScan]:
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+        q_max = experiment.experiment_definition.data["q_max"]
         list_of_temperatures = experiment.experiment_definition.data.get(
             "list_of_temperatures"
         )
@@ -307,6 +311,7 @@ class I151Converter(Converter):
                 instrument_session=experiment.instrument_session,
                 pin=None,
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
             ),
             AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
@@ -314,6 +319,7 @@ class I151Converter(Converter):
                     capillary=experiment.sample.data["capillary"], contents=None
                 ),
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
                 list_of_temperatures=list_of_temperatures,
             ),
             AuxiliaryScan(
@@ -322,6 +328,7 @@ class I151Converter(Converter):
                     capillary=experiment.sample.data["capillary"], contents="Silicon"
                 ),
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
             ),
         ]
 
@@ -329,7 +336,10 @@ class I151Converter(Converter):
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
-        data: dict[str, Any] = {"time_per_pdf": auxiliary_scan.time_per_pdf}
+        data: dict[str, Any] = {
+            "time_per_pdf": auxiliary_scan.time_per_pdf,
+            "q_max": auxiliary_scan.q_max,
+        }
         if auxiliary_scan.list_of_temperatures:
             settle_time = (
                 self._queue_params.blower_auxiliary_collection_params.settle_time_s
