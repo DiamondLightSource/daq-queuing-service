@@ -31,8 +31,9 @@ def get_suitable_tiled_scan(
 
         oldest_valid_time = time.time() - stale_time_s
         result: Container = (
-            tiled_client.search(Eq("start.instrument", "i15-1"))
-            .search(Eq("start.instrument_session", instrument_session))
+            tiled_client[
+                f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
+            ]
             .search(Eq("stop.exit_status", "success"))
             .search(Comparison("ge", "stop.time", oldest_valid_time))
             .search(In("start.scan_type", list(AuxiliaryScanType)))
