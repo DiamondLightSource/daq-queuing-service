@@ -28,13 +28,13 @@ def mock_current_time():
 @pytest.fixture()
 def mock_tiled_searches(
     tiled_client: MagicMock,
-) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
 
     result_1.metadata = {
         "start": {
             "time": 1,
-            "experiment_definition": {"data": {"time_per_pdf": 10}},
+            "experiment_definition": {"data": {"time_per_pdf": 10, "q_max": 35}},
             "sample_info": None,
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10000",
@@ -45,7 +45,7 @@ def mock_tiled_searches(
     result_2.metadata = {
         "start": {
             "time": 10,
-            "experiment_definition": {"data": {"time_per_pdf": 11}},
+            "experiment_definition": {"data": {"time_per_pdf": 11, "q_max": 35}},
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10001",
@@ -56,7 +56,7 @@ def mock_tiled_searches(
     result_3.metadata = {
         "start": {
             "time": 2,
-            "experiment_definition": {"data": {"time_per_pdf": 9}},
+            "experiment_definition": {"data": {"time_per_pdf": 9, "q_max": 30}},
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10002",
@@ -67,7 +67,7 @@ def mock_tiled_searches(
     result_4.metadata = {
         "start": {
             "time": 5,
-            "experiment_definition": {"data": {"time_per_pdf": 12}},
+            "experiment_definition": {"data": {"time_per_pdf": 12, "q_max": 25}},
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10003",
@@ -84,6 +84,7 @@ def mock_tiled_searches(
                     "list_of_temperatures": [100, 200, 300],
                     "ramp_rate": 0,
                     "settle_time": 10,
+                    "q_max": 35,
                 }
             },
             "sample_info": {"data": {"capillary": "fq1.0"}},
@@ -93,8 +94,8 @@ def mock_tiled_searches(
         }
     }
 
-    search_result_4 = MagicMock()
-    search_result_4.search = MagicMock(
+    search_result_5 = MagicMock()
+    search_result_5.search = MagicMock(
         return_value={
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
@@ -104,6 +105,8 @@ def mock_tiled_searches(
         }
     )
 
+    search_result_4 = MagicMock()
+    search_result_4.search = MagicMock(return_value=search_result_5)
     search_result_3 = MagicMock()
     search_result_3.search = MagicMock(return_value=search_result_4)
     search_result_2 = MagicMock()
@@ -113,17 +116,25 @@ def mock_tiled_searches(
         return_value=search_result_2
     )
 
-    return (tiled_client, search_result_2, search_result_3, search_result_4)
+    return (
+        tiled_client,
+        search_result_2,
+        search_result_3,
+        search_result_4,
+        search_result_5,
+    )
 
 
 def test_get_suitable_tiled_background_makes_expected_searches(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock],
+    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
     queue_params: QueueParameters,
 ):
-    client, search_2, search_3, search_4 = mock_tiled_searches
+    client, search_2, search_3, search_4, search_5 = mock_tiled_searches
     get_suitable_tiled_scan(
         client,
-        AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+        AuxiliaryScan(
+            instrument_session="cm12345-1", pin=None, time_per_pdf=10, q_max=35
+        ),
         queue_params.tiled_stale_time_s,
     )
     client["i15-1/cm12345/cm12345-1"].search.assert_called_once_with(  # type: ignore
@@ -138,6 +149,9 @@ def test_get_suitable_tiled_background_makes_expected_searches(
     search_4.search.assert_called_once_with(
         KeyPresent("start.experiment_definition.data.time_per_pdf")
     )
+    search_5.search.assert_called_once_with(
+        KeyPresent("start.experiment_definition.data.q_max")
+    )
 
 
 @pytest.mark.parametrize(
@@ -148,6 +162,7 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                 instrument_session="cm12345-1",
                 pin=StandardsPin(capillary="fq1.0", contents=None),
                 time_per_pdf=10,
+                q_max=30,
             ),
             TiledAuxiliary(
                 instrument_session="cm12345-1",
@@ -157,6 +172,7 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                 filename="i15-1-10001.nxs",
                 instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
                 filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10001.nxs"),
+                q_max=35,
             ),
         ),
         (
@@ -165,6 +181,7 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                 pin=StandardsPin(capillary="fq1.0", contents=None),
                 time_per_pdf=10,
                 list_of_temperatures=[150, 250],
+                q_max=30,
             ),
             TiledAuxiliary(
                 instrument_session="cm12345-1",
@@ -175,6 +192,7 @@ def test_get_suitable_tiled_background_makes_expected_searches(
                 instrument_session_directory=Path("/path/to/data/2026/cm12345-1"),
                 filepath=Path("/path/to/data/2026/cm12345-1/i15-1-10004.nxs"),
                 list_of_temperatures=[100, 200, 300],
+                q_max=35,
             ),
         ),
     ],
@@ -197,7 +215,9 @@ def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_f
     assert (
         get_suitable_tiled_scan(
             client,
-            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            AuxiliaryScan(
+                instrument_session="cm12345-1", pin=None, time_per_pdf=10, q_max=30
+            ),
             1000000,
         )
         is None
@@ -223,7 +243,9 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_no_capillary_found_an
     with caplog.at_level(logging.WARNING):
         tiled_scan = get_suitable_tiled_scan(
             client,
-            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            AuxiliaryScan(
+                instrument_session="cm12345-1", pin=None, time_per_pdf=10, q_max=30
+            ),
             1000000,
         )
     assert tiled_scan is None
@@ -238,7 +260,7 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_scan_type_doesnt_matc
     result.metadata = {
         "start": {
             "time": 10,
-            "experiment_definition": {"data": {"time_per_pdf": 11}},
+            "experiment_definition": {"data": {"time_per_pdf": 11, "q_max": 25}},
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10001",
@@ -249,7 +271,9 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_scan_type_doesnt_matc
     with caplog.at_level(logging.WARNING):
         tiled_scan = get_suitable_tiled_scan(
             client,
-            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            AuxiliaryScan(
+                instrument_session="cm12345-1", pin=None, time_per_pdf=10, q_max=30
+            ),
             1000000,
         )
     assert tiled_scan is None

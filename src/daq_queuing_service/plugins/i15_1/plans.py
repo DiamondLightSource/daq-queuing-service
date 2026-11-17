@@ -105,6 +105,7 @@ def get_data_collection(
         "exposure_time_per_frame": data_collection_params.exposure_time_per_frame_s,
         "scan_type": scan_type,
         "metadata": collection_metadata,
+        "q_max": experiment_definition.data["q_max"],
     }
 
     if experiment_is_blower(experiment):
