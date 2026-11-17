@@ -33,6 +33,8 @@ def get_background_temperatures(
     )
 
 
+# Should merge with equivalent in crystallography-bluesky once
+# https://github.com/DiamondLightSource/daq-queuing-service/issues/131 is done
 Q_MAX_OPTIONS = Literal[25, 30, 35, 40]
 
 
