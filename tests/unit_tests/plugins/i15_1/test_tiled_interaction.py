@@ -28,7 +28,7 @@ def mock_current_time():
 @pytest.fixture()
 def mock_tiled_searches(
     tiled_client: MagicMock,
-) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
 
     result_1.metadata = {
@@ -94,8 +94,8 @@ def mock_tiled_searches(
         }
     }
 
-    search_result_7 = MagicMock()
-    search_result_7.search = MagicMock(
+    search_result_5 = MagicMock()
+    search_result_5.search = MagicMock(
         return_value={
             "tiled_id_1": result_1,
             "tiled_id_2": result_2,
@@ -105,10 +105,6 @@ def mock_tiled_searches(
         }
     )
 
-    search_result_6 = MagicMock()
-    search_result_6.search = MagicMock(return_value=search_result_7)
-    search_result_5 = MagicMock()
-    search_result_5.search = MagicMock(return_value=search_result_6)
     search_result_4 = MagicMock()
     search_result_4.search = MagicMock(return_value=search_result_5)
     search_result_3 = MagicMock()
@@ -116,7 +112,9 @@ def mock_tiled_searches(
     search_result_2 = MagicMock()
     search_result_2.search = MagicMock(return_value=search_result_3)
 
-    tiled_client.search = MagicMock(return_value=search_result_2)
+    tiled_client["i15-1/cm12345/cm12345-1"].search = MagicMock(
+        return_value=search_result_2
+    )
 
     return (
         tiled_client,
@@ -124,20 +122,14 @@ def mock_tiled_searches(
         search_result_3,
         search_result_4,
         search_result_5,
-        search_result_6,
-        search_result_7,
     )
 
 
 def test_get_suitable_tiled_background_makes_expected_searches(
-    mock_tiled_searches: tuple[
-        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
-    ],
+    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
     queue_params: QueueParameters,
 ):
-    client, search_2, search_3, search_4, search_5, search_6, search_7 = (
-        mock_tiled_searches
-    )
+    client, search_2, search_3, search_4, search_5 = mock_tiled_searches
     get_suitable_tiled_scan(
         client,
         AuxiliaryScan(
@@ -145,21 +137,19 @@ def test_get_suitable_tiled_background_makes_expected_searches(
         ),
         queue_params.tiled_stale_time_s,
     )
-    client.search.assert_called_once_with(Eq(key="start.instrument", value="i15-1"))
-    search_2.search.assert_called_once_with(
-        Eq(key="start.instrument_session", value="cm12345-1")
+    client["i15-1/cm12345/cm12345-1"].search.assert_called_once_with(  # type: ignore
+        Eq("stop.exit_status", "success")
     )
-    search_3.search.assert_called_once_with(Eq("stop.exit_status", "success"))
-    search_4.search.assert_called_once_with(
+    search_2.search.assert_called_once_with(
         Comparison("ge", "stop.time", 30 - queue_params.tiled_stale_time_s)
     )
-    search_5.search.assert_called_once_with(
+    search_3.search.assert_called_once_with(
         In(key="start.scan_type", value=["Air", "Empty Capillary", "Standard Sample"])
     )
-    search_6.search.assert_called_once_with(
+    search_4.search.assert_called_once_with(
         KeyPresent("start.experiment_definition.data.time_per_pdf")
     )
-    search_7.search.assert_called_once_with(
+    search_5.search.assert_called_once_with(
         KeyPresent("start.experiment_definition.data.q_max")
     )
 
