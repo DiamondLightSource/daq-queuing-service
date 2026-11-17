@@ -1,5 +1,4 @@
 import asyncio
-import time
 from collections.abc import Callable, Sequence
 from copy import deepcopy
 from enum import StrEnum
@@ -159,16 +158,26 @@ class TaskQueue:
         tasks to a queue of blueapi calls. This is called every time the queue is
         modified, and also right before a call is popped off the front of the queue.
         """
-        t1 = time.monotonic()
         assert get_session_filter(LOGGER).instrument_session_var.get() is None, (
             "Logger instrument session should not be set at this point"
         )
         LOGGER.debug(f"Syncing. Queue before sync: {self._queue}")
-
-        self._move_complete_tasks_to_history()
+        for task_id in list(self._queue):
+            task = self._tasks[task_id]
+            if task.status in (Status.COMPLETE, Status.ERROR):
+                # Move task from queue to history if all blueapi calls complete
+                # Or an error occurred during one of them
+                self._queue.remove(task_id)
+                self._history.append(task_id)
+                for call in filter(
+                    lambda call: call.status == CallStatus.WAITING, task.blueapi_calls
+                ):
+                    call.skip()
+            elif task.status == Status.QUEUED:
+                # If task is not in progress calls will be re-calculated
+                task.blueapi_calls = []
 
         try:
-            pre_process_t1 = time.monotonic()
             new_tasks = self._converter.pre_process(
                 self._get_running_task(),
                 [
@@ -178,9 +187,6 @@ class TaskQueue:
                 ],
                 self._get_history(),
                 self._get_call_history(),
-            )
-            LOGGER.info(
-                f"Completed plugin pre_process in {time.monotonic() - pre_process_t1}s"
             )
         except Exception as e:
             raise ConverterError(e) from e
@@ -215,7 +221,6 @@ class TaskQueue:
         ]
 
         try:
-            bapi_calls_t1 = time.monotonic()
             new_calls = self._converter.construct_blueapi_calls(
                 [
                     task
@@ -225,10 +230,6 @@ class TaskQueue:
                 self._get_history(),
                 self._get_call_history(),
             )
-            LOGGER.info(
-                "Completed plugin construct_blueapi_calls in"
-                + f" {time.monotonic() - bapi_calls_t1}s"
-            )
         except Exception as e:
             raise ConverterError(e) from e
 
@@ -236,7 +237,8 @@ class TaskQueue:
 
         for call in new_calls:
             # Add children to parent tasks
-            self._tasks[call.parent_task_id].blueapi_calls.append(call)
+            if call.parent_task_id:
+                self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
         if not self._call_queue:
             self._pause_queue(PauseReason.EMPTY_QUEUE)
@@ -247,26 +249,6 @@ class TaskQueue:
         self._broadcast_changes()
         self._modifying.notify_all()
         LOGGER.debug(f"Queue after sync: {self._queue}")
-        LOGGER.info(f"Sync complete in {time.monotonic() - t1}s")
-
-    def _move_complete_tasks_to_history(self):
-        _queue_copy = list(self._queue)
-        self._queue = []
-        for task_id in _queue_copy:
-            task = self._tasks[task_id]
-            if task.status in (Status.COMPLETE, Status.ERROR):
-                # Move task from queue to history if all blueapi calls complete
-                # Or an error occurred during one of them
-
-                self._history.append(task_id)
-                for call in task.blueapi_calls:
-                    if call.status == CallStatus.WAITING:
-                        call.skip()
-            else:
-                self._queue.append(task_id)
-                if task.status == Status.QUEUED:
-                    # If task is not in progress calls will be re-calculated
-                    task.blueapi_calls = []
 
     def _copy_contents(self) -> QueueContents:
         return deepcopy(
@@ -283,6 +265,8 @@ class TaskQueue:
         self._last_good_contents = self._copy_contents()
 
     def _restore_from_contents(self, contents: QueueContents):
+        LOGGER.info(f"Restoring to contents: {contents}")
+
         restored = deepcopy(contents)
 
         self._tasks = TaskRegistry(restored["tasks"])
@@ -296,7 +280,6 @@ class TaskQueue:
         self._restore_from_contents(self._last_good_contents)
 
     def _broadcast_changes(self):
-        LOGGER.info("Broadcasting changes")
         queue = self._get_queue_with_positions()
         history = self._get_history()
 
@@ -558,9 +541,9 @@ class TaskQueue:
     async def cancel_all_tasks(self) -> list[TaskWithPosition]:
         async with self._modifying:
             task_ids = [
-                task_id
-                for task_id in self._queue
-                if self._tasks[task_id].status == Status.QUEUED
+                id
+                for id in self._queue
+                if self._get_task_by_id(id).status == Status.QUEUED
             ]
             cancelled_tasks = self._cancel_tasks(task_ids)
         LOGGER.info("Successfully cleared all queued tasks")
@@ -690,16 +673,12 @@ class TaskQueue:
     def _remove_tasks_from_registry(self, task_ids: list[str]) -> None:
         # Only removes tasks not present in the queue or history
         # So should remove tasks from queue/history before removing from registry
-
-        queue_set = set(self._queue)
-        history_set = set(self._history)
-
         def should_be_removed(task_id: str) -> bool:
             return (
                 task_id in self._tasks
                 and self._tasks[task_id].status != Status.IN_PROGRESS
-                and task_id not in queue_set
-                and task_id not in history_set
+                and task_id not in self._queue
+                and task_id not in self._history
             )
 
         removed_ids = [task_id for task_id in task_ids if should_be_removed(task_id)]
