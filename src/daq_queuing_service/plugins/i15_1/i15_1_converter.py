@@ -159,8 +159,11 @@ class I151Converter(Converter):
 
         plans: list[TaskRequest] = []
 
-        if sample and self._queue_params.do_robot_load:
-            plans.append(get_robot_load(sample, session))
+        if self._queue_params.do_robot_load:
+            if sample:
+                plans.append(get_robot_load(sample, session))
+            else:
+                plans.append(get_robot_unload(session))
 
         if self._queue_params.do_wait_for_beam:
             plans.append(get_wait_for_beam(session))
