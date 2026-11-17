@@ -1,5 +1,6 @@
 import time
 from pathlib import Path
+from typing import Any
 
 from cachetools import TTLCache, cached
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
@@ -31,48 +32,44 @@ def get_suitable_tiled_scan(
 
         oldest_valid_time = time.time() - stale_time_s
         t1 = time.monotonic()
-        result: Container = (
-            tiled_client[
-                f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
-            ]
-            .search(Eq("stop.exit_status", "success"))
-            .search(Comparison("ge", "stop.time", oldest_valid_time))
-            .search(In("start.scan_type", list(AuxiliaryScanType)))
-            .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
-            .search(KeyPresent("start.experiment_definition.data.q_max"))
+        result = dict(
+            (
+                tiled_client[
+                    f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
+                ]
+                .search(Eq("stop.exit_status", "success"))
+                .search(Comparison("ge", "stop.time", oldest_valid_time))
+                .search(In("start.scan_type", list(AuxiliaryScanType)))
+                .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
+                .search(KeyPresent("start.experiment_definition.data.q_max"))
+                .sort(("start.time", -1))
+            ).items()
         )
-        LOGGER.info(f"Tiled query executed in {time.monotonic() - t1}s")
 
-        tiled_ids = [
-            item[0]
-            for item in sorted(
-                result.items(),
-                key=lambda item: item[1].metadata["start"]["time"],
-                reverse=True,
-            )
-        ]
+        LOGGER.info(f"Tiled query executed in {time.monotonic() - t1}s")
 
         auxiliary_scans: list[TiledAuxiliary] = []
 
-        for tiled_id in tiled_ids:
+        for tiled_id in result:
             if auxiliary_scan := construct_tiled_auxiliary(
                 result, tiled_id, instrument_session
             ):
                 auxiliary_scans.append(auxiliary_scan)
 
-        LOGGER.debug(
+        LOGGER.info(
             f"Found {len(auxiliary_scans)} auxiliary scans in tiled since "
             + f"{stale_time_s}s ago for visit {instrument_session}."
         )
         LOGGER.info(
-            f"Tiled auxiliary scans retrieved and sorted in {time.monotonic() - t1}s"
+            "Tiled auxiliary scans retrieved and constructed in "
+            + f"{time.monotonic() - t1}s"
         )
         return auxiliary_scans
 
     auxiliary_scans = _query_tiled(required_scan.instrument_session)
     for scan in auxiliary_scans:
         if scan.is_suitable(required_scan):
-            LOGGER.info(f"Found suitable auxiliary scans in tiled: {scan.tiled_id}")
+            LOGGER.info(f"Found suitable auxiliary scan in tiled: {scan.tiled_id}")
             return scan
     LOGGER.info(
         f"Found no suitable auxiliary scans in tiled matching: {required_scan}."
@@ -80,7 +77,7 @@ def get_suitable_tiled_scan(
 
 
 def construct_tiled_auxiliary(
-    container: Container, tiled_id: str, instrument_session: str
+    container: dict[str, Any], tiled_id: str, instrument_session: str
 ) -> TiledAuxiliary | None:
     start_doc = container[tiled_id].metadata["start"]
     filename = f"{start_doc['scan_file']}.nxs"
