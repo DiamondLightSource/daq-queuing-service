@@ -29,9 +29,8 @@ def mock_current_time():
 @pytest.fixture()
 def mock_tiled_searches(
     tiled_client: MagicMock,
-) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock]:
     result_1 = MagicMock()
-
     result_1.metadata = {
         "start": {
             "time": 1,
@@ -44,29 +43,6 @@ def mock_tiled_searches(
     }
     result_2 = MagicMock()
     result_2.metadata = {
-        "start": {
-            "time": 10,
-            "experiment_definition": {"data": {"time_per_pdf": 11, "q_max": 35}},
-            "sample_info": {"data": {"capillary": "fq1.0"}},
-            "data_session_directory": "/path/to/data/2026/cm12345-1",
-            "scan_file": "i15-1-10001",
-            "scan_type": "Empty Capillary",
-            "auxiliary_scans": {
-                AuxiliaryScanType.AIR.value: {
-                    "instrument_session": "cm12345-1",
-                    "pin": None,
-                    "time_per_pdf": 25.0,
-                    "list_of_temperatures": None,
-                    "tiled_id": "tiled_id_1",
-                    "filename": "i15-1-10000.nxs",
-                    "instrument_session_directory": "/path/to/data/2026/cm12345-1",
-                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
-                }
-            },
-        }
-    }
-    result_3 = MagicMock()
-    result_3.metadata = {
         "start": {
             "time": 2,
             "experiment_definition": {"data": {"time_per_pdf": 9, "q_max": 30}},
@@ -88,14 +64,37 @@ def mock_tiled_searches(
             },
         }
     }
-    result_4 = MagicMock()
-    result_4.metadata = {
+    result_3 = MagicMock()
+    result_3.metadata = {
         "start": {
             "time": 5,
             "experiment_definition": {"data": {"time_per_pdf": 12, "q_max": 25}},
             "sample_info": {"data": {"capillary": "fq1.0"}},
             "data_session_directory": "/path/to/data/2026/cm12345-1",
             "scan_file": "i15-1-10003",
+            "scan_type": "Empty Capillary",
+            "auxiliary_scans": {
+                AuxiliaryScanType.AIR.value: {
+                    "instrument_session": "cm12345-1",
+                    "pin": None,
+                    "time_per_pdf": 25.0,
+                    "list_of_temperatures": None,
+                    "tiled_id": "tiled_id_1",
+                    "filename": "i15-1-10000.nxs",
+                    "instrument_session_directory": "/path/to/data/2026/cm12345-1",
+                    "filepath": "/path/to/data/2026/cm12345-1/i15-1-10000.nxs",
+                }
+            },
+        }
+    }
+    result_4 = MagicMock()
+    result_4.metadata = {
+        "start": {
+            "time": 10,
+            "experiment_definition": {"data": {"time_per_pdf": 11, "q_max": 35}},
+            "sample_info": {"data": {"capillary": "fq1.0"}},
+            "data_session_directory": "/path/to/data/2026/cm12345-1",
+            "scan_file": "i15-1-10001",
             "scan_type": "Empty Capillary",
             "auxiliary_scans": {
                 AuxiliaryScanType.AIR.value: {
@@ -143,17 +142,19 @@ def mock_tiled_searches(
         }
     }
 
-    search_result_5 = MagicMock()
-    search_result_5.search = MagicMock(
+    sort_result = MagicMock()
+    sort_result.sort = MagicMock(
         return_value={
-            "tiled_id_1": result_1,
-            "tiled_id_2": result_2,
-            "tiled_id_3": result_3,
-            "tiled_id_4": result_4,
             "tiled_id_5": result_5,
+            "tiled_id_4": result_4,
+            "tiled_id_3": result_3,
+            "tiled_id_2": result_2,
+            "tiled_id_1": result_1,
         }
     )
 
+    search_result_5 = MagicMock()
+    search_result_5.search = MagicMock(return_value=sort_result)
     search_result_4 = MagicMock()
     search_result_4.search = MagicMock(return_value=search_result_5)
     search_result_3 = MagicMock()
@@ -171,14 +172,17 @@ def mock_tiled_searches(
         search_result_3,
         search_result_4,
         search_result_5,
+        sort_result,
     )
 
 
 def test_get_suitable_tiled_background_makes_expected_searches(
-    mock_tiled_searches: tuple[MagicMock, MagicMock, MagicMock, MagicMock, MagicMock],
+    mock_tiled_searches: tuple[
+        MagicMock, MagicMock, MagicMock, MagicMock, MagicMock, MagicMock
+    ],
     queue_params: QueueParameters,
 ):
-    client, search_2, search_3, search_4, search_5 = mock_tiled_searches
+    client, search_2, search_3, search_4, search_5, sort = mock_tiled_searches
     get_suitable_tiled_scan(
         client,
         AuxiliaryScan(
@@ -201,6 +205,7 @@ def test_get_suitable_tiled_background_makes_expected_searches(
     search_5.search.assert_called_once_with(
         KeyPresent("start.experiment_definition.data.q_max")
     )
+    sort.sort.assert_called_once_with(("start.time", -1))
 
 
 @pytest.mark.parametrize(
@@ -215,7 +220,7 @@ def test_get_suitable_tiled_background_makes_expected_searches(
             ),
             TiledAuxiliary(
                 instrument_session="cm12345-1",
-                tiled_id="tiled_id_2",
+                tiled_id="tiled_id_4",
                 pin=StandardsPin(capillary="fq1.0", contents=None),
                 time_per_pdf=11,
                 q_max=35,
@@ -291,8 +296,8 @@ def test_get_background_tiled_returns_most_recent_suitable_background(
 def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_found(
     mock_tiled_searches: tuple[MagicMock, ...],
 ):
-    client, *_, final_search = mock_tiled_searches
-    final_search.search.return_value = {}
+    client, *_, final_sort = mock_tiled_searches
+    final_sort.sort.return_value = {}
     assert (
         get_suitable_tiled_scan(
             client,
@@ -308,7 +313,7 @@ def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_f
 def test_get_suitable_tiled_background_skips_tiled_scan_if_no_capillary_found_and_warns(
     mock_tiled_searches: tuple[MagicMock, ...], caplog: LogCaptureFixture
 ):
-    client, *_, final_search = mock_tiled_searches
+    client, *_, final_sort = mock_tiled_searches
     result = MagicMock()
     result.metadata = {
         "start": {
@@ -320,7 +325,7 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_no_capillary_found_an
             "scan_type": "Empty Capillary",
         }
     }
-    final_search.search.return_value = {"tiled_id_1": result}
+    final_sort.sort.return_value = {"tiled_id_1": result}
     with caplog.at_level(logging.WARNING):
         tiled_scan = get_suitable_tiled_scan(
             client,
@@ -336,7 +341,7 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_no_capillary_found_an
 def test_get_suitable_tiled_background_skips_tiled_scan_if_scan_type_doesnt_match(
     mock_tiled_searches: tuple[MagicMock, ...], caplog: LogCaptureFixture
 ):
-    client, *_, final_search = mock_tiled_searches
+    client, *_, final_sort = mock_tiled_searches
     result = MagicMock()
     result.metadata = {
         "start": {
@@ -348,7 +353,7 @@ def test_get_suitable_tiled_background_skips_tiled_scan_if_scan_type_doesnt_matc
             "scan_type": "Air",  # Can't be an air scan as a capillary is given
         }
     }
-    final_search.search.return_value = {"tiled_id_1": result}
+    final_sort.sort.return_value = {"tiled_id_1": result}
     with caplog.at_level(logging.WARNING):
         tiled_scan = get_suitable_tiled_scan(
             client,
