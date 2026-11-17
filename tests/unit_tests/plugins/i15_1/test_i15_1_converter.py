@@ -554,10 +554,11 @@ def test_experiment_with_no_sample_converts_to_air_scan():
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
-    assert len(tasks) == 2
-    assert tasks[0].name == "wait_for_beam"
-    assert tasks[1].name == "data_collection"
-    assert tasks[1].params == {
+    assert len(tasks) == 3
+    assert tasks[0].name == "robot_unload"
+    assert tasks[1].name == "wait_for_beam"
+    assert tasks[2].name == "data_collection"
+    assert tasks[2].params == {
         "full_collection_time": 100,
         "exposure_time_per_frame": 1.0,
         "scan_type": ScanType.DATA_COLLECTION,
@@ -985,20 +986,21 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
 
 @pytest.mark.parametrize(
     "index, expected_scan_type",
-    [  # 0 is wait_for_beam
-        (1, ScanType.AIR),
-        # 2 is robot load
-        # 3 is wait_for_beam
-        # 4 is centring
-        # 5 is wait_for_beam
-        (6, ScanType.EMPTY_CAPILLARY),
-        # 7 is robot unload
+    [  # 0 is robot_unload
+        # 1 is wait_for_beam
+        (2, ScanType.AIR),
+        # 3 is robot load
+        # 4 is wait_for_beam
+        # 5 is centring
+        # 6 is wait_for_beam
+        (7, ScanType.EMPTY_CAPILLARY),
+        # 8 is robot unload
         # 8 is robot load
-        # 9 is wait_for_beam
-        # 10 is centring
-        # 11 is wait_for_beam
-        (12, ScanType.STANDARD_SAMPLE),
-        (18, ScanType.DATA_COLLECTION),
+        # 10 is wait_for_beam
+        # 11 is centring
+        # 12 is wait_for_beam
+        (13, ScanType.STANDARD_SAMPLE),
+        (19, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(
