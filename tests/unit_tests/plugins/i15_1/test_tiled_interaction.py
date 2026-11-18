@@ -232,7 +232,9 @@ def test_get_suitable_tiled_background_returns_none_if_tiled_node_not_found(
     with caplog.at_level(logging.WARNING):
         result = get_suitable_tiled_scan(
             tiled_client,
-            AuxiliaryScan(instrument_session="cm12345-1", pin=None, time_per_pdf=10),
+            AuxiliaryScan(
+                instrument_session="cm12345-1", pin=None, time_per_pdf=10, q_max=25
+            ),
             1000000,
         )
 
