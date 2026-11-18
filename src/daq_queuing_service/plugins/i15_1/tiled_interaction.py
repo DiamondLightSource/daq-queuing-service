@@ -28,7 +28,9 @@ def get_suitable_tiled_scan(
 ) -> TiledAuxiliary | None:
 
     @cached(cache)
-    def _query_tiled(instrument_session: str) -> list[TiledAuxiliary]:
+    def _query_tiled(
+        instrument_session: str, stale_time_s: int
+    ) -> list[TiledAuxiliary]:
         tiled_node = f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
         oldest_valid_time = time.time() - stale_time_s
         t1 = time.monotonic()
@@ -73,7 +75,7 @@ def get_suitable_tiled_scan(
         )
         return auxiliary_scans
 
-    auxiliary_scans = _query_tiled(required_scan.instrument_session)
+    auxiliary_scans = _query_tiled(required_scan.instrument_session, stale_time_s)
     for scan in auxiliary_scans:
         if scan.is_suitable(required_scan):
             LOGGER.info(f"Found suitable auxiliary scan in tiled: {scan.tiled_id}")
