@@ -98,6 +98,10 @@ def protected_routes(
         else:
             return await queue.resume_queue()
 
+    @router.post("/sync")
+    async def sync_queue():
+        return await queue.sync()
+
     @router.get("/queue")
     async def get_queued_tasks(status: Status | None = None) -> list[TaskWithPosition]:
         return _filter_by_status(await queue.get_queue(), status)
