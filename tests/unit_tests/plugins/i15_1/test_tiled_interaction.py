@@ -310,6 +310,27 @@ def test_get_suitable_tiled_background_returns_none_if_no_matching_backgrounds_f
     )
 
 
+def test_get_suitable_tiled_background_returns_none_if_tiled_node_not_found(
+    tiled_client: MagicMock, caplog: LogCaptureFixture
+):
+    tiled_client.__getitem__.side_effect = KeyError
+
+    with caplog.at_level(logging.WARNING):
+        result = get_suitable_tiled_scan(
+            tiled_client,
+            AuxiliaryScan(
+                instrument_session="cm12345-1", pin=None, time_per_pdf=10, q_max=25
+            ),
+            1000000,
+        )
+
+    assert result is None
+    assert (
+        "Failed to get data from i15-1/cm12345/cm12345-1. Assuming first collection "
+        "of session."
+    ) in caplog.text
+
+
 def test_get_suitable_tiled_background_skips_tiled_scan_if_no_capillary_found_and_warns(
     mock_tiled_searches: tuple[MagicMock, ...], caplog: LogCaptureFixture
 ):

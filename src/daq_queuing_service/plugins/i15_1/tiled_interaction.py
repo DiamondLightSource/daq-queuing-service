@@ -29,22 +29,29 @@ def get_suitable_tiled_scan(
 
     @cached(cache)
     def _query_tiled(instrument_session: str) -> list[TiledAuxiliary]:
-
+        tiled_node = f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
         oldest_valid_time = time.time() - stale_time_s
         t1 = time.monotonic()
-        result = dict(
-            (
-                tiled_client[
-                    f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
-                ]
-                .search(Eq("stop.exit_status", "success"))
-                .search(Comparison("ge", "stop.time", oldest_valid_time))
-                .search(In("start.scan_type", list(AuxiliaryScanType)))
-                .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
-                .search(KeyPresent("start.experiment_definition.data.q_max"))
-                .sort(("start.time", -1))
-            ).items()
-        )
+
+        try:
+            result = dict[str, Any](
+                (
+                    tiled_client[tiled_node]
+                    .search(Eq("stop.exit_status", "success"))
+                    .search(Comparison("ge", "stop.time", oldest_valid_time))
+                    .search(In("start.scan_type", list(AuxiliaryScanType)))
+                    .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
+                    .search(KeyPresent("start.experiment_definition.data.q_max"))
+                    .sort(("start.time", -1))
+                ).items()
+            )
+
+        except KeyError:
+            LOGGER.warning(
+                f"Failed to get data from {tiled_node}. Assuming first "
+                "collection of session."
+            )
+            return []
 
         LOGGER.info(f"Tiled query executed in {time.monotonic() - t1}s")
 
