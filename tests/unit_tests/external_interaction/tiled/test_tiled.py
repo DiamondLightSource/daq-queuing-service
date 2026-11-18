@@ -1,9 +1,10 @@
 import logging
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from pydantic import SecretStr
-from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture, MonkeyPatch
 from tiled.queries import Eq
 
 from daq_queuing_service.external_interaction.tiled.tiled import (
@@ -153,3 +154,11 @@ def test_get_metadata_from_tiled_returns_empty_list_if_no_result_found(
     client["ixx/cm12345/cm12345-1"].search = MagicMock(return_value={})
     result = get_metadata_from_tiled(client, "ixx", "cm12345-1", "bapi_task_id")
     assert result == []
+
+
+def test_get_tiled_client_can_be_instantiated(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("UDC_CLIENT_ID", "client")
+    monkeypatch.setenv("UDC_SECRET", "secret")
+
+    with pytest.raises(httpx.UnsupportedProtocol):
+        get_tiled_client("")
