@@ -59,8 +59,8 @@ CONTAINER_POSITION = ContainerPosition(position=2)
 CONTAINER = Container(id="", positionInParent=CONTAINER_POSITION)
 
 
-def make_sample(name: str, id: str, composition: str = ""):
-    data = {"capillary": "fq1.0", "composition": "chemical"}
+def make_sample(name: str, id: str, composition: str | None = "chemical"):
+    data = {"capillary": "fq1.0"}
     if composition:
         data["composition"] = composition
     return Sample(
