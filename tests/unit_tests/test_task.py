@@ -85,3 +85,47 @@ def test_runtime_calculated_correctly_from_blueapi_call_runtimes(
     ]
     task = Task(blueapi_calls=blueapi_calls, experiment=tr)
     assert task.runtime == expected_task_runtime
+
+
+def test_put_on_hold_changes_status_to_on_hold_and_updates_reason():
+    task = Task(experiment=TaskRequest(name="", params={}, instrument_session=""))
+    assert task.status == Status.QUEUED
+    assert task.hold_reason is None
+
+    task.put_on_hold("Testing the put_on_hold method")
+
+    assert task.status == Status.ON_HOLD
+    assert task.hold_reason == "Testing the put_on_hold method"
+
+    task.take_off_hold()
+
+    assert task.status == Status.QUEUED
+    assert task.hold_reason is None
+
+
+@pytest.mark.parametrize(
+    "current_status",
+    [
+        Status.CANCELLED,
+        Status.COMPLETE,
+        Status.ERROR,
+        Status.IN_PROGRESS,
+        Status.ON_HOLD,
+    ],
+)
+def test_put_on_hold_raises_error_if_current_status_is_not_queued(
+    current_status: Status,
+):
+    class _Task(Task):
+        @property
+        def status(self):
+            return current_status
+
+    task = _Task(experiment=TaskRequest(name="", params={}, instrument_session=""))
+    with pytest.raises(ValueError) as exc:
+        task.put_on_hold("This should fail")
+
+    assert (
+        str(exc.value)
+        == f"Cannot put this task on hold, its status is already {current_status}"
+    )

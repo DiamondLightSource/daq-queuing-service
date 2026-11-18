@@ -53,6 +53,7 @@ class Status(StrEnum):
     COMPLETE = "Complete"
     ERROR = "Error"
     CANCELLED = "Cancelled"
+    ON_HOLD = "On hold"
 
 
 class TaskKind(StrEnum):
@@ -67,15 +68,40 @@ class Task(BaseModel):
     user: User | None = None
     estimated_runtime: int | None = None
     _cancelled: bool = False
+    _hold_reason: str | None = None
 
     def cancel(self):
         self._cancelled = True
+
+    def put_on_hold(self, hold_reason: str):
+        if not self.status == Status.QUEUED:
+            raise ValueError(
+                f"Cannot put this task on hold, its status is already {self.status}"
+            )
+        if not hold_reason:
+            raise ValueError("Must give a reason for putting this task on hold")
+        self._hold_reason = hold_reason
+
+    def take_off_hold(self):
+        if not self.status == Status.ON_HOLD:
+            raise ValueError(
+                "Cannot take this task off hold, it is not currently on hold. "
+                + f"Current status: {self.status}"
+            )
+        self._hold_reason = None
+
+    @computed_field
+    @property
+    def hold_reason(self) -> str | None:
+        return self._hold_reason
 
     @computed_field
     @property
     def status(self) -> Status:
         if self._cancelled:
             return Status.CANCELLED
+        if self._hold_reason:
+            return Status.ON_HOLD
         if self.blueapi_calls and all(
             call.status == CallStatus.SUCCESS for call in self.blueapi_calls
         ):

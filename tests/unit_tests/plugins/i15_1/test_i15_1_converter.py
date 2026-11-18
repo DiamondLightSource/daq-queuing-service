@@ -224,6 +224,7 @@ def create_task_dict(task_id: str, experiment: dict[str, Any]) -> dict[str, Any]
         "user": None,
         "runtime": None,
         "estimated_runtime": None,
+        "hold_reason": None,
     }
 
 
