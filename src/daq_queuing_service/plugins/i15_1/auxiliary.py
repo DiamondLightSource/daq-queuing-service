@@ -10,6 +10,10 @@ from daq_queuing_service.task_queue.task import Experiment
 
 DEFAULT_TEMPERATURE_STEP = 100
 
+# Should merge with equivalent in crystallography-bluesky once
+# https://github.com/DiamondLightSource/daq-queuing-service/issues/131 is done
+Q_MAX_OPTIONS = Literal[25, 30, 35, 40]
+
 
 class AuxiliaryScanType(StrEnum):
     AIR = "Air"
@@ -51,9 +55,6 @@ def combine_auxiliary_requirements(
             result.append(aux1)
 
     return result + remaining
-
-
-Q_MAX_OPTIONS = Literal[25, 30, 35, 40]
 
 
 class AuxiliaryScan(BaseModel):
@@ -175,11 +176,11 @@ class AuxiliaryScan(BaseModel):
             instrument_session=self.instrument_session,
             pin=self.pin,
             time_per_pdf=max(self.time_per_pdf, required_background.time_per_pdf),
+            q_max=max(self.q_max, required_background.q_max),
             list_of_temperatures=list_of_temperatures,
             requires=combine_auxiliary_requirements(
                 self.requires, required_background.requires
             ),
-            q_max=max(self.q_max, required_background.q_max),
         )
         assert result.is_suitable(required_background)
         return result
