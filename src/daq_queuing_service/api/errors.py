@@ -18,7 +18,12 @@ def make_exception_handler(
     status_code: int, error_code: str
 ) -> Callable[[Request, Exception], Awaitable[JSONResponse]]:
     async def handler(request: Request, exception: Exception):
-        LOGGER.exception("Error while handling request: %s", request)
+        LOGGER.exception(
+            "Error while handling request: %s %s. Exception: %s",
+            request.method,
+            request.url,
+            exception,
+        )
         return JSONResponse(
             status_code=status_code,
             content={"error": error_code, "message": str(exception)},

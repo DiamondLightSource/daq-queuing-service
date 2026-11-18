@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
-from blueapi.worker.event import TaskError
+from blueapi.worker.event import TaskError, TaskResult
 from daq_config_server.models.i15_1.queue_parameters import QueueParameters
 from daq_config_server.models.i15_1.standards_puck import (
     STANDARD_CAPILLARY,
@@ -22,7 +22,10 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScanType,
     TiledAuxiliary,
 )
-from daq_queuing_service.plugins.i15_1.i15_1_converter import I151Converter
+from daq_queuing_service.plugins.i15_1.i15_1_converter import (
+    I151Converter,
+    QueuedAuxiliary,
+)
 from daq_queuing_service.plugins.i15_1.plans import ScanType
 from daq_queuing_service.task_queue.queue import TaskQueue
 from daq_queuing_service.task_queue.task import (
@@ -50,7 +53,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_0_2",
                     id="0",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -68,7 +71,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="c5786b54-fd88-4088-8952-8d087cb47028",
+            id="0",
             blueapi_calls=[],
             user=None,
         ),
@@ -79,7 +82,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_1_2",
                     id="1",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -97,7 +100,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="7a23c7f6-eecf-4376-a5f3-40b0f221635b",
+            id="1",
             blueapi_calls=[],
             user=None,
         ),
@@ -108,7 +111,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_2_2",
                     id="2",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -126,7 +129,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="c96a85c3-cc4b-41e4-b0b5-7292956b6f7c",
+            id="2",
             blueapi_calls=[],
             user=None,
         ),
@@ -137,7 +140,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_3_2",
                     id="3",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -152,7 +155,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="5e2571d9-2f87-45b2-ac3b-b486e83a92d6",
+            id="3",
             blueapi_calls=[],
             user=None,
         ),
@@ -163,7 +166,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_4_2",
                     id="4",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -181,7 +184,7 @@ def i15_1_tasks():
                     },
                 ),
             ),
-            id="098d3c5a-5bcb-43a3-acc6-c7e2ae050587",
+            id="4",
             blueapi_calls=[],
             user=None,
         ),
@@ -192,7 +195,7 @@ def i15_1_tasks():
 
 def make_background_task(
     capillary: STANDARD_CAPILLARY, time_per_pdf: int, q_max: Q_MAX_OPTIONS
-) -> Task:
+) -> tuple[Task, AuxiliaryScan]:
     background = AuxiliaryScan(
         instrument_session="cm12345-1",
         pin=StandardsPin(capillary=capillary, contents=None),
@@ -203,7 +206,7 @@ def make_background_task(
         experiment=I151Converter()._construct_auxiliary_experiment(
             background, "cm12345-1"
         )
-    )
+    ), background
 
 
 def assert_tasks_equal(task1: Task | TaskWithPosition, task2: Task | TaskWithPosition):
@@ -242,7 +245,11 @@ def air_task(
             "experiment_definition": {
                 "name": "Air",
                 "id": "",
-                "data": {"time_per_pdf": time_per_pdf, "q_max": q_max},
+                "data": {
+                    "time_per_pdf": time_per_pdf,
+                    "q_max": q_max,
+                    "required_auxiliary_scans": [],
+                },
             },
         },
     )
@@ -257,7 +264,20 @@ def empty_capillary_task(
     capillary: STANDARD_CAPILLARY,
     standards_puck: StandardsPuck,
 ) -> dict[str, Any]:
-    data: dict[str, Any] = {"time_per_pdf": time_per_pdf, "q_max": q_max}
+    data: dict[str, Any] = {
+        "time_per_pdf": time_per_pdf,
+        "q_max": q_max,
+        "required_auxiliary_scans": [
+            {
+                "instrument_session": instrument_session,
+                "pin": None,
+                "time_per_pdf": time_per_pdf,
+                "q_max": q_max,
+                "list_of_temperatures": None,
+                "kind": AuxiliaryScanType.AIR,
+            },
+        ],
+    }
     if list_of_temperatures is not None:
         data.update(
             {
@@ -296,6 +316,39 @@ def empty_capillary_task(
     )
 
 
+def air_auxiliary_scan(
+    instrument_session: str, time_per_pdf: float, q_max: Q_MAX_OPTIONS
+) -> dict[str, Any]:
+    return {
+        "instrument_session": instrument_session,
+        "pin": None,
+        "time_per_pdf": time_per_pdf,
+        "q_max": q_max,
+        "list_of_temperatures": None,
+        "kind": AuxiliaryScanType.AIR,
+    }
+
+
+def empty_capillary_auxiliary_scan(
+    instrument_session: str,
+    time_per_pdf: float,
+    q_max: Q_MAX_OPTIONS,
+    list_of_temperatures: list[float] | None,
+    capillary: STANDARD_CAPILLARY,
+) -> dict[str, Any]:
+    return {
+        "instrument_session": instrument_session,
+        "pin": {
+            "capillary": capillary,
+            "contents": None,
+        },
+        "time_per_pdf": time_per_pdf,
+        "q_max": q_max,
+        "list_of_temperatures": list_of_temperatures,
+        "kind": AuxiliaryScanType.EMPTY_CAPILLARY,
+    }
+
+
 def standard_sample_task(
     task_id: str,
     instrument_session: str,
@@ -304,7 +357,9 @@ def standard_sample_task(
     capillary: STANDARD_CAPILLARY,
     contents: STANDARD_SAMPLE,
     standards_puck: StandardsPuck,
+    required_empty_capillaries: list[dict[str, Any]],
 ) -> dict[str, Any]:
+
     return create_task_dict(
         task_id,
         {
@@ -329,7 +384,14 @@ def standard_sample_task(
             "experiment_definition": {
                 "name": "Standard Sample",
                 "id": "",
-                "data": {"time_per_pdf": time_per_pdf, "q_max": q_max},
+                "data": {
+                    "time_per_pdf": time_per_pdf,
+                    "q_max": q_max,
+                    "required_auxiliary_scans": [
+                        air_auxiliary_scan(instrument_session, time_per_pdf, q_max)
+                    ]
+                    + required_empty_capillaries,
+                },
             },
         },
     )
@@ -370,7 +432,7 @@ def background_found_in_tiled():
 def background_not_found_in_tiled():
     with patch(
         "daq_queuing_service.plugins.i15_1.i15_1_converter.get_suitable_tiled_scan",
-        MagicMock(return_value=None),
+        return_value=None,
     ) as mock_get_suitable_tiled_background:
         yield mock_get_suitable_tiled_background
 
@@ -405,7 +467,7 @@ def test_centre_sample_at_room_temperature_uses_correct_params_from_queue_params
         experiment_definition=ExperimentDefinition(
             name=" ", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     centring_params = queue_params.room_temperature_centring_params
@@ -420,7 +482,7 @@ def test_centre_sample_at_room_temperature_uses_correct_params_from_queue_params
             "experiment_definition": ExperimentDefinition(
                 name=" ", id="", data={"time_per_pdf": 100, "q_max": 30}
             ),
-            "sample": make_sample("test_8_1", ""),
+            "sample": make_sample("test_8_1", "", composition="chemical"),
         },
     }
 
@@ -441,7 +503,7 @@ def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
                 "q_max": 30,
             },
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -463,7 +525,7 @@ def test_centre_sample_with_blower_uses_correct_params_from_queue_params(
                     "q_max": 30,
                 },
             ),
-            "sample": make_sample("test_8_1", ""),
+            "sample": make_sample("test_8_1", "", composition="chemical"),
         },
     }
 
@@ -474,7 +536,7 @@ def test_session_and_number_of_tasks_per_experiment_is_expected():
         experiment_definition=ExperimentDefinition(
             name=" ", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -489,7 +551,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     task = TaskWithPosition(
@@ -513,7 +575,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         experiment_definition=ExperimentDefinition(
             name="", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -525,7 +587,7 @@ def test_experiment_with_no_temperatures_runs_a_room_temperature_collection():
         "experiment_definition": ExperimentDefinition(
             name="", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        "sample": make_sample("test_8_1", ""),
+        "sample": make_sample("test_8_1", "", composition="chemical"),
     }
 
 
@@ -545,7 +607,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -558,7 +620,7 @@ def test_experiment_with_temperatures_runs_a_blower_collection():
     assert tasks[4].params["scan_type"] == ScanType.DATA_COLLECTION
     assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
-        "sample": make_sample("test_8_1", ""),
+        "sample": make_sample("test_8_1", "", composition="chemical"),
     }
 
 
@@ -610,7 +672,7 @@ def test_wait_for_beam_plans_added_by_converter():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = I151Converter()._construct_blueapi_tasks_from_experiment(experiment, "id")
@@ -641,13 +703,13 @@ def test_tiled_backgrounds_added_to_metadata_if_present():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
     assert tasks[4].params["metadata"] == {
         "experiment_definition": experiment_definition,
-        "sample": make_sample("test_8_1", ""),
+        "sample": make_sample("test_8_1", "", composition="chemical"),
         "auxiliary_scans": {
             AuxiliaryScanType.EMPTY_CAPILLARY: TiledAuxiliary(
                 instrument_session="cm12345-1",
@@ -669,7 +731,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={"time_per_pdf": 100, "q_max": 30}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     good_task = TaskWithPosition(
@@ -706,7 +768,7 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         experiment_definition=ExperimentDefinition(
             name="run_full_collection", id="", data={"time_per_pdf": 100, "q_max": 40}
         ),
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     task = Task(
@@ -720,9 +782,17 @@ def test_if_no_background_found_in_tiled_then_background_scan_added_to_tasks(
         tasks[1].id, "cm12345-1", 100.0, 40, None, "fq1.0", standards_puck
     )
     assert tasks[2].model_dump() == standard_sample_task(
-        tasks[2].id, "cm12345-1", 100.0, 40, "fq1.0", "Silicon", standards_puck
+        tasks[2].id,
+        "cm12345-1",
+        100.0,
+        40,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [empty_capillary_auxiliary_scan("cm12345-1", 100.0, 40, None, "fq1.0")],
     )
-    assert converter._tiled_auxiliary_scans == {"1": {}}
+
+    assert list(converter._tiled_auxiliary_scans.values()) == [{}, {}, {}, {}]
 
 
 def test_add_required_background_scans_does_not_add_the_same_background_twice(
@@ -815,19 +885,19 @@ def test_add_required_background_scans_combines_similar_background_requirements(
     assert (
         isinstance(new_tasks[2].experiment, Experiment)
         and new_tasks[2].experiment.sample
-        and new_tasks[2].experiment.sample.name == "Silicon fq1.0"
+        and new_tasks[2].experiment.sample.name == "Empty fq1.0"
     )
     assert (
-        isinstance(new_tasks[6].experiment, Experiment)
-        and new_tasks[6].experiment.sample
-        and new_tasks[6].experiment.sample.name == "Empty fq1.0"
+        isinstance(new_tasks[3].experiment, Experiment)
+        and new_tasks[3].experiment.sample
+        and new_tasks[3].experiment.sample.name == "Silicon fq1.0"
     )
     # Should have the maximum time_per_pdf of i15_1_tasks
     assert new_tasks[0].experiment.experiment_definition.data["time_per_pdf"] == 25
     assert new_tasks[1].experiment.experiment_definition.data["time_per_pdf"] == 25
-    assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 25
+    assert new_tasks[2].experiment.experiment_definition.data["time_per_pdf"] == 20
+    assert new_tasks[3].experiment.experiment_definition.data["time_per_pdf"] == 25
     # This one isn't a temperature experiment so needs a separate empty capillary
-    assert new_tasks[6].experiment.experiment_definition.data["time_per_pdf"] == 20
 
 
 def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_in_each(
@@ -855,29 +925,65 @@ def test_same_experiment_in_different_instrument_sessions_will_add_backgrounds_i
         "fq1.0",
         standards_puck,
     )
-    assert new_tasks[2].model_dump() == standard_sample_task(
-        new_tasks[2].id, "cm12345-1", 25.0, 40, "fq1.0", "Silicon", standards_puck
+    assert new_tasks[2].model_dump() == empty_capillary_task(
+        new_tasks[2].id, "cm12345-1", 20.0, 40, None, "fq1.0", standards_puck
+    )
+    assert new_tasks[3].model_dump() == standard_sample_task(
+        new_tasks[3].id,
+        "cm12345-1",
+        25.0,
+        40,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [
+            empty_capillary_auxiliary_scan(
+                "cm12345-1", 25.0, 30, [0, 100, 200, 300, 400, 500], "fq1.0"
+            ),
+            empty_capillary_auxiliary_scan("cm12345-1", 20.0, 40, None, "fq1.0"),
+        ],
     )
 
-    assert new_tasks[4].model_dump() == air_task(new_tasks[4].id, "different", 10.0, 25)
-    assert new_tasks[5].model_dump() == empty_capillary_task(
-        new_tasks[5].id, "different", 10.0, 25, [100, 200], "fq1.0", standards_puck
+    assert new_tasks[5].model_dump() == air_task(new_tasks[5].id, "different", 10.0, 25)
+    assert new_tasks[6].model_dump() == empty_capillary_task(
+        new_tasks[6].id, "different", 10.0, 25, [100, 200], "fq1.0", standards_puck
     )
-    assert new_tasks[6].model_dump() == standard_sample_task(
-        new_tasks[6].id, "different", 10.0, 25, "fq1.0", "Silicon", standards_puck
+    assert new_tasks[7].model_dump() == standard_sample_task(
+        new_tasks[7].id,
+        "different",
+        10.0,
+        25,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [empty_capillary_auxiliary_scan("different", 10.0, 25, [100, 200], "fq1.0")],
     )
 
-    assert new_tasks[8].model_dump() == air_task(
-        new_tasks[8].id, "also_different", 10.0, 35
+    assert new_tasks[9].model_dump() == air_task(
+        new_tasks[9].id, "also_different", 10.0, 35
     )
-    assert new_tasks[9].model_dump() == empty_capillary_task(
-        new_tasks[9].id, "also_different", 10.0, 35, [200, 300], "fq1.0", standards_puck
+    assert new_tasks[10].model_dump() == empty_capillary_task(
+        new_tasks[10].id,
+        "also_different",
+        10.0,
+        35,
+        [200, 300],
+        "fq1.0",
+        standards_puck,
     )
-    assert new_tasks[10].model_dump() == standard_sample_task(
-        new_tasks[10].id, "also_different", 10.0, 35, "fq1.0", "Silicon", standards_puck
-    )
-    assert new_tasks[12].model_dump() == empty_capillary_task(
-        new_tasks[12].id, "cm12345-1", 20.0, 40, None, "fq1.0", standards_puck
+    assert new_tasks[11].model_dump() == standard_sample_task(
+        new_tasks[11].id,
+        "also_different",
+        10.0,
+        35,
+        "fq1.0",
+        "Silicon",
+        standards_puck,
+        [
+            empty_capillary_auxiliary_scan(
+                "also_different", 10.0, 35, [200, 300], "fq1.0"
+            )
+        ],
     )
 
 
@@ -910,6 +1016,66 @@ def test_add_required_background_scans_if_found_in_tiled_then_no_background_adde
     }
 
 
+async def test_auxiliary_scans_have_their_own_required_tiled_auxiliaries_added_to_data(
+    queue_with_i15_1_plugin: TaskQueue,
+    queue_params: QueueParameters,
+    background_not_found_in_tiled: MagicMock,
+):
+    queue_params.do_wait_for_beam = False
+    queue_params.do_robot_load = False
+    queue = await queue_with_i15_1_plugin.get_queue()
+    assert [task.experiment.experiment_definition.name for task in queue[:4]] == [  # type: ignore
+        # Auxiliaries added to queue
+        ScanType.AIR,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.STANDARD_SAMPLE,
+    ]
+
+    air_scan = await queue_with_i15_1_plugin.get_next_call_once_available()
+    air_scan.put_in_progress()
+
+    air_tiled_scan = TiledAuxiliary(
+        instrument_session="cm12345-1",
+        tiled_id="fake_tiled_id",
+        pin=None,
+        time_per_pdf=25,
+        q_max=40,
+        filepath=Path(""),
+        instrument_session_directory=Path(""),
+        filename="air_scan.nxs",
+    )
+    background_not_found_in_tiled.return_value = air_tiled_scan
+
+    await queue_with_i15_1_plugin.complete_call(
+        air_scan, TaskResult(outcome="success", result=None, type="None")
+    )
+    async with queue_with_i15_1_plugin._modifying:
+        queue_with_i15_1_plugin._sync()
+
+    queue = await queue_with_i15_1_plugin.get_queue()
+
+    assert [task.experiment.experiment_definition.name for task in queue[:3]] == [  # type: ignore
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.EMPTY_CAPILLARY,
+        ScanType.STANDARD_SAMPLE,
+    ]
+    converter = queue_with_i15_1_plugin._converter
+    assert isinstance(converter, I151Converter)
+    for task in queue:
+        assert (
+            converter._tiled_auxiliary_scans[task.id][AuxiliaryScanType.AIR]
+            == air_tiled_scan
+        )
+        assert any(
+            "metadata" in call.task_request.params
+            and "auxiliary_scans" in call.task_request.params["metadata"]
+            and call.task_request.params["metadata"]["auxiliary_scans"]
+            == {AuxiliaryScanType.AIR: air_tiled_scan.model_dump()}
+            for call in task.blueapi_calls
+        )
+
+
 async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: TaskQueue):
     for i, task in enumerate(queue_with_i15_1_plugin._tasks.values()):
         task.experiment.instrument_session = str(i)
@@ -923,16 +1089,23 @@ async def test_queue_with_i15_1_converter_can_sync(queue_with_i15_1_plugin: Task
 def test__ensure_background_in_queue_or_tiled_returns_if_suitable_already_queued(
     i15_1_converter: I151Converter, background_not_found_in_tiled: MagicMock
 ):
-    background = AuxiliaryScan(
+    required_auxiliary = AuxiliaryScan(
         instrument_session="cm12345-1",
         pin=StandardsPin(capillary="fq1.0", contents=None),
         time_per_pdf=25,
         q_max=30,
     )
-    new_tasks = [make_background_task("fq1.0", 25, 30)]
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, None, new_tasks, "task_id", "cm12345-1"
+    new_task, auxiliary_scan = make_background_task("fq1.0", 25, 30)
+    new_tasks = [new_task]
+    auxiliary_scans = {
+        0: QueuedAuxiliary(index=0, auxiliary=auxiliary_scan, task_id=new_tasks[0].id)
+    }
+    result, queued_auxiliary_tasks = (
+        i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+            required_auxiliary, auxiliary_scans, None, new_tasks, "task_id", "cm12345-1"
+        )
     )
+    assert auxiliary_scans == queued_auxiliary_tasks
     assert result == new_tasks
 
 
@@ -948,12 +1121,13 @@ def test__ensure_background_in_queue_or_tiled_returns_if_current_task_is_suitabl
     new_tasks: list[Task] = []
     result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
         background,
-        TaskWithPosition.from_task(make_background_task("fq1.0", 25, q_max=40)),
+        {},
+        TaskWithPosition.from_task(make_background_task("fq1.0", 25, q_max=40)[0]),
         new_tasks,
         "task_id",
         "cm12345-1",
     )
-    assert result == new_tasks
+    assert result == ([], {})
 
 
 def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_possible(
@@ -965,16 +1139,27 @@ def test__ensure_background_in_queue_or_tiled_modifies_queued_background_if_poss
         time_per_pdf=25,
         q_max=40,
     )
-    current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25, 40))
+    current_task = TaskWithPosition.from_task(make_background_task("fq1.0", 25, 40)[0])
+
     # Current task is suitable but not a background
     assert isinstance(current_task.experiment, Experiment)
     current_task.experiment.experiment_definition.name = "Not a background"
-    new_tasks = [make_background_task("fq1.0", 10, 30)]
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, current_task, new_tasks, "task_id", "cm12345-1"
+    new_task, queued_auxiliary = make_background_task("fq1.0", 10, 30)
+    queued_auxiliaries = 1
+    new_tasks = [new_task]
+    queued_auxiliaries = {
+        0: QueuedAuxiliary(auxiliary=queued_auxiliary, index=0, task_id=new_tasks[0].id)
+    }
+    result, _ = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+        background,
+        queued_auxiliaries,
+        current_task,
+        new_tasks,
+        "task_id",
+        "cm12345-1",
     )
     assert len(result) == 1
-    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 40))
+    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 40)[0])
 
 
 def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_in_queue(
@@ -987,11 +1172,11 @@ def test__ensure_background_in_queue_or_tiled_adds_background_if_none_suitable_i
         time_per_pdf=25,
         q_max=35,
     )
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, None, [], "task_id", "cm12345-1"
+    result, _ = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+        background, {}, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 1
-    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 35))
+    assert_tasks_equal(result[0], make_background_task("fq1.0", 25, 35)[0])
 
 
 def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
@@ -1005,8 +1190,8 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
         time_per_pdf=25,
         q_max=35,
     )
-    result = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
-        background, None, [], "task_id", "cm12345-1"
+    result, _ = i15_1_converter._ensure_auxiliary_in_queue_or_tiled(
+        background, {}, None, [], "task_id", "cm12345-1"
     )
     assert len(result) == 0
     assert i15_1_converter._tiled_auxiliary_scans == {
@@ -1032,16 +1217,12 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
         (2, ScanType.AIR),
         # 3 is robot load
         # 4 is wait_for_beam
-        # 5 is centring
-        # 6 is wait_for_beam
-        (7, ScanType.EMPTY_CAPILLARY),
-        # 8 is robot unload
-        # 8 is robot load
-        # 10 is wait_for_beam
-        # 11 is centring
-        # 12 is wait_for_beam
-        (13, ScanType.STANDARD_SAMPLE),
-        (19, ScanType.DATA_COLLECTION),
+        (5, ScanType.EMPTY_CAPILLARY),
+        # 6 is robot unload
+        # etc
+        (9, ScanType.EMPTY_CAPILLARY),
+        (15, ScanType.STANDARD_SAMPLE),
+        (21, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(
@@ -1074,7 +1255,7 @@ def test_i15_1_tasks_can_be_serialised():
     experiment = Experiment(
         name="test_experiment",
         experiment_definition=experiment_definition,
-        sample=make_sample("test_8_1", ""),
+        sample=make_sample("test_8_1", "", composition="chemical"),
         instrument_session="cm12345-1",
     )
     tasks = converter._construct_blueapi_tasks_from_experiment(experiment, "id")
