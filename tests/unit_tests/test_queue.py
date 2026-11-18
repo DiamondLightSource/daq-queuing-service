@@ -3,7 +3,7 @@ import copy
 import logging
 from datetime import datetime
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from blueapi.service.model import TaskRequest
@@ -1491,3 +1491,11 @@ def test__add_runtime_estimates_to_tasks_cathes_errors_and_logs(
         task_queue._add_runtime_estimates_to_tasks()
 
     assert "Error getting runtime estimate from server" in caplog.text
+
+
+async def test_sync_calls__sync_once():
+    with patch.object(TaskQueue, "_sync") as mock_sync:
+        task_queue = TaskQueue(Converter(), Broadcaster())
+        await task_queue.sync()
+
+    mock_sync.assert_called_once()
