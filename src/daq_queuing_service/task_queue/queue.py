@@ -168,16 +168,20 @@ class TaskQueue:
         LOGGER.debug(f"Syncing. Queue before sync: {self._queue}")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
+            LOGGER.info(task.status)
             if task.status in (Status.COMPLETE, Status.ERROR):
                 # Move task from queue to history if all blueapi calls complete
                 # Or an error occurred during one of them
+                LOGGER.info(
+                    f"Moving task {task_id} into history, its status is {task.status}"
+                )
                 self._queue.remove(task_id)
                 self._history.append(task_id)
                 for call in filter(
                     lambda call: call.status == CallStatus.WAITING, task.blueapi_calls
                 ):
                     call.skip()
-            elif task.status == Status.QUEUED:
+            elif task.status in [Status.QUEUED, Status.ON_HOLD]:
                 # If task is not in progress calls will be re-calculated
                 task.blueapi_calls = []
 
@@ -187,7 +191,7 @@ class TaskQueue:
                 [
                     self._tasks[task_id]
                     for task_id in self._queue
-                    if self._tasks[task_id].status == Status.QUEUED
+                    if self._tasks[task_id].status in [Status.QUEUED, Status.ON_HOLD]
                 ],
                 self._get_history(),
                 self._get_call_history(),
@@ -204,7 +208,7 @@ class TaskQueue:
         self._queue = [
             task_id
             for task_id in self._queue
-            if not self._tasks[task_id].status == Status.QUEUED
+            if self._tasks[task_id].status == Status.IN_PROGRESS
         ]
         self._queue.extend(task.id for task in new_tasks)
 
@@ -229,7 +233,7 @@ class TaskQueue:
                 [
                     task
                     for task in self._get_queue_with_positions()
-                    if task.status == Status.QUEUED
+                    if task.status in [Status.QUEUED, Status.ON_HOLD]
                 ],
                 self._get_history(),
                 self._get_call_history(),
@@ -247,7 +251,7 @@ class TaskQueue:
         if not self._call_queue:
             self._pause_queue(PauseReason.EMPTY_QUEUE)
 
-        self._add_runtime_estimates_to_tasks()
+        # self._add_runtime_estimates_to_tasks()
 
         self._save_contents()
         self._broadcast_changes()
@@ -269,7 +273,8 @@ class TaskQueue:
         self._last_good_contents = self._copy_contents()
 
     def _restore_from_contents(self, contents: QueueContents):
-        LOGGER.info(f"Restoring to contents: {contents}")
+        LOGGER.info("Restoring to contents")
+        LOGGER.debug(f"Contents: {contents}")
 
         restored = deepcopy(contents)
 
@@ -308,14 +313,46 @@ class TaskQueue:
             BlueapiCall: The call at the top of the queue
         """
         async with self._modifying:
-            while not self._task_available():
-                await self._modifying.wait()
             self._sync()  # Do conversion here to ensure conditions are up to date
+
+            while not self._first_call_available():
+                if self._promote_first_runnable_task():
+                    break
+                await self._modifying.wait()
+
             call = self._call_queue[0]
             with add_session_to_logger(call.task_request.instrument_session):
                 call.claim()
                 LOGGER.info(f"Plan {call} has been claimed")
         return call
+
+    def _promote_first_runnable_task(self) -> bool:
+        if self._state.paused or self._get_running_task():
+            return False
+        if task := self._get_first_runnable_task():
+            LOGGER.info(f"Found runnable task {task.id}, position {task.position}")
+            queue_contents = self._copy_contents()
+            new_position = self._move_task(task.id, 0)
+            assert new_position == 0
+            self._sync()
+            if self._queue[0] == task.id:
+                if self._first_call_available():
+                    LOGGER.info(
+                        f"Sync successful after moving {task.id} to front of queue"
+                    )
+                    return True
+                else:
+                    LOGGER.info(
+                        f"Queue not ready to emit a call after moving {task.id} to "
+                        + "front as first blueapi call not available, restoring"
+                    )
+            else:
+                LOGGER.info(
+                    f"Queue not ready to emit a call after moving {task.id} to front"
+                    + " as after a sync it was no longer the first task, restoring"
+                )
+            self._restore_from_contents(queue_contents)
+        return False
 
     async def wait_until_call_available(self):
         """Waits until a task is available before returning. A task is
@@ -323,7 +360,7 @@ class TaskQueue:
         claimed, and the queue is not paused.
         """
         async with self._lock:
-            while not self._task_available():
+            while not self._any_call_available():
                 await self._modifying.wait()
 
     async def return_call_to_queue(self, call: BlueapiCall):
@@ -367,6 +404,7 @@ class TaskQueue:
                 call.model_copy(), result
             )
             LOGGER.info(f"Plan {call} completed successfully. Result: {result}")
+            LOGGER.info(f"Part of task {self._tasks[call.parent_task_id]}")
 
         async with self._modifying:
             call.tiled_ids = tiled_ids
@@ -517,13 +555,22 @@ class TaskQueue:
             int: The new position of the task (may be different to what was requested)
         """
         async with self._modifying:
-            self._validate_tasks_for_move_or_deletion([task_id])
-            position = self._get_valid_position(position)
-            self._remove_tasks_from_queue([task_id])
-            self._queue[position:position] = [task_id]
-            new_position = self._queue.index(task_id)
+            new_position = self._move_task(task_id, position)
         LOGGER.info(f"Successfully moved task {task_id} to position {new_position}")
         return new_position
+
+    def _move_task(self, task_id: str, position: int) -> int:
+        self._validate_tasks_for_move_or_deletion([task_id])
+        position = self._get_valid_position(position)
+        self._remove_tasks_from_queue([task_id])
+        self._queue[position:position] = [task_id]
+        return self._queue.index(task_id)
+
+    async def modify_tasks(self, task_ids: list[str], modify: Callable[[Task], None]):
+        async with self._modifying:
+            self._validate_tasks_for_move_or_deletion(task_ids)
+            for task_id in task_ids:
+                modify(self._tasks[task_id])
 
     async def cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
         """Remove tasks from the queue. If one or more of the requested tasks cannot be
@@ -604,17 +651,39 @@ class TaskQueue:
     def length(self):
         return len(self._queue)
 
-    def _task_available(self) -> bool:
-        """Predicate that determines whether the queue has a task available. This
-        returns True if the first task in the queue has a status of WAITING, and the
+    def _first_call_available(self) -> bool:
+        """Predicate that determines whether the queue has a call available. This
+        returns True if the first call in the queue has a status of WAITING, and the
         queue is not paused.
 
         Returns:
-            bool: Whether or not the queue has a task available.
+            bool: Whether or not the queue has a call available.
         """
         if self._state.paused or not self._call_queue:
             return False
-        return self._call_queue[0].status == CallStatus.WAITING
+        return self._call_is_available(self._call_queue[0])
+
+    def _any_call_available(self) -> bool:
+        if self._state.paused:
+            return False
+        for call in self._call_queue:
+            if call.status in [CallStatus.IN_PROGRESS, CallStatus.CLAIMED]:
+                return False
+            if self._call_is_available(call):
+                return True
+        return False
+
+    def _call_is_available(self, call: BlueapiCall) -> bool:
+        return (
+            call.status == CallStatus.WAITING
+            and self._tasks[call.parent_task_id].status != Status.ON_HOLD
+        )
+
+    def _get_first_runnable_task(self) -> TaskWithPosition | None:
+        for i, task_id in enumerate(self._queue):
+            task = self._tasks[task_id]
+            if task.status == Status.QUEUED:
+                return TaskWithPosition.from_task(task, i)
 
     def _check_call_valid_to_be_returned(self, call: BlueapiCall):
         # Check caller has actual task object not copy
@@ -633,8 +702,12 @@ class TaskQueue:
         if (  # if position 0 requested but a task is in progress, return position 1
             position == 0
             and self.length
-            and self._tasks[self._queue[0]].status != Status.QUEUED
+            and self._tasks[self._queue[0]].status == Status.IN_PROGRESS
         ):
+            LOGGER.info(
+                f"Can't move task to position 0 because task {self._queue[0]} is in "
+                + "progress, moving to position 1"
+            )
             return 1
         return position
 
@@ -699,7 +772,7 @@ class TaskQueue:
             task = self._tasks[task_id]
             if task_id not in self._queue:
                 raise TaskNotInQueueError(f"Task {task_id} isn't present in queue")
-            if task.status != Status.QUEUED:
+            if task.status not in [Status.QUEUED, Status.ON_HOLD]:
                 raise TaskInProgressError(
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )

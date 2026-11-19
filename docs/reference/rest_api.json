@@ -109,6 +109,22 @@
         }
       }
     },
+    "/sync": {
+      "post": {
+        "summary": "Sync Queue",
+        "operationId": "sync_queue_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/queue": {
       "get": {
         "summary": "Get Queued Tasks",
@@ -305,7 +321,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TaskCancelRequest"
+                "$ref": "#/components/schemas/TaskActionRequest"
               }
             }
           },
@@ -323,6 +339,78 @@
                   "type": "array",
                   "title": "Response Cancel Tasks Queue Tasks Delete"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/tasks/put_on_hold": {
+      "post": {
+        "summary": "Put Tasks On Hold",
+        "operationId": "put_tasks_on_hold_queue_tasks_put_on_hold_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/tasks/take_off_hold": {
+      "post": {
+        "summary": "Take Tasks Off Hold",
+        "operationId": "take_tasks_off_hold_queue_tasks_take_off_hold_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1072,29 +1160,9 @@
       "OIDCConfig": {
         "properties": {
           "well_known_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Well Known Url",
-            "description": "URL to fetch OIDC config from the provider",
-            "deprecated": true
-          },
-          "issuer": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Issuer",
-            "description": "URL of OIDC provider"
+            "description": "URL to fetch OIDC config from the provider"
           },
           "client_id": {
             "type": "string",
@@ -1117,6 +1185,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "well_known_url",
           "client_id"
         ],
         "title": "OIDCConfig"
@@ -1254,7 +1323,8 @@
           "In progress",
           "Complete",
           "Error",
-          "Cancelled"
+          "Cancelled",
+          "On hold"
         ],
         "title": "Status"
       },
@@ -1290,7 +1360,7 @@
         "title": "StompConfig",
         "description": "Config for connecting to stomp broker"
       },
-      "TaskCancelRequest": {
+      "TaskActionRequest": {
         "properties": {
           "task_ids": {
             "items": {
@@ -1304,7 +1374,7 @@
         "required": [
           "task_ids"
         ],
-        "title": "TaskCancelRequest"
+        "title": "TaskActionRequest"
       },
       "TaskError": {
         "properties": {

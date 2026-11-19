@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 
 from constants import TEST_CONFIG_PATH
 from daq_queuing_service.api.api import (
-    TaskCancelRequest,
+    TaskActionRequest,
     get_current_user,
     protected_routes,
     public_routes,
@@ -678,7 +678,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
     response = test_client.request(
         "DELETE",
         "/queue/tasks",
-        json=TaskCancelRequest(task_ids=last_two_task_ids).model_dump(),
+        json=TaskActionRequest(task_ids=last_two_task_ids).model_dump(),
     )
 
     queue_after = await task_queue_with_history.get_queue()
@@ -787,7 +787,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
         ],
         [
-            TaskCancelRequest(task_ids=["doesn't exist"]).model_dump(),
+            TaskActionRequest(task_ids=["doesn't exist"]).model_dump(),
             404,
             {
                 "error": "task_not_found",
@@ -795,7 +795,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
         ],
         [
-            TaskCancelRequest(task_ids=["2", "3", "4"]).model_dump(),
+            TaskActionRequest(task_ids=["2", "3", "4"]).model_dump(),
             409,
             {
                 "error": "task_in_progress",
@@ -803,7 +803,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
         ],
         [
-            TaskCancelRequest(task_ids=["1", "2", "3", "4"]).model_dump(),
+            TaskActionRequest(task_ids=["1", "2", "3", "4"]).model_dump(),
             409,
             {"error": "task_not_in_queue", "message": "Task 1 isn't present in queue"},
         ],

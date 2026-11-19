@@ -76,7 +76,8 @@ class Task(BaseModel):
     def put_on_hold(self, hold_reason: str):
         if not self.status == Status.QUEUED:
             raise ValueError(
-                f"Cannot put this task on hold, its status is already {self.status}"
+                f"Cannot put task {self.id} on hold, its status is already"
+                + str(self.status)
             )
         if not hold_reason:
             raise ValueError("Must give a reason for putting this task on hold")
@@ -85,7 +86,7 @@ class Task(BaseModel):
     def take_off_hold(self):
         if not self.status == Status.ON_HOLD:
             raise ValueError(
-                "Cannot take this task off hold, it is not currently on hold. "
+                f"Cannot take task {self.id} off hold, it is not currently on hold. "
                 + f"Current status: {self.status}"
             )
         self._hold_reason = None
