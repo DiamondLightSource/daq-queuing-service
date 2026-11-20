@@ -77,6 +77,7 @@ def get_metadata_from_tiled(
                 f"Failed to get data from {tiled_node}. Node does not exist."
             )
             return []
+
         items = sorted(
             ((key, dict(value.metadata)) for key, value in result.items()),
             key=lambda item: item[1]["start"]["time"],
