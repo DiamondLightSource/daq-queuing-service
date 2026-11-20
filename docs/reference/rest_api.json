@@ -1534,6 +1534,17 @@
               }
             ],
             "title": "Runtime"
+          },
+          "hold_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Reason"
           }
         },
         "type": "object",
@@ -1546,7 +1557,8 @@
           "kind",
           "user",
           "estimated_runtime",
-          "runtime"
+          "runtime",
+          "hold_reason"
         ],
         "title": "TaskWithPosition"
       },

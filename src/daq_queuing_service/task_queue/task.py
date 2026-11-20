@@ -154,6 +154,7 @@ class TaskWithPosition(BaseModel):
     user: User | None
     estimated_runtime: int | None
     runtime: float | None
+    hold_reason: str | None
 
     @classmethod
     def from_task(cls, task: Task, position: int | None = None) -> Self:
