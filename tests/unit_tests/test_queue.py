@@ -857,6 +857,15 @@ async def test_wait_until_call_available_waits_if_queue_paused(
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
+async def test_wait_until_call_available_waits_if_all_tasks_on_hold(
+    task_queue: TaskQueue,
+):
+    for task_id in task_queue._queue:
+        task_queue._tasks[task_id].put_on_hold("Test")
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
+
+
 async def test_wait_until_call_available_waits_if_queue_empty():
     task_queue = TaskQueue(Converter(), Broadcaster())
     with pytest.raises(asyncio.TimeoutError):
