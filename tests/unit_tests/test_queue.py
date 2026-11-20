@@ -45,6 +45,42 @@ from .conftest import make_sample
 pytest_plugins = ("pytest_asyncio",)
 
 
+class AddSleepBeforePlanPlugin(Converter):
+    """Plugin that adds a 10 second sleep before each plan"""
+
+    def pre_process(
+        self,
+        current_task: TaskWithPosition | None,
+        queue: list[Task],
+        history: list[TaskWithPosition],
+        call_history: list[BlueapiCallResponse],
+    ):
+        def sleep_task():
+            return Task(
+                experiment=TaskRequest(
+                    name="sleep", params={"time": 10}, instrument_session="cm12345-1"
+                )
+            )
+
+        new_tasks: list[Task] = []
+        for i, task in enumerate(queue):
+            if not task.experiment.name == "sleep":
+                if i == 0:
+                    previous_plan = (
+                        current_task
+                        if current_task
+                        else history[-1]
+                        if history
+                        else None
+                    )
+                else:
+                    previous_plan = queue[i - 1]
+                if not (previous_plan and previous_plan.experiment.name == "sleep"):
+                    new_tasks.append(sleep_task())
+            new_tasks.append(task)
+        return new_tasks
+
+
 def make_new_task(id_str: str):
     return Task(
         id=id_str,
@@ -315,6 +351,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -347,6 +384,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -379,6 +417,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
     ]
 
@@ -426,6 +465,7 @@ async def test_get_history_only_returns_tasks_in_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -458,6 +498,7 @@ async def test_get_history_only_returns_tasks_in_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
     ]
 
@@ -506,6 +547,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -538,6 +580,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -570,6 +613,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -602,6 +646,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -634,6 +679,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
     ]
 
@@ -811,15 +857,31 @@ async def test_wait_until_call_available_waits_if_queue_paused(
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
+async def test_wait_until_call_available_waits_if_all_tasks_on_hold(
+    task_queue: TaskQueue,
+):
+    for task_id in task_queue._queue:
+        task_queue._tasks[task_id].put_on_hold("Test")
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
+
+
 async def test_wait_until_call_available_waits_if_queue_empty():
     task_queue = TaskQueue(Converter(), Broadcaster())
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
-async def test_wait_until_call_available_does_not_wait_if_conditions_met(
+async def test_wait_until_call_available_does_not_wait_if_first_call_available(
     task_queue: TaskQueue,
 ):
+    await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
+
+
+async def test_wait_until_call_available_does_not_wait_if_later_call_available(
+    task_queue: TaskQueue,
+):
+    task_queue._tasks[task_queue._queue[0]].put_on_hold("Test")
     await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
@@ -1499,3 +1561,100 @@ async def test_sync_calls__sync_once():
         await task_queue.sync()
 
     mock_sync.assert_called_once()
+
+
+async def test_if_first_task_on_hold_then_next_available_task_promoted(
+    task_queue: TaskQueue,
+):
+    first_task = task_queue._tasks[task_queue._queue[0]]
+    first_task.put_on_hold("Testing queue hold behaviour")
+
+    second_task = task_queue._tasks[task_queue._queue[1]]
+    second_task.put_on_hold("Testing queue hold behaviour")
+
+    third_task = task_queue._tasks[task_queue._queue[2]]
+
+    next_call = await task_queue.get_next_call_once_available()
+    assert next_call.parent_task_id == third_task.id
+
+    assert task_queue._queue[1] == first_task.id
+    assert task_queue._queue[2] == second_task.id
+    assert task_queue._queue[0] == third_task.id
+
+
+async def test_if_all_tasks_on_hold_then_next_available_task_promoted(
+    task_queue: TaskQueue,
+):
+    for task_id in task_queue._queue:
+        task = task_queue._tasks[task_id]
+        task.put_on_hold("Testing queue hold behaviour")
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(task_queue.get_next_call_once_available(), timeout=0.05)
+
+
+async def test__promote_first_runnable_task_does_nothing_if_queue_paused(
+    task_queue: TaskQueue,
+):
+    task_queue._move_task = MagicMock(wraps=task_queue._move_task)
+    await task_queue.pause_queue(PauseReason.USER_REQUESTED)
+
+    assert task_queue._promote_first_runnable_task() is False
+    task_queue._move_task.assert_not_called()
+
+
+async def test__promote_first_runnable_task_does_nothing_if_task_in_progress(
+    task_queue_in_progress: TaskQueue,
+):
+    task_queue_in_progress._move_task = MagicMock(
+        wraps=task_queue_in_progress._move_task
+    )
+
+    assert task_queue_in_progress._promote_first_runnable_task() is False
+    task_queue_in_progress._move_task.assert_not_called()
+
+
+async def test__promote_first_runnable_task_restores_queue_if_promoted_task_not_first(
+    caplog: LogCaptureFixture,
+):
+    task_queue = TaskQueue(AddSleepBeforePlanPlugin(), Broadcaster())
+    task_queue._move_task = MagicMock(wraps=task_queue._move_task)
+    task_queue._restore_from_contents = MagicMock(
+        wraps=task_queue._restore_from_contents
+    )
+
+    tasks = [
+        Task(
+            id="data_collection_plan",
+            experiment=TaskRequest(
+                name="data_collection", params={}, instrument_session="cm12345-1"
+            ),
+        )
+    ]
+    await task_queue.add_tasks(tasks)
+
+    task = task_queue._tasks[task_queue._queue[0]]
+    task.put_on_hold("Putting first sleep plan on hold")
+
+    queue_copy = await task_queue.get_queue()
+    assert [(task.position, task.experiment.name) for task in queue_copy] == [
+        (0, "sleep"),
+        (1, "data_collection"),
+    ]
+
+    await task_queue.resume_queue()
+
+    with caplog.at_level(logging.WARNING):
+        async with task_queue._lock:
+            assert task_queue._promote_first_runnable_task() is False
+
+    task_queue._move_task.assert_called_once_with("data_collection_plan", 0)
+    task_queue._restore_from_contents.assert_called_once()
+
+    assert await task_queue.get_queue() == queue_copy
+
+    assert (
+        "Queue not ready to emit a call after moving data_collection_plan to front as "
+        + "after a sync it was no longer the first task. Restoring"
+        in caplog.text
+    )

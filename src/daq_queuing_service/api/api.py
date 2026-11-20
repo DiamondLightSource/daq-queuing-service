@@ -41,7 +41,7 @@ class QueueStateUpdate(BaseModel):
     paused: bool
 
 
-class TaskCancelRequest(BaseModel):
+class TaskActionRequest(BaseModel):
     task_ids: list[str]
 
 
@@ -131,8 +131,26 @@ def protected_routes(
         return await queue.move_task(task_id, new_position)
 
     @router.delete("/queue/tasks")
-    async def cancel_tasks(payload: TaskCancelRequest) -> list[TaskWithPosition]:
+    async def cancel_tasks(payload: TaskActionRequest) -> list[TaskWithPosition]:
         return await queue.cancel_tasks(payload.task_ids)
+
+    @router.post("/queue/tasks/put_on_hold")
+    async def put_tasks_on_hold(payload: TaskActionRequest):
+        LOGGER.info(f"Putting the following tasks on hold: {payload.task_ids}")
+
+        def put_on_hold(task: Task):
+            task.put_on_hold("Requested via API")
+
+        return await queue.modify_tasks(payload.task_ids, put_on_hold)
+
+    @router.post("/queue/tasks/take_off_hold")
+    async def take_tasks_off_hold(payload: TaskActionRequest):
+        LOGGER.info(f"Taking the following tasks off hold: {payload.task_ids}")
+
+        def take_tasks_off_hold(task: Task):
+            task.take_off_hold()
+
+        return await queue.modify_tasks(payload.task_ids, take_tasks_off_hold)
 
     @router.get("/queue/{position}")
     async def get_task_by_position(position: int) -> TaskWithPosition | None:
