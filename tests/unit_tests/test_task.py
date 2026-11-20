@@ -131,6 +131,14 @@ def test_put_on_hold_raises_error_if_current_status_is_not_queued(
     )
 
 
+def test_put_on_hold_raises_error_if_no_reason_given():
+    task = Task(experiment=TaskRequest(name="", params={}, instrument_session=""))
+    with pytest.raises(ValueError) as exc:
+        task.put_on_hold("")
+
+    assert str(exc.value) == "Must give a reason for putting this task on hold"
+
+
 @pytest.mark.parametrize(
     "current_status",
     [

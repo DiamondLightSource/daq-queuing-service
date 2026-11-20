@@ -863,9 +863,16 @@ async def test_wait_until_call_available_waits_if_queue_empty():
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
-async def test_wait_until_call_available_does_not_wait_if_conditions_met(
+async def test_wait_until_call_available_does_not_wait_if_first_call_available(
     task_queue: TaskQueue,
 ):
+    await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
+
+
+async def test_wait_until_call_available_does_not_wait_if_later_call_available(
+    task_queue: TaskQueue,
+):
+    task_queue._tasks[task_queue._queue[0]].put_on_hold("Test")
     await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
