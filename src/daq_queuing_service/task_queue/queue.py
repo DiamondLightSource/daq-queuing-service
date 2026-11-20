@@ -344,6 +344,8 @@ class TaskQueue:
                     )
                     return True
                 else:
+                    # I'm not sure this code path is possible?
+                    # Maybe with a very weird plugin
                     LOGGER.warning(
                         f"Queue not ready to emit a call after moving {task.id} to "
                         + "front as after a sync, the first blueapi call was not "
