@@ -315,6 +315,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -347,6 +348,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -379,6 +381,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
     ]
 
@@ -426,6 +429,7 @@ async def test_get_history_only_returns_tasks_in_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -458,6 +462,7 @@ async def test_get_history_only_returns_tasks_in_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
     ]
 
@@ -506,6 +511,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -538,6 +544,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -570,6 +577,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -602,6 +610,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -634,6 +643,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            hold_reason=None,
         ),
     ]
 

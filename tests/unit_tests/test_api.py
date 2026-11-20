@@ -190,6 +190,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -230,6 +231,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -270,6 +272,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
     ]
 
@@ -317,6 +320,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         }
     ]
 
@@ -378,6 +382,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
             "user": None,
             "runtime": 59.0,
             "estimated_runtime": 100,
+            "hold_reason": None,
         }
     ]
 
@@ -440,6 +445,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         user=None,
         runtime=None,
         estimated_runtime=100,
+        hold_reason=None,
     )
 
 
@@ -725,6 +731,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -765,6 +772,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
     ]
 
@@ -884,6 +892,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -931,6 +940,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
     ]
 
@@ -984,6 +994,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
         "user": None,
         "runtime": None,
         "estimated_runtime": 100,
+        "hold_reason": None,
     }
 
 
@@ -1036,6 +1047,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
         "user": None,
         "runtime": None,
         "estimated_runtime": 100,
+        "hold_reason": None,
     }
 
 

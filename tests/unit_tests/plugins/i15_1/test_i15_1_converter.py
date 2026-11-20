@@ -503,6 +503,7 @@ def test_experiment_with_correct_experiment_type_are_converted():
         user=None,
         runtime=None,
         estimated_runtime=100,
+        hold_reason=None,
     )
     call_list = I151Converter().construct_blueapi_calls([task], [], [])
     assert len(call_list) == 6
@@ -683,6 +684,7 @@ def test_mix_of_experiments_with_correct_experiment_type_are_converted():
         user=None,
         runtime=None,
         estimated_runtime=100,
+        hold_reason=None,
     )
 
     class BadExperiment:
