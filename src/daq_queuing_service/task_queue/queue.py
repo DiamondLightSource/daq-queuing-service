@@ -352,6 +352,9 @@ class TaskQueue:
                         + "available. Restoring"
                     )
             else:
+                # This could happen if a plugin adds tasks to the queue, meaning the
+                # task you've just promoted isn't necessarily the first after a sync.
+                # In this case, restore to before the promotion and wait.
                 LOGGER.warning(
                     f"Queue not ready to emit a call after moving {task.id} to front"
                     + " as after a sync it was no longer the first task. Restoring"
