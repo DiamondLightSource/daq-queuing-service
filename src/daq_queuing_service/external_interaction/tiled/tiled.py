@@ -51,7 +51,7 @@ def get_tiled_client(
         LOGGER.warning("Tiled auth will not be used.")
         tiled_auth = None
 
-    return from_uri(tiled_url, auth=tiled_auth)  # type: ignore https://github.com/DiamondLightSource/blueapi/issues/1772
+    return from_uri(tiled_url, auth=tiled_auth)
 
 
 def get_metadata_from_tiled(
