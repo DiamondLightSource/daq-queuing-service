@@ -162,3 +162,17 @@ def test_get_tiled_client_can_be_instantiated(monkeypatch: MonkeyPatch):
 
     with pytest.raises(httpx.UnsupportedProtocol):
         get_tiled_client("")
+
+
+def test_get_suitable_tiled_background_returns_empty_list_if_tiled_node_not_found(
+    tiled_client: MagicMock, caplog: LogCaptureFixture
+):
+    tiled_client.__getitem__.side_effect = KeyError
+
+    with caplog.at_level(logging.WARNING):
+        result = get_metadata_from_tiled(tiled_client, "ixx", "cm12345-1", "1234-5678")
+
+    assert result == []
+    assert (
+        "Failed to get data from ixx/cm12345/cm12345-1. Node does not exist"
+    ) in caplog.text
