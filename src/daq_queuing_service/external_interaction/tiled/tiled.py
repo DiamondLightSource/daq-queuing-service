@@ -65,9 +65,18 @@ def get_metadata_from_tiled(
     def _query_tiled(
         instrument: str, instrument_session: str, blueapi_task_id: str
     ) -> list[tuple[str, dict[str, Any]]]:
-        result: Container = tiled_client[
+        tiled_node = (
             f"{instrument}/{instrument_session.split('-')[0]}/{instrument_session}"
-        ].search(Eq("start.blueapi_task_id", blueapi_task_id))
+        )
+        try:
+            result: Container = tiled_client[tiled_node].search(
+                Eq("start.blueapi_task_id", blueapi_task_id)
+            )
+        except KeyError:
+            LOGGER.warning(
+                f"Failed to get data from {tiled_node}. Node does not exist."
+            )
+            return []
 
         items = sorted(
             ((key, dict(value.metadata)) for key, value in result.items()),
