@@ -76,7 +76,7 @@ class Task(BaseModel):
     def put_on_hold(self, hold_reason: str):
         if not self.status == Status.QUEUED:
             raise ValueError(
-                f"Cannot put task {self.id} on hold, its status is already"
+                f"Cannot put task {self.id} on hold, its status is already "
                 + str(self.status)
             )
         if not hold_reason:

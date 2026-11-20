@@ -127,5 +127,5 @@ def test_put_on_hold_raises_error_if_current_status_is_not_queued(
 
     assert (
         str(exc.value)
-        == f"Cannot put this task on hold, its status is already {current_status}"
+        == f"Cannot put task {task.id} on hold, its status is already {current_status}"
     )

@@ -251,7 +251,7 @@ class TaskQueue:
         if not self._call_queue:
             self._pause_queue(PauseReason.EMPTY_QUEUE)
 
-        # self._add_runtime_estimates_to_tasks()
+        self._add_runtime_estimates_to_tasks()
 
         self._save_contents()
         self._broadcast_changes()
