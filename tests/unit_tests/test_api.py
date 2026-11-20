@@ -675,6 +675,63 @@ def test_move_task_with_bad_params_gives_expected_error_responses(
     assert response.json() == expected_response_json
 
 
+async def test_put_tasks_on_hold_updates_task_status(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    payload = TaskActionRequest(
+        task_ids=task_queue_with_history._queue[1:]
+    ).model_dump()
+
+    response = test_client.post("/queue/tasks/put_on_hold", json=payload)
+
+    assert response.status_code == 200
+
+    queue = await task_queue_with_history.get_queue()
+    assert len(queue) == 3
+    for task in queue[1:]:
+        assert task.status == Status.ON_HOLD
+
+
+async def test_put_on_hold_task_on_hold_returns_expected_response(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    payload = TaskActionRequest(task_ids=task_queue_with_history._queue).model_dump()
+
+    response = test_client.post("/queue/tasks/put_on_hold", json=payload)
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "error": "task_in_progress",
+        "message": "Cannot move task '2', it is currently in progress!",
+    }
+
+    queue = await task_queue_with_history.get_queue()
+    assert len(queue) == 3
+    for task in queue:
+        if task.position == 0:
+            assert task.status == Status.IN_PROGRESS
+        else:
+            assert task.status == Status.QUEUED
+
+
+async def test_take_tasks_off_hold_updates_task_status(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    payload = TaskActionRequest(
+        task_ids=task_queue_with_history._queue[1:]
+    ).model_dump()
+
+    test_client.post("/queue/tasks/put_on_hold", json=payload)
+    response = test_client.post("/queue/tasks/take_off_hold", json=payload)
+
+    assert response.status_code == 200
+
+    queue = await task_queue_with_history.get_queue()
+    assert len(queue) == 3
+    for task in queue[1:]:
+        assert task.status == Status.QUEUED
+
+
 async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
     test_client: TestClient, task_queue_with_history: TaskQueue
 ):

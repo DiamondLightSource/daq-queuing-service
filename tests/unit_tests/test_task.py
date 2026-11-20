@@ -129,3 +129,30 @@ def test_put_on_hold_raises_error_if_current_status_is_not_queued(
         str(exc.value)
         == f"Cannot put task {task.id} on hold, its status is already {current_status}"
     )
+
+
+@pytest.mark.parametrize(
+    "current_status",
+    [
+        Status.CANCELLED,
+        Status.COMPLETE,
+        Status.ERROR,
+        Status.IN_PROGRESS,
+        Status.QUEUED,
+    ],
+)
+def test_take_off_hold_raises_error_if_task_is_not_on_hold(current_status: Status):
+    class _Task(Task):
+        @property
+        def status(self):
+            return current_status
+
+    task = _Task(experiment=TaskRequest(name="", params={}, instrument_session=""))
+    with pytest.raises(ValueError) as exc:
+        task.take_off_hold()
+
+    assert (
+        str(exc.value)
+        == f"Cannot take task {task.id} off hold, it is not currently on hold. "
+        + f"Current status: {current_status}"
+    )
