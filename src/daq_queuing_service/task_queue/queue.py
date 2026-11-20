@@ -346,12 +346,13 @@ class TaskQueue:
                 else:
                     LOGGER.warning(
                         f"Queue not ready to emit a call after moving {task.id} to "
-                        + "front as first blueapi call not available, restoring"
+                        + "front as after a sync, the first blueapi call was not "
+                        + "available. Restoring"
                     )
             else:
                 LOGGER.warning(
                     f"Queue not ready to emit a call after moving {task.id} to front"
-                    + " as after a sync it was no longer the first task, restoring"
+                    + " as after a sync it was no longer the first task. Restoring"
                 )
             self._restore_from_contents(queue_contents)
         return False
