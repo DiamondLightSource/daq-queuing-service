@@ -168,7 +168,6 @@ class TaskQueue:
         LOGGER.debug(f"Syncing. Queue before sync: {self._queue}")
         for task_id in list(self._queue):
             task = self._tasks[task_id]
-            LOGGER.info(task.status)
             if task.status in (Status.COMPLETE, Status.ERROR):
                 # Move task from queue to history if all blueapi calls complete
                 # Or an error occurred during one of them
@@ -330,7 +329,10 @@ class TaskQueue:
         if self._state.paused or self._get_running_task():
             return False
         if task := self._get_first_runnable_task():
-            LOGGER.info(f"Found runnable task {task.id}, position {task.position}")
+            LOGGER.info(
+                f"Found runnable task {task.id} at position {task.position}, "
+                + "attempting to promote to the front"
+            )
             queue_contents = self._copy_contents()
             new_position = self._move_task(task.id, 0)
             assert new_position == 0
@@ -342,12 +344,12 @@ class TaskQueue:
                     )
                     return True
                 else:
-                    LOGGER.info(
+                    LOGGER.warning(
                         f"Queue not ready to emit a call after moving {task.id} to "
                         + "front as first blueapi call not available, restoring"
                     )
             else:
-                LOGGER.info(
+                LOGGER.warning(
                     f"Queue not ready to emit a call after moving {task.id} to front"
                     + " as after a sync it was no longer the first task, restoring"
                 )
@@ -652,32 +654,34 @@ class TaskQueue:
         return len(self._queue)
 
     def _first_call_available(self) -> bool:
+        if self._state.paused or not self._call_queue:
+            return False
+        call = self._call_queue[0]
+        if self._tasks[call.parent_task_id].status == Status.ON_HOLD:
+            LOGGER.info("First call is not available as its parent task is on hold")
+            return False
+
+        return call.status == CallStatus.WAITING
+
+    def _any_call_available(self) -> bool:
         """Predicate that determines whether the queue has a call available. This
-        returns True if the first call in the queue has a status of WAITING, and the
-        queue is not paused.
+        returns True if any call in the queue has a status of WAITING, its parent task
+        is not on hold, and the queue is not paused.
 
         Returns:
             bool: Whether or not the queue has a call available.
         """
-        if self._state.paused or not self._call_queue:
-            return False
-        return self._call_is_available(self._call_queue[0])
-
-    def _any_call_available(self) -> bool:
         if self._state.paused:
             return False
         for call in self._call_queue:
             if call.status in [CallStatus.IN_PROGRESS, CallStatus.CLAIMED]:
                 return False
-            if self._call_is_available(call):
+            if (
+                call.status == CallStatus.WAITING
+                and self._tasks[call.parent_task_id].status != Status.ON_HOLD
+            ):
                 return True
         return False
-
-    def _call_is_available(self, call: BlueapiCall) -> bool:
-        return (
-            call.status == CallStatus.WAITING
-            and self._tasks[call.parent_task_id].status != Status.ON_HOLD
-        )
 
     def _get_first_runnable_task(self) -> TaskWithPosition | None:
         for i, task_id in enumerate(self._queue):
