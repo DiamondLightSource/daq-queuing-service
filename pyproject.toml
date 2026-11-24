@@ -73,6 +73,7 @@ reportMissingImports = false    # Ignore missing stubs in imported modules
 reportMissingTypeStubs = "none"
 
 executionEnvironments = [{ root = "tests", reportPrivateUsage = false }]
+exclude = ["**/generated"]
 
 [tool.pytest.ini_options]
 # Run pytest with all our checkers, and don't spam us with massive tracebacks on error
@@ -200,6 +201,7 @@ lint.select = [
     "UP",  # pyupgrade - https://docs.astral.sh/ruff/rules/#pyupgrade-up
     "SLF", # self - https://docs.astral.sh/ruff/settings/#lintflake8-self
 ]
+extend-exclude = ["src/daq_queuing_service/plugins/*/generated"]
 
 [tool.ruff.lint.per-file-ignores]
 # By default, private member access is allowed in tests
