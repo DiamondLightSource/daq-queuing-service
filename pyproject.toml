@@ -1,12 +1,11 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm[toml]>=8"]
+requires = ["setuptools>=77.0.3", "setuptools_scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "daq-queuing-service"
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -23,7 +22,8 @@ dependencies = [
     "tiled[client]==0.2.18",      # Unpin once https://github.com/DiamondLightSource/blueapi/issues/1772 solved
 ]
 dynamic = ["version"]
-license.file = "LICENSE"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.11"
 
@@ -43,8 +43,12 @@ dev = [
     "sphinx-autobuild",
     "sphinx-copybutton",
     "sphinx-design",
+<<<<<<< before updating
     "sphinxcontrib-openapi>=0.9.0",
     "tox-uv",
+=======
+    "tox-uv-bare",
+>>>>>>> after updating
     "types-mock",
 ]
 
@@ -59,9 +63,14 @@ email = "jacob.williamson@diamond.ac.uk"
 name = "Jacob Williamson"
 
 [tool.uv]
+<<<<<<< before updating
 # https://github.com/astral-sh/uv/security/advisories/GHSA-hq85-5cpj-mr62
 required-version = ">=0.13.5"
 constraint-dependencies = ["certifi>=v2026.10.19", "starlette>=1.1.0"]
+=======
+# Minimum uv to fix eMudhra CA cert incident (see discuss.python.org/t/109576)
+required-version = ">=0.13.5"
+>>>>>>> after updating
 
 [tool.setuptools_scm]
 version_file = "src/daq_queuing_service/_version.py"
@@ -101,6 +110,13 @@ env_list = ["pre-commit", "type-checking", "tests", "docs", "generate-api-docs"]
 [tool.tox.env_run_base]
 # Pass all environment variables to the test environments
 passenv = ["*"]
+allowlist_externals = [
+    "pyright",
+    "pytest",
+    "pre-commit",
+    "sphinx-build",
+    "sphinx-autobuild",
+]
 
 [tool.tox.env.pre-commit]
 description = "Run pre-commit on all files"
