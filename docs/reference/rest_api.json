@@ -321,7 +321,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TaskCancelRequest"
+                "$ref": "#/components/schemas/TaskActionRequest"
               }
             }
           },
@@ -339,6 +339,78 @@
                   "type": "array",
                   "title": "Response Cancel Tasks Queue Tasks Delete"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/tasks/put_on_hold": {
+      "post": {
+        "summary": "Put Tasks On Hold",
+        "operationId": "put_tasks_on_hold_queue_tasks_put_on_hold_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/tasks/take_off_hold": {
+      "post": {
+        "summary": "Take Tasks Off Hold",
+        "operationId": "take_tasks_off_hold_queue_tasks_take_off_hold_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1251,7 +1323,8 @@
           "In progress",
           "Complete",
           "Error",
-          "Cancelled"
+          "Cancelled",
+          "On hold"
         ],
         "title": "Status"
       },
@@ -1287,7 +1360,7 @@
         "title": "StompConfig",
         "description": "Config for connecting to stomp broker"
       },
-      "TaskCancelRequest": {
+      "TaskActionRequest": {
         "properties": {
           "task_ids": {
             "items": {
@@ -1301,7 +1374,7 @@
         "required": [
           "task_ids"
         ],
-        "title": "TaskCancelRequest"
+        "title": "TaskActionRequest"
       },
       "TaskError": {
         "properties": {
@@ -1461,6 +1534,17 @@
               }
             ],
             "title": "Runtime"
+          },
+          "hold_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Reason"
           }
         },
         "type": "object",
@@ -1473,7 +1557,8 @@
           "kind",
           "user",
           "estimated_runtime",
-          "runtime"
+          "runtime",
+          "hold_reason"
         ],
         "title": "TaskWithPosition"
       },

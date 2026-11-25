@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 
 from constants import TEST_CONFIG_PATH
 from daq_queuing_service.api.api import (
-    TaskCancelRequest,
+    TaskActionRequest,
     get_current_user,
     protected_routes,
     public_routes,
@@ -190,6 +190,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -230,6 +231,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -270,6 +272,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
     ]
 
@@ -317,6 +320,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         }
     ]
 
@@ -378,6 +382,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
             "user": None,
             "runtime": 59.0,
             "estimated_runtime": 100,
+            "hold_reason": None,
         }
     ]
 
@@ -440,6 +445,7 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         user=None,
         runtime=None,
         estimated_runtime=100,
+        hold_reason=None,
     )
 
 
@@ -669,6 +675,63 @@ def test_move_task_with_bad_params_gives_expected_error_responses(
     assert response.json() == expected_response_json
 
 
+async def test_put_tasks_on_hold_updates_task_status(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    payload = TaskActionRequest(
+        task_ids=task_queue_with_history._queue[1:]
+    ).model_dump()
+
+    response = test_client.post("/queue/tasks/put_on_hold", json=payload)
+
+    assert response.status_code == 200
+
+    queue = await task_queue_with_history.get_queue()
+    assert len(queue) == 3
+    for task in queue[1:]:
+        assert task.status == Status.ON_HOLD
+
+
+async def test_put_on_hold_task_on_hold_returns_expected_response(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    payload = TaskActionRequest(task_ids=task_queue_with_history._queue).model_dump()
+
+    response = test_client.post("/queue/tasks/put_on_hold", json=payload)
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "error": "task_in_progress",
+        "message": "Cannot move task '2', it is currently in progress!",
+    }
+
+    queue = await task_queue_with_history.get_queue()
+    assert len(queue) == 3
+    for task in queue:
+        if task.position == 0:
+            assert task.status == Status.IN_PROGRESS
+        else:
+            assert task.status == Status.QUEUED
+
+
+async def test_take_tasks_off_hold_updates_task_status(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    payload = TaskActionRequest(
+        task_ids=task_queue_with_history._queue[1:]
+    ).model_dump()
+
+    test_client.post("/queue/tasks/put_on_hold", json=payload)
+    response = test_client.post("/queue/tasks/take_off_hold", json=payload)
+
+    assert response.status_code == 200
+
+    queue = await task_queue_with_history.get_queue()
+    assert len(queue) == 3
+    for task in queue[1:]:
+        assert task.status == Status.QUEUED
+
+
 async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
     test_client: TestClient, task_queue_with_history: TaskQueue
 ):
@@ -678,7 +741,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
     response = test_client.request(
         "DELETE",
         "/queue/tasks",
-        json=TaskCancelRequest(task_ids=last_two_task_ids).model_dump(),
+        json=TaskActionRequest(task_ids=last_two_task_ids).model_dump(),
     )
 
     queue_after = await task_queue_with_history.get_queue()
@@ -725,6 +788,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -765,6 +829,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
     ]
 
@@ -787,7 +852,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
         ],
         [
-            TaskCancelRequest(task_ids=["doesn't exist"]).model_dump(),
+            TaskActionRequest(task_ids=["doesn't exist"]).model_dump(),
             404,
             {
                 "error": "task_not_found",
@@ -795,7 +860,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
         ],
         [
-            TaskCancelRequest(task_ids=["2", "3", "4"]).model_dump(),
+            TaskActionRequest(task_ids=["2", "3", "4"]).model_dump(),
             409,
             {
                 "error": "task_in_progress",
@@ -803,7 +868,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             },
         ],
         [
-            TaskCancelRequest(task_ids=["1", "2", "3", "4"]).model_dump(),
+            TaskActionRequest(task_ids=["1", "2", "3", "4"]).model_dump(),
             409,
             {"error": "task_not_in_queue", "message": "Task 1 isn't present in queue"},
         ],
@@ -884,6 +949,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
         {
             "experiment": {
@@ -931,6 +997,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "hold_reason": None,
         },
     ]
 
@@ -984,6 +1051,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
         "user": None,
         "runtime": None,
         "estimated_runtime": 100,
+        "hold_reason": None,
     }
 
 
@@ -1036,6 +1104,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
         "user": None,
         "runtime": None,
         "estimated_runtime": 100,
+        "hold_reason": None,
     }
 
 
