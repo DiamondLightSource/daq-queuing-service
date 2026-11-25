@@ -199,7 +199,6 @@ class TaskQueue:
         ]
         self._queue.extend(task.id for task in new_tasks)
 
-        # This is needed because pre_process could remove tasks
         self._prune_tasks_from_registry()
 
         # Persist calls which aren't complete but who's parent task is in progress
