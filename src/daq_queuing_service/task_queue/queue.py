@@ -682,25 +682,14 @@ class TaskQueue:
         return removed_ids
 
     def _prune_tasks_from_registry(self):
-        # Removes tasks not present in the queue or history
-        # So should remove tasks from queue/history before removing from registry
-        queue_set = set(self._queue)
-        history_set = set(self._history)
-
-        def should_be_removed(task_id: str) -> bool:
-            return (
-                task_id in self._tasks
-                and self._tasks[task_id].status != Status.IN_PROGRESS
-                and task_id not in queue_set
-                and task_id not in history_set
-            )
-
-        removed_ids = [task_id for task_id in self._tasks if should_be_removed(task_id)]
+        """Removes tasks not present in the queue or history. Tasks should be removed
+        from queue/history before removing from registry"""
+        to_keep = {*self._queue, *self._history}
         self._tasks = TaskRegistry(
             {
                 task_id: task
                 for task_id, task in self._tasks.items()
-                if task.id not in removed_ids
+                if task_id in to_keep
             }
         )
 
