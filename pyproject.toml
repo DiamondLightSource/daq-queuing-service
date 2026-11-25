@@ -16,11 +16,11 @@ description = "A service to queue tasks and chain BlueAPI calls"
 dependencies = [
     "blueapi>=1.18.1",
     "cachetools>=7.0.5",
-    "daq-config-server >= 1.6.1",
+    "daq-config-server >= 1.6.2",
     "fastapi>=0.136.0",
     "graypy>=2.1.0",
     "pydantic>=2.13.2",
-    "tiled[client]>=0.2.21",
+    "tiled[client]==0.2.18",      # Unpin once https://github.com/DiamondLightSource/blueapi/issues/1772 solved
 ]
 dynamic = ["version"]
 license.file = "LICENSE"

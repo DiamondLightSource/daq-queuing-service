@@ -158,7 +158,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "sample": {
                     "name": "test_8_2",
                     "id": "2",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -198,7 +198,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "sample": {
                     "name": "test_8_3",
                     "id": "3",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -238,7 +238,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
                 "sample": {
                     "name": "test_8_4",
                     "id": "4",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -285,7 +285,7 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
                 "sample": {
                     "name": "test_8_2",
                     "id": "2",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -342,7 +342,7 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
                 "sample": {
                     "name": "test_8_1",
                     "id": "1",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -693,7 +693,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                 "sample": {
                     "name": "test_8_3",
                     "id": "3",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -733,7 +733,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
                 "sample": {
                     "name": "test_8_4",
                     "id": "4",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {"id": "", "positionInParent": {"position": 2}},
                     "positionInContainer": {"position": 2},
                 },
@@ -845,7 +845,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                 "sample": {
                     "name": "test_8_3",
                     "id": "3",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {
                         "id": "",
                         "positionInParent": {
@@ -892,7 +892,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
                 "sample": {
                     "name": "test_8_4",
                     "id": "4",
-                    "data": {"capillary": "fq1.0"},
+                    "data": {"capillary": "fq1.0", "composition": "chemical"},
                     "container": {
                         "id": "",
                         "positionInParent": {
@@ -945,7 +945,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
             "sample": {
                 "name": "test_8_3",
                 "id": "3",
-                "data": {"capillary": "fq1.0"},
+                "data": {"capillary": "fq1.0", "composition": "chemical"},
                 "container": {
                     "id": "",
                     "positionInParent": {
@@ -997,7 +997,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
             "sample": {
                 "name": "test_8_3",
                 "id": "3",
-                "data": {"capillary": "fq1.0"},
+                "data": {"capillary": "fq1.0", "composition": "chemical"},
                 "container": {
                     "id": "",
                     "positionInParent": {
@@ -1209,3 +1209,27 @@ def test_get_current_user_returns_user_from_request_state():
     user = User(fedid="abc12345")
     request.state.user = user
     assert get_current_user(request) == user
+
+
+def test_sync_syncs_queue_and_returns_200(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    task_queue_with_history.sync = MagicMock(wraps=task_queue_with_history.sync)
+    response = test_client.post("/sync")
+    assert response.status_code == 200
+    task_queue_with_history.sync.assert_called_once()
+
+
+def test_if_sync_fails_then_error_returned(
+    test_client: TestClient, task_queue_with_history: TaskQueue
+):
+    task_queue_with_history.sync = MagicMock(wraps=task_queue_with_history.sync)
+    task_queue_with_history._converter.pre_process = MagicMock(
+        side_effect=ValueError("Plugin pre process failed")
+    )
+    response = test_client.post("/sync")
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": "converter_error",
+        "message": "ValueError: Plugin pre process failed",
+    }

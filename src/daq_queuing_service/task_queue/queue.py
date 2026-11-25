@@ -154,6 +154,10 @@ class TaskQueue:
         )
         self._runtime_client = runtime_estimator_client
 
+    async def sync(self):
+        async with self._lock:
+            self._sync()
+
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
         tasks to a queue of blueapi calls. This is called every time the queue is
