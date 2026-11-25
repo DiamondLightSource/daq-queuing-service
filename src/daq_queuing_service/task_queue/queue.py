@@ -140,7 +140,6 @@ class TaskQueue:
         self._call_queue: list[BlueapiCall] = []
         self._call_history: list[BlueapiCall] = []
         self._save_contents()
-        self._queue_history: list[BlueapiCall] = []
         self._state: QueueState = QueueState(
             paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE
         )
@@ -153,6 +152,10 @@ class TaskQueue:
             on_error=self._restore_latest_good_contents,
         )
         self._runtime_client = runtime_estimator_client
+
+    async def sync(self):
+        async with self._lock:
+            self._sync()
 
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
@@ -187,7 +190,7 @@ class TaskQueue:
                     if self._tasks[task_id].status == Status.QUEUED
                 ],
                 self._get_history(),
-                self._queue_history,
+                self._get_call_history(),
             )
         except Exception as e:
             raise ConverterError(e) from e
@@ -229,7 +232,7 @@ class TaskQueue:
                     if task.status == Status.QUEUED
                 ],
                 self._get_history(),
-                self._queue_history,
+                self._get_call_history(),
             )
         except Exception as e:
             raise ConverterError(e) from e
@@ -294,6 +297,7 @@ class TaskQueue:
         self._broadcaster.broadcast(
             Event(type="call_history_update", data=self._get_call_history())
         )
+        self._broadcaster.broadcast(Event(type="state_update", data=self._state))
 
     async def get_next_call_once_available(self) -> BlueapiCall:
         """Waits until a call is available before returning the call. A call is
@@ -354,7 +358,11 @@ class TaskQueue:
             result (TaskResult): The result of the task from blueapi
         """
         with add_session_to_logger(call.task_request.instrument_session):
-            tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+            tiled_ids, scan_ids = (
+                get_tiled_and_scan_ids(self._tiled_client, self.instrument, call)
+                if self.instrument
+                else ([], [])
+            )
             should_pause = self._converter.pause_on_complete_blueapi_call(
                 call.model_copy(), result
             )
@@ -383,7 +391,12 @@ class TaskQueue:
             should_pause = self._converter.pause_on_fail_blueapi_call(
                 call.model_copy(), errors
             )
-            tiled_ids, scan_ids = get_tiled_and_scan_ids(self._tiled_client, call)
+
+            tiled_ids, scan_ids = (
+                get_tiled_and_scan_ids(self._tiled_client, self.instrument, call)
+                if self.instrument
+                else ([], [])
+            )
             LOGGER.error(f"Plan {call} has failed with the following errors: {errors}")
 
         async with self._modifying:
@@ -556,7 +569,6 @@ class TaskQueue:
         )
         self._state.paused = True
         self._state.last_pause_reason = reason
-        self._broadcaster.broadcast(Event(type="state_update", data=self._state))
         notify(f"Queue paused: {reason}", "INFO")
 
     async def pause_queue(self, reason: PauseReason) -> QueueState:
@@ -582,7 +594,6 @@ class TaskQueue:
         LOGGER.info("Resuming queue")
         async with self._modifying:
             self._state.paused = False
-            self._broadcaster.broadcast(Event(type="state_update", data=self._state))
         return self._state
 
     @property

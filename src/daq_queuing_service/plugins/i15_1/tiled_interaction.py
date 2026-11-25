@@ -28,16 +28,23 @@ def get_suitable_tiled_scan(
 
     @cached(cache)
     def _query_tiled(instrument_session: str) -> list[TiledAuxiliary]:
-
+        tiled_node = f"i15-1/{instrument_session.split('-')[0]}/{instrument_session}"
         oldest_valid_time = time.time() - stale_time_s
-        result: Container = (
-            tiled_client.search(Eq("start.instrument", "i15-1"))
-            .search(Eq("start.instrument_session", instrument_session))
-            .search(Eq("stop.exit_status", "success"))
-            .search(Comparison("ge", "stop.time", oldest_valid_time))
-            .search(In("start.scan_type", list(AuxiliaryScanType)))
-            .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
-        )
+        try:
+            result: Container = (
+                tiled_client[tiled_node]
+                .search(Eq("stop.exit_status", "success"))
+                .search(Comparison("ge", "stop.time", oldest_valid_time))
+                .search(In("start.scan_type", list(AuxiliaryScanType)))
+                .search(KeyPresent("start.experiment_definition.data.time_per_pdf"))
+                .search(KeyPresent("start.experiment_definition.data.q_max"))
+            )
+        except KeyError:
+            LOGGER.warning(
+                f"Failed to get data from {tiled_node}. Assuming first "
+                "collection of session."
+            )
+            return []
 
         items = sorted(
             ((key, value) for key, value in result.items()),
@@ -70,6 +77,10 @@ def get_suitable_tiled_scan(
                     contents=sample["data"].get("composition"),
                 )
             time_per_pdf = start_doc["experiment_definition"]["data"]["time_per_pdf"]
+            q_max = start_doc["experiment_definition"]["data"]["q_max"]
+            list_of_temperatures = start_doc["experiment_definition"]["data"].get(
+                "list_of_temperatures"
+            )
 
             auxiliary_scan = TiledAuxiliary(
                 tiled_id=tiled_id,
@@ -79,6 +90,8 @@ def get_suitable_tiled_scan(
                 filepath=filepath,
                 pin=pin,
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
+                list_of_temperatures=list_of_temperatures,
             )
             if auxiliary_scan.kind != start_doc["scan_type"]:
                 LOGGER.warning(

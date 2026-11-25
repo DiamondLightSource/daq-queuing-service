@@ -20,7 +20,10 @@ from daq_queuing_service.app.config import (
     load_config,
 )
 from daq_queuing_service.broadcaster import Broadcaster
-from daq_queuing_service.external_interaction.blueapi.blueapi_call import BlueapiCall
+from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
+    BlueapiCall,
+    BlueapiCallResponse,
+)
 from daq_queuing_service.external_interaction.runtime_estimator.client import (
     RuntimeEstimatorClient,
 )
@@ -56,11 +59,14 @@ CONTAINER_POSITION = ContainerPosition(position=2)
 CONTAINER = Container(id="", positionInParent=CONTAINER_POSITION)
 
 
-def make_sample(name: str, id: str):
+def make_sample(name: str, id: str, composition: str | None = "chemical"):
+    data = {"capillary": "fq1.0"}
+    if composition:
+        data["composition"] = composition
     return Sample(
         name=name,
         id=id,
-        data={"capillary": "fq1.0"},
+        data=data,
         positionInContainer=CONTAINER_POSITION,
         container=CONTAINER,
     )
@@ -76,7 +82,7 @@ def tasks() -> list[Task]:
                 experiment_definition=ExperimentDefinition(
                     name="test", id=str(i), data={}
                 ),
-                sample=make_sample(f"test_8_{i}", str(i)),
+                sample=make_sample(f"test_8_{i}", str(i), composition="chemical"),
             ),
             id=str(i),
         )
@@ -142,7 +148,7 @@ async def task_queue_one_to_many(tasks: list[Task]):
     def construct_blueapi_calls(
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
         for task in queue:

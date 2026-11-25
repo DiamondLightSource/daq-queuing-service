@@ -55,16 +55,28 @@ def get_tiled_client(
 
 
 def get_metadata_from_tiled(
-    tiled_client: Container, instrument_session: str, blueapi_task_id: str
+    tiled_client: Container,
+    instrument: str,
+    instrument_session: str,
+    blueapi_task_id: str,
 ) -> list[tuple[str, dict[str, Any]]]:
 
     @cached(cache)
     def _query_tiled(
-        instrument_session: str, blueapi_task_id: str
+        instrument: str, instrument_session: str, blueapi_task_id: str
     ) -> list[tuple[str, dict[str, Any]]]:
-        result: Container = tiled_client.search(
-            Eq("start.instrument_session", instrument_session)
-        ).search(Eq("start.blueapi_task_id", blueapi_task_id))
+        tiled_node = (
+            f"{instrument}/{instrument_session.split('-')[0]}/{instrument_session}"
+        )
+        try:
+            result: Container = tiled_client[tiled_node].search(
+                Eq("start.blueapi_task_id", blueapi_task_id)
+            )
+        except KeyError:
+            LOGGER.warning(
+                f"Failed to get data from {tiled_node}. Node does not exist."
+            )
+            return []
 
         items = sorted(
             ((key, dict(value.metadata)) for key, value in result.items()),
@@ -72,10 +84,10 @@ def get_metadata_from_tiled(
         )
         return items
 
-    return _query_tiled(instrument_session, blueapi_task_id)
+    return _query_tiled(instrument, instrument_session, blueapi_task_id)
 
 
-def get_tiled_and_scan_ids(tiled_client: Container, call: BlueapiCall):
+def get_tiled_and_scan_ids(tiled_client: Container, instrument: str, call: BlueapiCall):
     tiled_ids: list[str] = []
     scan_ids: list[int] = []
 
@@ -84,7 +96,7 @@ def get_tiled_and_scan_ids(tiled_client: Container, call: BlueapiCall):
         return tiled_ids, scan_ids
 
     scan_metadatas = get_metadata_from_tiled(
-        tiled_client, call.task_request.instrument_session, call.blueapi_id
+        tiled_client, instrument, call.task_request.instrument_session, call.blueapi_id
     )
 
     for item in scan_metadatas:

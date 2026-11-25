@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Any
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
@@ -8,6 +9,7 @@ from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
     BlueapiCall,
+    BlueapiCallResponse,
 )
 from daq_queuing_service.external_interaction.tiled.tiled import get_tiled_client
 from daq_queuing_service.log import (
@@ -19,6 +21,7 @@ from daq_queuing_service.plugins.i15_1.auxiliary import (
     AuxiliaryScan,
     AuxiliaryScanType,
     TiledAuxiliary,
+    get_background_temperatures,
     is_auxiliary_experiment,
 )
 from daq_queuing_service.plugins.i15_1.plans import (
@@ -87,7 +90,7 @@ class I151Converter(Converter):
         current_task: TaskWithPosition | None,
         queue: list[Task],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ) -> list[Task]:
         self._config_client.reset_cache()
         if self._queue_params.add_auxiliary_scans:
@@ -98,7 +101,7 @@ class I151Converter(Converter):
         self,
         queue: list[TaskWithPosition],
         history: list[TaskWithPosition],
-        call_history: list[BlueapiCall],
+        call_history: list[BlueapiCallResponse],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
 
@@ -156,13 +159,16 @@ class I151Converter(Converter):
 
         plans: list[TaskRequest] = []
 
-        if sample and self._queue_params.do_robot_load:
-            plans.append(get_robot_load(sample, session))
+        if self._queue_params.do_robot_load:
+            if sample:
+                plans.append(get_robot_load(sample, session))
+            else:
+                plans.append(get_robot_unload(session))
 
         if self._queue_params.do_wait_for_beam:
             plans.append(get_wait_for_beam(session))
 
-        if sample and self._queue_params.do_centring:
+        if sample and sample.data.get("composition") and self._queue_params.do_centring:
             plans.append(get_centre_sample(centring_params, experiment))
             if self._queue_params.do_wait_for_beam:
                 plans.append(get_wait_for_beam(session))
@@ -291,14 +297,21 @@ class I151Converter(Converter):
     def _get_required_auxiliary_scans(
         self, experiment: Experiment
     ) -> list[AuxiliaryScan]:
-        # This should be fleshed out https://github.com/DiamondLightSource/daq-queuing-service/issues/79
         time_per_pdf = experiment.experiment_definition.data["time_per_pdf"]
+        q_max = experiment.experiment_definition.data["q_max"]
+        list_of_temperatures = experiment.experiment_definition.data.get(
+            "list_of_temperatures"
+        )
+        if list_of_temperatures:
+            list_of_temperatures = get_background_temperatures(list_of_temperatures)
+
         assert experiment.sample
         return [
             AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
                 pin=None,
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
             ),
             AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
@@ -306,6 +319,8 @@ class I151Converter(Converter):
                     capillary=experiment.sample.data["capillary"], contents=None
                 ),
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
+                list_of_temperatures=list_of_temperatures,
             ),
             AuxiliaryScan(
                 instrument_session=experiment.instrument_session,
@@ -313,6 +328,7 @@ class I151Converter(Converter):
                     capillary=experiment.sample.data["capillary"], contents="Silicon"
                 ),
                 time_per_pdf=time_per_pdf,
+                q_max=q_max,
             ),
         ]
 
@@ -320,6 +336,22 @@ class I151Converter(Converter):
         self, auxiliary_scan: AuxiliaryScan, instrument_session: str
     ) -> Experiment:
         LOGGER.debug(f"Constructing experiment for auxiliary scan: {auxiliary_scan}")
+        data: dict[str, Any] = {
+            "time_per_pdf": auxiliary_scan.time_per_pdf,
+            "q_max": auxiliary_scan.q_max,
+        }
+        if auxiliary_scan.list_of_temperatures:
+            settle_time = (
+                self._queue_params.blower_auxiliary_collection_params.settle_time_s
+            )
+            ramp_rate = self._queue_params.blower_auxiliary_collection_params.ramp_rate
+            data.update(
+                {
+                    "list_of_temperatures": auxiliary_scan.list_of_temperatures,
+                    "ramp_rate": ramp_rate,
+                    "settle_time": settle_time,
+                }
+            )
 
         sample = self._construct_auxiliary_sample(auxiliary_scan.pin)
         experiment_name = (
@@ -331,12 +363,11 @@ class I151Converter(Converter):
         return Experiment(
             name=experiment_name,
             instrument_session=instrument_session,
-            # Need to get sample info for test samples (air, empty capillary etc)
             sample=sample,
             experiment_definition=ExperimentDefinition(
                 name=auxiliary_scan.kind,
                 id="",
-                data={"time_per_pdf": auxiliary_scan.time_per_pdf},
+                data=data,
             ),
         )
 

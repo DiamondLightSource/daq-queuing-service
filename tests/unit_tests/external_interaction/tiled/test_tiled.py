@@ -1,9 +1,10 @@
 import logging
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from pydantic import SecretStr
-from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture, MonkeyPatch
 from tiled.queries import Eq
 
 from daq_queuing_service.external_interaction.tiled.tiled import (
@@ -39,14 +40,13 @@ def mock_tiled_search(
         }
     }
 
-    search_result = MagicMock()
-    search_result.search = MagicMock(
+    search_result = MagicMock(
         return_value={"tiled_id_1": result_1, "tiled_id_2": result_2}
     )
 
-    tiled_client.search = MagicMock(return_value=search_result)
+    tiled_client["ixx/cm12345/cm12345-1"].search = search_result
 
-    return (tiled_client, search_result)
+    return tiled_client
 
 
 def test_get_tiled_client_instantiates_client_from_uri():
@@ -104,22 +104,21 @@ def test_get_tiled_client_adds_tiled_auth_with_client_id_and_secret_if_found(
     )
 
 
-def test_get_metadata_from_tiled_makes_expected_searches(
-    mock_tiled_search: tuple[MagicMock, MagicMock],
+def test_get_metadata_from_tiled_makes_expected_search(
+    mock_tiled_search: MagicMock,
 ):
-    client, result = mock_tiled_search
-    get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
-    client.search.assert_called_once_with(
-        Eq(key="start.instrument_session", value="cm12345-1")
+    client = mock_tiled_search
+    get_metadata_from_tiled(client, "ixx", "cm12345-1", "bapi_task_id")
+    client["ixx/cm12345/cm12345-1"].search.assert_called_once_with(  # type:ignore
+        Eq("start.blueapi_task_id", "bapi_task_id")
     )
-    result.search.assert_called_once_with(Eq("start.blueapi_task_id", "bapi_task_id"))
 
 
 def test_get_metadata_from_tiled_returns_expected_result(
-    mock_tiled_search: tuple[MagicMock, MagicMock],
+    mock_tiled_search: MagicMock,
 ):
-    client, _ = mock_tiled_search
-    result = get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
+    client = mock_tiled_search
+    result = get_metadata_from_tiled(client, "ixx", "cm12345-1", "bapi_task_id")
     assert result == [  # Should be in chronological order
         (
             "tiled_id_2",
@@ -149,9 +148,31 @@ def test_get_metadata_from_tiled_returns_expected_result(
 
 
 def test_get_metadata_from_tiled_returns_empty_list_if_no_result_found(
-    mock_tiled_search: tuple[MagicMock, MagicMock],
+    mock_tiled_search: MagicMock,
 ):
-    client, search = mock_tiled_search
-    search.search = MagicMock(return_value={})
-    result = get_metadata_from_tiled(client, "cm12345-1", "bapi_task_id")
+    client = mock_tiled_search
+    client["ixx/cm12345/cm12345-1"].search = MagicMock(return_value={})
+    result = get_metadata_from_tiled(client, "ixx", "cm12345-1", "bapi_task_id")
     assert result == []
+
+
+def test_get_tiled_client_can_be_instantiated(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("UDC_CLIENT_ID", "client")
+    monkeypatch.setenv("UDC_SECRET", "secret")
+
+    with pytest.raises(httpx.UnsupportedProtocol):
+        get_tiled_client("")
+
+
+def test_get_suitable_tiled_background_returns_empty_list_if_tiled_node_not_found(
+    tiled_client: MagicMock, caplog: LogCaptureFixture
+):
+    tiled_client.__getitem__.side_effect = KeyError
+
+    with caplog.at_level(logging.WARNING):
+        result = get_metadata_from_tiled(tiled_client, "ixx", "cm12345-1", "1234-5678")
+
+    assert result == []
+    assert (
+        "Failed to get data from ixx/cm12345/cm12345-1. Node does not exist"
+    ) in caplog.text
