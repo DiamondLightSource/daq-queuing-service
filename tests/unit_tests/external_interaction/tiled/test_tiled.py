@@ -1,9 +1,10 @@
 import logging
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from pydantic import SecretStr
-from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture, MonkeyPatch
 from tiled.queries import Eq
 
 from daq_queuing_service.external_interaction.tiled.tiled import (
@@ -153,3 +154,25 @@ def test_get_metadata_from_tiled_returns_empty_list_if_no_result_found(
     client["ixx/cm12345/cm12345-1"].search = MagicMock(return_value={})
     result = get_metadata_from_tiled(client, "ixx", "cm12345-1", "bapi_task_id")
     assert result == []
+
+
+def test_get_tiled_client_can_be_instantiated(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("UDC_CLIENT_ID", "client")
+    monkeypatch.setenv("UDC_SECRET", "secret")
+
+    with pytest.raises(httpx.UnsupportedProtocol):
+        get_tiled_client("")
+
+
+def test_get_suitable_tiled_background_returns_empty_list_if_tiled_node_not_found(
+    tiled_client: MagicMock, caplog: LogCaptureFixture
+):
+    tiled_client.__getitem__.side_effect = KeyError
+
+    with caplog.at_level(logging.WARNING):
+        result = get_metadata_from_tiled(tiled_client, "ixx", "cm12345-1", "1234-5678")
+
+    assert result == []
+    assert (
+        "Failed to get data from ixx/cm12345/cm12345-1. Node does not exist"
+    ) in caplog.text

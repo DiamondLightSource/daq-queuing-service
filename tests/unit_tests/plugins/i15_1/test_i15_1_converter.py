@@ -53,7 +53,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_0_2",
                     id="0",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -82,7 +82,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_1_2",
                     id="1",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -111,7 +111,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_2_2",
                     id="2",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -140,7 +140,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_3_2",
                     id="3",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -166,7 +166,7 @@ def i15_1_tasks():
                 sample=Sample(
                     name="sample_4_2",
                     id="4",
-                    data={"capillary": "fq1.0"},
+                    data={"capillary": "fq1.0", "composition": "chemical"},
                     container=Container(
                         id="", positionInParent=ContainerPosition(position=2)
                     ),
@@ -1217,14 +1217,12 @@ def test__ensure_background_in_queue_or_tiled_saves_tiled_info_if_exists(
         (2, ScanType.AIR),
         # 3 is robot load
         # 4 is wait_for_beam
-        # 5 is centring
-        # 6 is wait_for_beam
-        (7, ScanType.EMPTY_CAPILLARY),
-        # 8 is robot unload
+        (5, ScanType.EMPTY_CAPILLARY),
+        # 6 is robot unload
         # etc
-        (13, ScanType.EMPTY_CAPILLARY),
-        (19, ScanType.STANDARD_SAMPLE),
-        (25, ScanType.DATA_COLLECTION),
+        (9, ScanType.EMPTY_CAPILLARY),
+        (15, ScanType.STANDARD_SAMPLE),
+        (21, ScanType.DATA_COLLECTION),
     ],
 )
 async def test_queued_data_collections_have_correct_scan_type_parameter(

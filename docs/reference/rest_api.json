@@ -109,6 +109,22 @@
         }
       }
     },
+    "/sync": {
+      "post": {
+        "summary": "Sync Queue",
+        "operationId": "sync_queue_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/queue": {
       "get": {
         "summary": "Get Queued Tasks",
