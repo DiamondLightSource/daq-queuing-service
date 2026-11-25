@@ -562,14 +562,25 @@ class TaskQueue:
         LOGGER.info("Successfully cleared history")
 
     def _pause_queue(self, reason: PauseReason):
-        reason = (
-            reason
-            if reason == PauseReason.ERROR or not self._state.paused
-            else self._state.last_pause_reason
-        )
-        self._state.paused = True
-        self._state.last_pause_reason = reason
-        notify(f"Queue paused: {reason}", "INFO")
+        if self._state.paused:
+            if reason == PauseReason.USER_REQUESTED:
+                return
+
+            reason_update = (
+                reason if reason == PauseReason.ERROR else self._state.last_pause_reason
+            )
+            message = (
+                f"Pause requested: {reason}. Queue was already paused: "
+                + f"{self._state.last_pause_reason}"
+            )
+
+        else:
+            reason_update = reason
+            message = f"Queue paused: {reason}"
+            self._state.paused = True
+
+        self._state.last_pause_reason = reason_update
+        notify(message, "INFO")
 
     async def pause_queue(self, reason: PauseReason) -> QueueState:
         """Pause the queue if running.

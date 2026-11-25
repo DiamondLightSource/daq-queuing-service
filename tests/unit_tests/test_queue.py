@@ -739,6 +739,16 @@ async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQue
             PauseReason.USER_REQUESTED,
             QueueState(paused=True, last_pause_reason=PauseReason.USER_REQUESTED),
         ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.PLUGIN_REQUESTED),
+            PauseReason.ERROR,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
+        (
+            QueueState(paused=True, last_pause_reason=PauseReason.EMPTY_QUEUE),
+            PauseReason.ERROR,
+            QueueState(paused=True, last_pause_reason=PauseReason.ERROR),
+        ),
     ],
 )
 async def test__pause_queue_if_queue_already_paused_then_last_reason_kept_unless_error(
