@@ -41,6 +41,9 @@ from daq_queuing_service.task_queue.queue_utils import (
 )
 from daq_queuing_service.task_queue.task import Status, Task, TaskWithPosition
 
+_FINISHED_TASK_STATUSES = (Status.COMPLETE, Status.ERROR)
+_FINISHED_CALL_STATUSES = (CallStatus.SUCCESS, CallStatus.ERROR)
+
 
 class TaskRegistry(dict[str, Task]):
     def __missing__(self, task_id: str) -> Task:
@@ -169,16 +172,12 @@ class TaskQueue:
         )
         LOGGER.debug(f"Syncing. Queue before sync: {self._queue}")
 
-        self._move_complete_tasks_to_history()
+        self._move_finished_tasks_to_history()
 
         try:
             new_tasks = self._converter.pre_process(
                 self._get_running_task(),
-                [
-                    self._tasks[task_id]
-                    for task_id in self._queue
-                    if self._tasks[task_id].status == Status.QUEUED
-                ],
+                [task for task in self._get_queue() if task.status == Status.QUEUED],
                 self._get_history(),
                 self._get_call_history(),
             )
@@ -194,23 +193,23 @@ class TaskQueue:
         self._queue = [
             task_id
             for task_id in self._queue
-            if not self._tasks[task_id].status == Status.QUEUED
+            if self._tasks[task_id].status != Status.QUEUED
         ]
         self._queue.extend(task.id for task in new_tasks)
 
         # This is needed because pre_process could remove tasks
         self._prune_tasks_from_registry()
 
+        # Persist calls which aren't complete but who's parent task is in progress
+        # Once a task is in progress it is not provided to the converter
+        # More work needed to allow for interleaved calls from different tasks
+        queue_ids = set(self._queue)
         self._call_queue = [
-            # Persist calls which aren't complete but who's parent task is in progress
-            # Once a task is in progress it is not provided to the converter
-            # More work needed to allow for interleaved calls from different tasks,
-            # and for in progress tasks to inform conversion
             call
             for call in self._call_queue
-            if call.parent_task_id in self._queue
+            if call.parent_task_id in queue_ids
             and self._tasks[call.parent_task_id].status == Status.IN_PROGRESS
-            and call.status not in (CallStatus.SUCCESS, CallStatus.ERROR)
+            and call.status not in _FINISHED_CALL_STATUSES
         ]
 
         try:
@@ -223,14 +222,13 @@ class TaskQueue:
                 self._get_history(),
                 self._get_call_history(),
             )
-            LOGGER.info("Completed plugin construct_blueapi_calls in")
         except Exception as e:
             raise ConverterError(e) from e
 
         self._call_queue.extend(new_calls)
 
+        # Add children to parent tasks
         for call in new_calls:
-            # Add children to parent tasks
             self._tasks[call.parent_task_id].blueapi_calls.append(call)
 
         if not self._call_queue:
@@ -244,12 +242,12 @@ class TaskQueue:
         LOGGER.debug(f"Queue after sync: {self._queue}")
         LOGGER.info(f"Sync complete in {time.monotonic() - t1}s")
 
-    def _move_complete_tasks_to_history(self):
+    def _move_finished_tasks_to_history(self):
         _queue_copy = list(self._queue)
         self._queue = []
         for task_id in _queue_copy:
             task = self._tasks[task_id]
-            if task.status in (Status.COMPLETE, Status.ERROR):
+            if task.status in _FINISHED_TASK_STATUSES:
                 # Move task from queue to history if all blueapi calls complete
                 # Or an error occurred during one of them
 
