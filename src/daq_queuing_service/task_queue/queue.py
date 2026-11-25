@@ -158,8 +158,10 @@ class TaskQueue:
         self._runtime_client = runtime_estimator_client
 
     async def sync(self):
-        async with self._lock:
-            self._sync()
+        # Entering and exiting _modifying runs _sync on exit, and restores the
+        # contents of the queue on error.
+        async with self._modifying:
+            pass
 
     def _sync(self):
         """Syncs the task queue with the call queue, applying a conversion from queue of
