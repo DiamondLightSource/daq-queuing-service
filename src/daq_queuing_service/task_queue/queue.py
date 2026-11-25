@@ -562,6 +562,9 @@ class TaskQueue:
         LOGGER.info("Successfully cleared history")
 
     def _pause_queue(self, reason: PauseReason):
+        if self._state.paused and reason == PauseReason.USER_REQUESTED:
+            return
+
         reason = (
             reason
             if reason == PauseReason.ERROR or not self._state.paused
