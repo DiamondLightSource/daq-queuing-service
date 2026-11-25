@@ -37,21 +37,25 @@ class Broadcaster(Generic[T]):
         self._max_queue_size = max_queue_size
 
     def broadcast(self, event: Event[T]):
-        if self._subscribers:
-            serialised = serialise(event["data"])
-
-            if serialised == self._previous.get(event["type"]):
-                return
-
-            for subscriber in self._subscribers:
-                try:
-                    subscriber.put_nowait(Event(type=event["type"], data=serialised))
-                except asyncio.QueueFull:
-                    LOGGER.error(f"Queue full, passing subscriber {subscriber}")
-
-            self._previous[event["type"]] = serialised
-        else:
+        if not self._subscribers:
             LOGGER.debug("No subscribers to broadcast to, skipping")
+            return
+
+        LOGGER.debug(
+            f"Serialising and broadcasting to {len(self._subscribers)} subscribers"
+        )
+
+        serialised = serialise(event["data"])
+        if serialised == self._previous.get(event["type"]):
+            return
+
+        for subscriber in self._subscribers:
+            try:
+                subscriber.put_nowait(Event(type=event["type"], data=serialised))
+            except asyncio.QueueFull:
+                LOGGER.error(f"Queue full, passing subscriber {subscriber}")
+
+        self._previous[event["type"]] = serialised
 
     def subscribe(self) -> asyncio.Queue[Event[T]]:
         subscriber: asyncio.Queue[Event[T]] = asyncio.Queue(
