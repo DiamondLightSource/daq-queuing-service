@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -76,7 +77,7 @@ def _get_mock_blueapi_client(
 
 
 @pytest.fixture
-def worker(task_queue: TaskQueue):
+def worker(task_queue: TaskQueue[Any]):
     mock_events = [
         WorkerEvent(
             state=WorkerState.RUNNING,
@@ -100,7 +101,7 @@ def worker(task_queue: TaskQueue):
 
 
 @pytest.fixture
-def worker_with_no_blueapi_events(task_queue: TaskQueue):
+def worker_with_no_blueapi_events(task_queue: TaskQueue[Any]):
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(),
@@ -110,7 +111,7 @@ def worker_with_no_blueapi_events(task_queue: TaskQueue):
 
 
 @pytest.fixture
-def worker_with_parameter_error(task_queue: TaskQueue):
+def worker_with_parameter_error(task_queue: TaskQueue[Any]):
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(
@@ -130,7 +131,7 @@ def worker_with_parameter_error(task_queue: TaskQueue):
 
 
 @pytest.fixture
-def worker_with_unknown_plan_error(task_queue: TaskQueue):
+def worker_with_unknown_plan_error(task_queue: TaskQueue[Any]):
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(UnknownPlanError()),
@@ -139,7 +140,7 @@ def worker_with_unknown_plan_error(task_queue: TaskQueue):
 
 
 @pytest.fixture
-def worker_with_blueapi_error(task_queue: TaskQueue):
+def worker_with_blueapi_error(task_queue: TaskQueue[Any]):
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(BlueskyRemoteControlError()),
@@ -148,7 +149,7 @@ def worker_with_blueapi_error(task_queue: TaskQueue):
 
 
 @pytest.fixture
-def worker_with_plan_error(task_queue: TaskQueue):
+def worker_with_plan_error(task_queue: TaskQueue[Any]):
     worker = QueueWorker(
         queue=task_queue,
         blueapi_client=_get_mock_blueapi_client(

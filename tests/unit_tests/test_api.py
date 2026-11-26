@@ -64,9 +64,9 @@ def broadcaster() -> Broadcaster[QUEUE_EVENTS]:
 
 @pytest.fixture
 def app(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
     broadcaster: Broadcaster[QUEUE_EVENTS],
-    converter: Converter,
+    converter: Converter[None],
 ) -> FastAPI:
     app = FastAPI()
     register_exception_handlers(app)
@@ -190,6 +190,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         },
         {
             "experiment": {
@@ -230,6 +231,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         },
         {
             "experiment": {
@@ -270,6 +272,7 @@ def test_get_queued_tasks_returns_queued_task(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         },
     ]
 
@@ -317,12 +320,13 @@ def test_get_queued_tasks_can_filter_by_task_status(test_client: TestClient):
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         }
     ]
 
 
 async def test_get_all_tasks_returns_all_tasks(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     response = test_client.get("/tasks")
     assert response.status_code == 200
@@ -378,12 +382,13 @@ async def test_get_all_tasks_can_filter_by_task_status(test_client: TestClient):
             "user": None,
             "runtime": 59.0,
             "estimated_runtime": 100,
+            "plugin_data": None,
         }
     ]
 
 
 async def test_get_completed_tasks_returns_completed_tasks(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     response = test_client.get("/history")
     assert response.status_code == 200
@@ -393,7 +398,7 @@ async def test_get_completed_tasks_returns_completed_tasks(
 
 
 async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     response = test_client.post(
         "/queue",
@@ -410,7 +415,9 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
     task_ids: list[str] = response.json()
     [uuid.UUID(task_id) for task_id in task_ids]
 
-    assert await task_queue_with_history.get_task_by_position(-1) == TaskWithPosition(
+    assert await task_queue_with_history.get_task_by_position(-1) == TaskWithPosition[
+        None
+    ](
         experiment=TaskRequest(
             name="add_tasks",
             params={"time": 10},
@@ -440,11 +447,12 @@ async def test_add_tasks_to_queue_adds_to_queue_and_and_returns_task_ids(
         user=None,
         runtime=None,
         estimated_runtime=100,
+        plugin_data=None,
     )
 
 
 async def test_add_tasks_to_queue_adds_user_to_task_object(
-    app: FastAPI, task_queue_with_history: TaskQueue
+    app: FastAPI, task_queue_with_history: TaskQueue[None]
 ):
     user = User(fedid="abc12345", email="joe.blogs@diamond.ac.uk", name="Joe Blogs")
     app.dependency_overrides[get_current_user] = lambda: user
@@ -466,7 +474,9 @@ async def test_add_tasks_to_queue_adds_user_to_task_object(
 
 
 async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_if_fails(
-    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+    test_client: TestClient,
+    task_queue_with_history: TaskQueue[None],
+    converter: Converter[None],
 ):
     class SomeError(Exception): ...
 
@@ -488,16 +498,18 @@ async def test_add_tasks_to_queue_validates_new_tasks_and_gives_expected_error_i
 
 
 async def test_if_sync_fails_after_tasks_added_then_contents_restored_and_error(
-    test_client: TestClient, task_queue_with_history: TaskQueue, converter: Converter
+    test_client: TestClient,
+    task_queue_with_history: TaskQueue[None],
+    converter: Converter[None],
 ):
     assert task_queue_with_history._queue == ["2", "3", "4"]
 
     class SomeError(Exception): ...
 
     def fail_conversion(
-        current_task: TaskWithPosition | None,
-        queue: list[Task],
-        history: list[TaskWithPosition],
+        current_task: TaskWithPosition[None] | None,
+        queue: list[Task[None]],
+        history: list[TaskWithPosition[None]],
         call_history: list[BlueapiCallResponse],
     ):
         raise SomeError("Conversion failed because xyz")
@@ -587,7 +599,7 @@ def test_add_tasks_to_queue_with_bad_payload_gives_expected_error_responses(
 
 
 async def test_move_task_moves_task_and_returns_position(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     last_task_before = await task_queue_with_history.get_task_by_position(-1)
     second_last_task_before = await task_queue_with_history.get_task_by_position(-2)
@@ -670,7 +682,7 @@ def test_move_task_with_bad_params_gives_expected_error_responses(
 
 
 async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     queue = await task_queue_with_history.get_queue()
     last_two_task_ids = [task.id for task in queue[-2:]]
@@ -725,6 +737,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         },
         {
             "experiment": {
@@ -765,6 +778,7 @@ async def test_cancel_tasks_removes_task_from_queue_and_returns_tasks(
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         },
     ]
 
@@ -827,7 +841,7 @@ def test_cancel_tasks_with_bad_payloads_gives_expected_error_responses(
 
 
 async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_them(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     queue = await task_queue_with_history.get_queue()
     should_be_cancelled = [task for task in queue if task.status == Status.QUEUED]
@@ -884,6 +898,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         },
         {
             "experiment": {
@@ -931,6 +946,7 @@ async def test_cancel_all_tasks_removes_all_queued_tasks_from_queue_and_returns_
             "user": None,
             "runtime": None,
             "estimated_runtime": 100,
+            "plugin_data": None,
         },
     ]
 
@@ -984,6 +1000,7 @@ def test_get_task_by_position_returns_expected_task(test_client: TestClient):
         "user": None,
         "runtime": None,
         "estimated_runtime": 100,
+        "plugin_data": None,
     }
 
 
@@ -1036,6 +1053,7 @@ def test_get_task_by_id_returns_expected_task(test_client: TestClient):
         "user": None,
         "runtime": None,
         "estimated_runtime": 100,
+        "plugin_data": None,
     }
 
 
@@ -1049,7 +1067,7 @@ def test_get_task_by_id_gives_error_if_task_id_does_not_exist(test_client: TestC
 
 
 def test_get_call_queue_returns_calls_in_call_queue(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     response = test_client.get("/call_queue")
     assert response.status_code == 200
@@ -1057,7 +1075,7 @@ def test_get_call_queue_returns_calls_in_call_queue(
 
 
 def test_get_call_history_returns_calls_in_call_queue(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     response = test_client.get("/call_history")
     assert response.status_code == 200
@@ -1065,7 +1083,7 @@ def test_get_call_history_returns_calls_in_call_queue(
 
 
 async def test_clear_history_deletes_history(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     assert await task_queue_with_history.get_history()
     response = test_client.delete("/history")
@@ -1074,7 +1092,7 @@ async def test_clear_history_deletes_history(
 
 
 def test_any_queue_error_caught_by_error_handler(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     class SomeError(QueueError): ...
 
@@ -1212,7 +1230,7 @@ def test_get_current_user_returns_user_from_request_state():
 
 
 def test_sync_syncs_queue_and_returns_200(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     task_queue_with_history.sync = MagicMock(wraps=task_queue_with_history.sync)
     response = test_client.post("/sync")
@@ -1221,7 +1239,7 @@ def test_sync_syncs_queue_and_returns_200(
 
 
 def test_if_sync_fails_then_error_returned(
-    test_client: TestClient, task_queue_with_history: TaskQueue
+    test_client: TestClient, task_queue_with_history: TaskQueue[None]
 ):
     task_queue_with_history.sync = MagicMock(wraps=task_queue_with_history.sync)
     task_queue_with_history._converter.pre_process = MagicMock(

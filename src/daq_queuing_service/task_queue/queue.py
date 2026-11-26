@@ -4,7 +4,7 @@ from copy import deepcopy
 from enum import StrEnum
 from functools import cached_property
 from types import TracebackType
-from typing import Literal, TypedDict
+from typing import Generic, Literal, NoReturn, TypedDict
 
 from blueapi.worker.event import TaskError, TaskResult
 from pydantic import BaseModel
@@ -38,11 +38,11 @@ from daq_queuing_service.task_queue.queue_utils import (
     TaskNotFoundError,
     TaskNotInQueueError,
 )
-from daq_queuing_service.task_queue.task import Status, Task, TaskWithPosition
+from daq_queuing_service.task_queue.task import Status, T, Task, TaskWithPosition
 
 
-class TaskRegistry(dict[str, Task]):
-    def __missing__(self, task_id: str) -> Task:
+class TaskRegistry(dict[str, Task[T]], Generic[T]):
+    def __missing__(self, task_id: str) -> NoReturn:
         raise TaskNotFoundError(f"No task found matching id: {task_id}")
 
 
@@ -59,7 +59,7 @@ class QueueState(BaseModel):
     estimated_runtime: int | None = None
 
 
-class QueueContents(TypedDict):
+class QueueContents(TypedDict, Generic[T]):
     """A class to represent the contents of the queue
 
     tasks (dict[str, Task]): A dict containing all the tasks contained in the queue,
@@ -76,7 +76,7 @@ class QueueContents(TypedDict):
     call_history: (list[BlueapiCall]): A list of completed blueapi calls.
     """
 
-    tasks: dict[str, Task]
+    tasks: dict[str, Task[T]]
     queue: list[str]
     history: list[str]
     call_queue: list[BlueapiCall]
@@ -125,16 +125,16 @@ QUEUE_EVENTS = Literal[
 ]
 
 
-class TaskQueue:
+class TaskQueue(Generic[T]):
     def __init__(
         self,
-        converter: Converter,
+        converter: Converter[T],
         broadcaster: Broadcaster[QUEUE_EVENTS],
         runtime_estimator_client: RuntimeEstimatorClient | None = None,
         instrument: str | None = None,
     ):
         self.instrument = instrument
-        self._tasks: TaskRegistry = TaskRegistry()
+        self._tasks: TaskRegistry[T] = TaskRegistry()
         self._queue: list[str] = []
         self._history: list[str] = []
         self._call_queue: list[BlueapiCall] = []
@@ -254,7 +254,7 @@ class TaskQueue:
         self._modifying.notify_all()
         LOGGER.debug(f"Queue after sync: {self._queue}")
 
-    def _copy_contents(self) -> QueueContents:
+    def _copy_contents(self) -> QueueContents[T]:
         return deepcopy(
             {
                 "tasks": self._tasks,
@@ -268,7 +268,7 @@ class TaskQueue:
     def _save_contents(self):
         self._last_good_contents = self._copy_contents()
 
-    def _restore_from_contents(self, contents: QueueContents):
+    def _restore_from_contents(self, contents: QueueContents[T]):
         LOGGER.info(f"Restoring to contents: {contents}")
 
         restored = deepcopy(contents)
@@ -413,7 +413,7 @@ class TaskQueue:
             call.fail(errors)
             self._call_history.append(call)
 
-    async def get_task_by_id(self, task_id: str) -> TaskWithPosition:
+    async def get_task_by_id(self, task_id: str) -> TaskWithPosition[T]:
         """Returns a task based on it's task ID
 
         Args:
@@ -429,12 +429,12 @@ class TaskQueue:
         async with self._lock:
             return self._get_task_by_id(task_id)
 
-    def _get_task_by_id(self, task_id: str) -> TaskWithPosition:
+    def _get_task_by_id(self, task_id: str) -> TaskWithPosition[T]:
         task = self._tasks[task_id]
         position = self._queue.index(task.id) if task.id in self._queue else None
-        return TaskWithPosition.from_task(task, position)
+        return TaskWithPosition[T].from_task(task, position)
 
-    async def get_task_by_position(self, position: int) -> TaskWithPosition | None:
+    async def get_task_by_position(self, position: int) -> TaskWithPosition[T] | None:
         """Return a task based on it's position in the queue
 
         Args:
@@ -448,12 +448,12 @@ class TaskQueue:
         async with self._lock:
             return self._get_task_by_position(position)
 
-    def _get_task_by_position(self, position: int) -> TaskWithPosition | None:
+    def _get_task_by_position(self, position: int) -> TaskWithPosition[T] | None:
         if position < -self.length or position >= self.length:
             return
         return self._get_task_by_id(self._queue[position])
 
-    async def get_queue(self) -> list[TaskWithPosition]:
+    async def get_queue(self) -> list[TaskWithPosition[T]]:
         """Get the entire queue (not including history)
 
         Returns:
@@ -464,7 +464,7 @@ class TaskQueue:
         async with self._lock:
             return self._get_queue_with_positions()
 
-    async def get_history(self) -> list[TaskWithPosition]:
+    async def get_history(self) -> list[TaskWithPosition[T]]:
         """Get the history list.
 
         Returns:
@@ -475,7 +475,7 @@ class TaskQueue:
         async with self._lock:
             return self._get_history()
 
-    async def get_tasks(self) -> list[TaskWithPosition]:
+    async def get_tasks(self) -> list[TaskWithPosition[T]]:
         """Get all the tasks in the queue and history list.
 
         Returns:
@@ -486,7 +486,9 @@ class TaskQueue:
         async with self._lock:
             return self._get_history() + self._get_queue_with_positions()
 
-    async def add_tasks(self, tasks: list[Task], position: int | None = None) -> None:
+    async def add_tasks(
+        self, tasks: list[Task[T]], position: int | None = None
+    ) -> None:
         """Add tasks to the queue. Can specify a position to add the tasks in at.
         This position will apply to the first task in the list, with each subsequent
         task having a position of 1 more than the previous. By default adds tasks to the
@@ -525,7 +527,7 @@ class TaskQueue:
         LOGGER.info(f"Successfully moved task {task_id} to position {new_position}")
         return new_position
 
-    async def cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
+    async def cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition[T]]:
         """Remove tasks from the queue. If one or more of the requested tasks cannot be
         cancelled as they are complete or in progress, an error will be raised and none
         of the requested tasks will be cancelled.
@@ -542,7 +544,7 @@ class TaskQueue:
         LOGGER.info(f"Successfully cancelled tasks: {task_ids}")
         return cancelled_tasks
 
-    async def cancel_all_tasks(self) -> list[TaskWithPosition]:
+    async def cancel_all_tasks(self) -> list[TaskWithPosition[T]]:
         async with self._modifying:
             task_ids = [
                 id
@@ -638,12 +640,12 @@ class TaskQueue:
             return 1
         return position
 
-    def _validate_new_tasks(self, tasks: list[Task]):
+    def _validate_new_tasks(self, tasks: list[Task[T]]):
         for task in tasks:
             if task.id in self._tasks:
                 raise TaskIdInUseError(f"Task ID '{task.id}' already in use!")
 
-    def _add_tasks(self, tasks: list[Task], position: int | None) -> None:
+    def _add_tasks(self, tasks: list[Task[T]], position: int | None) -> None:
         task_ids = [task.id for task in tasks]
         if position is None:
             self._queue.extend(task_ids)
@@ -652,14 +654,14 @@ class TaskQueue:
         for task in tasks:
             self._tasks[task.id] = task
 
-    def _cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition]:
+    def _cancel_tasks(self, task_ids: Sequence[str]) -> list[TaskWithPosition[T]]:
         task_ids = list(task_ids)
         self._validate_tasks_for_move_or_deletion(task_ids)
         self._remove_tasks_from_queue(task_ids)
         tasks = [self._tasks[task_id] for task_id in task_ids]
         for task in tasks:
             task.cancel()
-        return [TaskWithPosition.from_task(task) for task in tasks]
+        return [TaskWithPosition[T].from_task(task) for task in tasks]
 
     def _remove_tasks_from_queue(self, task_ids: list[str]) -> list[str]:
         #  Only removes tasks in the queue (not history or registry)
@@ -704,18 +706,18 @@ class TaskQueue:
                     f"Cannot move task '{task_id}', it is currently in progress!"
                 )
 
-    def _get_queue(self) -> list[Task]:
+    def _get_queue(self) -> list[Task[T]]:
         return [self._tasks[task_id] for task_id in self._queue]
 
-    def _get_queue_with_positions(self) -> list[TaskWithPosition]:
+    def _get_queue_with_positions(self) -> list[TaskWithPosition[T]]:
         return [
-            TaskWithPosition.from_task(self._tasks[task_id], i)
+            TaskWithPosition[T].from_task(self._tasks[task_id], i)
             for i, task_id in enumerate(self._queue)
         ]
 
-    def _get_history(self) -> list[TaskWithPosition]:
+    def _get_history(self) -> list[TaskWithPosition[T]]:
         return [
-            TaskWithPosition.from_task(self._tasks[task_id])
+            TaskWithPosition[T].from_task(self._tasks[task_id])
             for task_id in self._history
         ]
 
@@ -733,7 +735,7 @@ class TaskQueue:
     def _get_call_history(self) -> list[BlueapiCallResponse]:
         return [call.to_response() for call in self._call_history]
 
-    def _get_running_task(self) -> TaskWithPosition | None:
+    def _get_running_task(self) -> TaskWithPosition[T] | None:
         current_task = self._get_task_by_position(0)
         if current_task and current_task.status == Status.IN_PROGRESS:
             return current_task

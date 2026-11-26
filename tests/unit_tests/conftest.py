@@ -73,7 +73,7 @@ def make_sample(name: str, id: str, composition: str | None = "chemical"):
 
 
 @pytest.fixture
-def tasks() -> list[Task]:
+def tasks() -> list[Task[None]]:
     return [
         Task(
             experiment=Experiment(
@@ -91,7 +91,7 @@ def tasks() -> list[Task]:
 
 
 @pytest.fixture
-def bluesky_tasks() -> list[Task]:
+def bluesky_tasks() -> list[Task[None]]:
     return [
         Task(
             experiment=TaskRequest(
@@ -124,8 +124,8 @@ def mock_runtime_estimator_client():
 
 @pytest.fixture
 async def task_queue_no_runtime(
-    tasks: list[Task],
-    converter: Converter,
+    tasks: list[Task[None]],
+    converter: Converter[None],
 ):
     queue = TaskQueue(converter=converter, broadcaster=Broadcaster(), instrument="ixx")
     await queue.add_tasks(tasks)
@@ -135,7 +135,7 @@ async def task_queue_no_runtime(
 
 @pytest.fixture
 async def task_queue(
-    task_queue_no_runtime: TaskQueue,
+    task_queue_no_runtime: TaskQueue[None],
     mock_runtime_estimator_client: RuntimeEstimatorClient,
 ):
     task_queue_no_runtime._runtime_client = mock_runtime_estimator_client
@@ -144,10 +144,10 @@ async def task_queue(
 
 
 @pytest.fixture
-async def task_queue_one_to_many(tasks: list[Task]):
+async def task_queue_one_to_many(tasks: list[Task[None]]):
     def construct_blueapi_calls(
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[TaskWithPosition[None]],
+        history: list[TaskWithPosition[None]],
         call_history: list[BlueapiCallResponse],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
@@ -166,7 +166,7 @@ async def task_queue_one_to_many(tasks: list[Task]):
                 )
         return call_list
 
-    converter = Converter()
+    converter = Converter[None]()
     converter.construct_blueapi_calls = construct_blueapi_calls
 
     queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
@@ -176,20 +176,20 @@ async def task_queue_one_to_many(tasks: list[Task]):
 
 
 @pytest.fixture
-async def task_queue_claimed(task_queue: TaskQueue):
+async def task_queue_claimed(task_queue: TaskQueue[None]):
     _ = task_queue.get_next_call_once_available()
     return task_queue
 
 
 @pytest.fixture
-async def task_queue_in_progress(task_queue: TaskQueue):
+async def task_queue_in_progress(task_queue: TaskQueue[None]):
     first_call = await task_queue.get_next_call_once_available()
     first_call.put_in_progress()
     return task_queue
 
 
 @pytest.fixture
-async def task_queue_with_history(task_queue: TaskQueue):
+async def task_queue_with_history(task_queue: TaskQueue[None]):
     for i in range(2):
         call = await task_queue.get_next_call_once_available()
         call.put_in_progress()
@@ -215,8 +215,8 @@ async def task_queue_with_history(task_queue: TaskQueue):
 
 
 @pytest.fixture()
-def converter():
-    class DNConverter(Converter):
+def converter() -> Converter[None]:
+    class DNConverter(Converter[None]):
         def _construct_blueapi_task_request(
             self,
             experiment: Experiment | TaskRequest,

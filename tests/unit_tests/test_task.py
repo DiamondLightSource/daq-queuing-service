@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 import pytest
 from blueapi.service.model import TaskRequest
@@ -34,7 +35,7 @@ from daq_queuing_service.task_queue.task import Status, Task
 def test_task_status_derived_correctly_from_call_statuses(
     blueapi_call_statuses: list[CallStatus], expected_task_status: Status
 ):
-    task = Task(
+    task = Task[Any](
         blueapi_calls=[
             BlueapiCall(
                 status=status,
@@ -83,5 +84,5 @@ def test_runtime_calculated_correctly_from_blueapi_call_runtimes(
         )
         for start, end in calls_start_end
     ]
-    task = Task(blueapi_calls=blueapi_calls, experiment=tr)
+    task = Task[Any](blueapi_calls=blueapi_calls, experiment=tr)
     assert task.runtime == expected_task_runtime
