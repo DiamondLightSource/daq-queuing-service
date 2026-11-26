@@ -1,10 +1,11 @@
 from functools import cached_property
-from typing import Any
+from typing import Any, TypeAlias
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError
 from daq_config_server.client import ConfigClient
 from daq_config_server.models.i15_1 import QueueParameters, StandardsPin, StandardsPuck
+from pydantic import BaseModel
 from tiled.client.container import Container as TiledContainer
 
 from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
@@ -52,7 +53,16 @@ QUEUE_PARAMS_CONFIG_PATH = (
 )
 
 
-def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]]:
+class I151PluginData(BaseModel):
+    auxiliary: bool
+
+
+I15: TypeAlias = I151PluginData
+
+I151Task = Task[I15]
+
+
+def _filter_auxiliary_scans(tasks: list[I151Task]) -> list[tuple[int, AuxiliaryScan]]:
     return [
         (i, AuxiliaryScan.from_experiment(task.experiment))
         for i, task in enumerate(tasks)
@@ -61,7 +71,7 @@ def _filter_auxiliary_scans(tasks: list[Task]) -> list[tuple[int, AuxiliaryScan]
     ]
 
 
-class I151Converter(Converter):
+class I151Converter(Converter[I151PluginData]):
     def __init__(self):
         # First key is the ID of the task using the auxiliary scan
         self._tiled_auxiliary_scans: dict[
@@ -87,11 +97,11 @@ class I151Converter(Converter):
 
     def pre_process(
         self,
-        current_task: TaskWithPosition | None,
-        queue: list[Task],
-        history: list[TaskWithPosition],
+        current_task: TaskWithPosition[I15] | None,
+        queue: list[Task[I15]],
+        history: list[TaskWithPosition[I15]],
         call_history: list[BlueapiCallResponse],
-    ) -> list[Task]:
+    ) -> list[Task[I15]]:
         self._config_client.reset_cache()
         if self._queue_params.add_auxiliary_scans:
             return self._add_required_auxiliary_scans(current_task, queue)
@@ -99,8 +109,8 @@ class I151Converter(Converter):
 
     def construct_blueapi_calls(
         self,
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[TaskWithPosition[I15]],
+        history: list[TaskWithPosition[I15]],
         call_history: list[BlueapiCallResponse],
     ) -> list[BlueapiCall]:
         call_list: list[BlueapiCall] = []
@@ -183,8 +193,8 @@ class I151Converter(Converter):
         return plans
 
     def _add_required_auxiliary_scans(
-        self, current_task: TaskWithPosition | None, tasks: list[Task]
-    ) -> list[Task]:
+        self, current_task: TaskWithPosition[I15] | None, tasks: list[Task[I15]]
+    ) -> list[Task[I15]]:
         """Adds auxiliary scan tasks to the queue. They will be added directly
         in front of the first task in the queue that requires them.
 
@@ -198,7 +208,7 @@ class I151Converter(Converter):
         LOGGER.info("Adding required auxiliary scans")
         self._tiled_auxiliary_scans = {task.id: {} for task in tasks}
 
-        new_tasks: list[Task] = []
+        new_tasks: list[Task[I15]] = []
 
         for task in tasks:
             with add_session_to_logger(task.experiment.instrument_session):
@@ -227,11 +237,11 @@ class I151Converter(Converter):
     def _ensure_auxiliary_in_queue_or_tiled(
         self,
         required_auxiliary: AuxiliaryScan,
-        current_task: TaskWithPosition | None,
-        new_tasks: list[Task],
+        current_task: TaskWithPosition[I15] | None,
+        new_tasks: list[Task[I15]],
         task_id: str,
         instrument_session: str,
-    ) -> list[Task]:
+    ) -> list[Task[I15]]:
         if (
             current_task
             and isinstance(current_task.experiment, Experiment)
@@ -271,10 +281,10 @@ class I151Converter(Converter):
     def _add_or_replace_auxiliary_scan(
         self,
         required_auxiliary: AuxiliaryScan,
-        new_tasks: list[Task],
+        new_tasks: list[Task[I15]],
         queued_auxiliary_scans: list[tuple[int, AuxiliaryScan]],
         instrument_session: str,
-    ) -> list[Task]:
+    ) -> list[Task[I15]]:
         combined_auxiliary_scan = None
         index = None
 

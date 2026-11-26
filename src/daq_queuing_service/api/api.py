@@ -24,7 +24,7 @@ from daq_queuing_service.task_queue.queue import (
     TaskQueue,
     TaskWithPosition,
 )
-from daq_queuing_service.task_queue.task import Experiment, Status, Task
+from daq_queuing_service.task_queue.task import Experiment, Status, T, Task
 
 # pyright: reportUnusedFunction=false
 
@@ -46,14 +46,14 @@ class TaskCancelRequest(BaseModel):
 
 
 def _filter_by_status(
-    tasks: list[TaskWithPosition], status: Status | None
-) -> list[TaskWithPosition]:
+    tasks: list[TaskWithPosition[T]], status: Status | None
+) -> list[TaskWithPosition[T]]:
     if status is None:
         return tasks
     return [task for task in tasks if task.status == status]
 
 
-def public_routes(queue: TaskQueue) -> APIRouter:
+def public_routes(queue: TaskQueue[T]) -> APIRouter:
     """No authentication is required to access these endpoints."""
     router = APIRouter()
 
@@ -76,10 +76,10 @@ def public_routes(queue: TaskQueue) -> APIRouter:
 
 
 def protected_routes(
-    queue: TaskQueue,
+    queue: TaskQueue[T],
     broadcaster: Broadcaster[QUEUE_EVENTS],
     config: AppConfig,
-    converter: Converter,
+    converter: Converter[T],
 ) -> APIRouter:
     """Authentication is required to access these endpoints (if turned on in config).
     Additionally, for endpoints that depend on whitelist_check, you must be in the
@@ -103,7 +103,9 @@ def protected_routes(
         return await queue.sync()
 
     @router.get("/queue")
-    async def get_queued_tasks(status: Status | None = None) -> list[TaskWithPosition]:
+    async def get_queued_tasks(
+        status: Status | None = None,
+    ) -> list[TaskWithPosition[T]]:
         return _filter_by_status(await queue.get_queue(), status)
 
     @router.post("/queue")

@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Generic, Self, TypeVar
 from uuid import uuid4
 
 from blueapi.service.model import TaskRequest
@@ -60,12 +60,16 @@ class TaskKind(StrEnum):
     PLAN = "Plan"
 
 
-class Task(BaseModel):
+T = TypeVar("T")
+
+
+class Task(BaseModel, Generic[T]):
     experiment: Experiment | TaskRequest
     id: str = Field(default_factory=create_uuid_str)
     blueapi_calls: list[BlueapiCall] = Field(default_factory=lambda: [])
     user: User | None = None
     estimated_runtime: int | None = None
+    plugin_data: T | None = None
     _cancelled: bool = False
 
     def cancel(self):
@@ -117,7 +121,7 @@ class Task(BaseModel):
             return total
 
 
-class TaskWithPosition(BaseModel):
+class TaskWithPosition(BaseModel, Generic[T]):
     experiment: Experiment | TaskRequest
     id: str
     status: Status
@@ -127,7 +131,8 @@ class TaskWithPosition(BaseModel):
     user: User | None
     estimated_runtime: int | None
     runtime: float | None
+    plugin_data: T | None
 
     @classmethod
-    def from_task(cls, task: Task, position: int | None = None) -> Self:
+    def from_task(cls, task: Task[T], position: int | None = None) -> Self:
         return cls.model_validate({**task.model_dump(), "position": position})

@@ -46,7 +46,7 @@ pytest_plugins = ("pytest_asyncio",)
 
 
 def make_new_task(id_str: str):
-    return Task(
+    return Task[None](
         id=id_str,
         experiment=Experiment(
             name="test_experiment",
@@ -61,14 +61,16 @@ def make_new_task(id_str: str):
     )
 
 
-async def test_add_tasks_adds_to_end_when_no_position_given(task_queue: TaskQueue):
+async def test_add_tasks_adds_to_end_when_no_position_given(
+    task_queue: TaskQueue[None],
+):
     new_task = make_new_task("new")
     await task_queue.add_tasks([new_task])
     assert task_queue._queue == ["0", "1", "2", "3", "4", "new"]
     assert set(task_queue._tasks.keys()) == {"0", "1", "2", "3", "4", "new"}
 
 
-async def test_add_tasks_adds_to_call_queue(converter: Converter):
+async def test_add_tasks_adds_to_call_queue(converter: Converter[None]):
     task_queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     await task_queue.add_tasks([make_new_task("new"), make_new_task("new_2")])
     assert task_queue._call_queue == [
@@ -83,7 +85,7 @@ async def test_add_tasks_adds_to_call_queue(converter: Converter):
     ]
 
 
-async def test_add_tasks_with_position_works_as_expected(task_queue: TaskQueue):
+async def test_add_tasks_with_position_works_as_expected(task_queue: TaskQueue[None]):
     new_task = make_new_task("new")
     await task_queue.add_tasks([new_task], 2)
     assert task_queue._queue == ["0", "1", "new", "2", "3", "4"]
@@ -91,7 +93,7 @@ async def test_add_tasks_with_position_works_as_expected(task_queue: TaskQueue):
 
 
 async def test_add_tasks_adds_to_the_end_if_position_bigger_than_queue_length(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     new_task = make_new_task("new")
     await task_queue.add_tasks([new_task], 20)
@@ -100,7 +102,7 @@ async def test_add_tasks_adds_to_the_end_if_position_bigger_than_queue_length(
 
 
 async def test_add_task_to_position_0_adds_to_position_1_if_first_task_in_progress(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     new_tasks = [make_new_task("new"), make_new_task("new_2")]
     first_task = await task_queue_in_progress.get_task_by_position(0)
@@ -121,7 +123,7 @@ async def test_add_task_to_position_0_adds_to_position_1_if_first_task_in_progre
 
 
 async def test_add_task_to_position_0_adds_to_position_0_if_first_task_waiting(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     new_tasks = new_tasks = [make_new_task("new"), make_new_task("new_2")]
     first_task = await task_queue.get_task_by_position(0)
@@ -142,14 +144,14 @@ async def test_add_task_to_position_0_adds_to_position_0_if_first_task_waiting(
 
 
 async def test_add_task_to_negative_position_raises_error(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     new_tasks = [make_new_task("new"), make_new_task("new_2")]
     with pytest.raises(NegativePositionError):
         await task_queue_in_progress.add_tasks(new_tasks, -1)
 
 
-async def test_add_task_with_repeated_task_id_raises_error(task_queue: TaskQueue):
+async def test_add_task_with_repeated_task_id_raises_error(task_queue: TaskQueue[None]):
     new_tasks = [task_queue._tasks["1"]]
     with pytest.raises(TaskIdInUseError):
         await task_queue.add_tasks(new_tasks)
@@ -170,7 +172,7 @@ async def test_move_task_works_as_expected_and_returns_new_position(
     new_position: int,
     expected_order: list[int],
     expected_return_value: int,
-    converter: Converter,
+    converter: Converter[None],
 ):
     queue = TaskQueue(converter=converter, broadcaster=Broadcaster())
     tasks = [make_new_task(str(i)) for i in range(10)]
@@ -185,7 +187,7 @@ async def test_move_task_works_as_expected_and_returns_new_position(
 
 
 async def test_move_task_to_position_0_moves_to_position_1_if_first_task_in_progress(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
@@ -200,7 +202,7 @@ async def test_move_task_to_position_0_moves_to_position_1_if_first_task_in_prog
 
 
 async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     task = await task_queue.get_task_by_position(0)
     assert task and task.status == Status.QUEUED
@@ -210,7 +212,7 @@ async def test_move_task_to_position_0_moves_to_position_0_if_first_task_waiting
 
 
 async def test_move_task_does_not_move_task_that_is_in_progress_and_raises_error(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
@@ -223,7 +225,7 @@ async def test_move_task_does_not_move_task_that_is_in_progress_and_raises_error
 
 
 async def test_move_task_raises_error_if_wrong_task_id_given(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
@@ -234,13 +236,13 @@ async def test_move_task_raises_error_if_wrong_task_id_given(
     assert task_queue_in_progress._queue == ["0", "1", "2", "3", "4"]
 
 
-async def test_cancel_tasks_works_as_expected(task_queue: TaskQueue):
+async def test_cancel_tasks_works_as_expected(task_queue: TaskQueue[None]):
     await task_queue.cancel_tasks(["4", "2"])
     assert task_queue._queue == ["0", "1", "3"]
 
 
 async def test_cancel_tasks_does_not_cancel_task_that_is_in_progress_and_raises_error(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     task = await task_queue_in_progress.get_task_by_position(0)
     assert task and task.status == Status.IN_PROGRESS
@@ -252,14 +254,16 @@ async def test_cancel_tasks_does_not_cancel_task_that_is_in_progress_and_raises_
     assert set(task_queue_in_progress._tasks.keys()) == {"0", "1", "2", "3", "4"}
 
 
-async def test_cancel_tasks_raises_error_if_wrong_task_id_used(task_queue: TaskQueue):
+async def test_cancel_tasks_raises_error_if_wrong_task_id_used(
+    task_queue: TaskQueue[None],
+):
     with pytest.raises(TaskNotFoundError):
         await task_queue.cancel_tasks(["4", "11", "2", "10"])
     assert task_queue._queue == ["0", "1", "2", "3", "4"]
 
 
 async def test_cancel_all_tasks_cancels_all_queued_tasks(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     cancelled_tasks = await task_queue_in_progress.cancel_all_tasks()
     assert [task.id for task in cancelled_tasks] == ["1", "2", "3", "4"]
@@ -267,7 +271,7 @@ async def test_cancel_all_tasks_cancels_all_queued_tasks(
 
 
 async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_history(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     assert "0" in task_queue_with_history._history
     assert "4" in task_queue_with_history._queue
@@ -279,7 +283,7 @@ async def test__remove_tasks_from_registry_does_not_remove_tasks_if_in_queue_or_
 
 
 async def test_get_queue_only_returns_tasks_in_queue(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     assert task_queue_with_history._history == ["0", "1"]
     result = await task_queue_with_history.get_queue()
@@ -315,6 +319,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            plugin_data=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -347,6 +352,7 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            plugin_data=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -379,12 +385,13 @@ async def test_get_queue_only_returns_tasks_in_queue(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            plugin_data=None,
         ),
     ]
 
 
 async def test_get_history_only_returns_tasks_in_history(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     assert task_queue_with_history._queue == ["2", "3", "4"]
     result = await task_queue_with_history.get_history()
@@ -426,6 +433,7 @@ async def test_get_history_only_returns_tasks_in_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            plugin_data=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -458,12 +466,13 @@ async def test_get_history_only_returns_tasks_in_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            plugin_data=None,
         ),
     ]
 
 
 async def test_get_tasks_returns_tasks_in_queue_and_history(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     assert task_queue_with_history._queue == ["2", "3", "4"]
     assert task_queue_with_history._history == ["0", "1"]
@@ -506,6 +515,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            plugin_data=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -538,6 +548,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=59,
             estimated_runtime=100,
+            plugin_data=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -570,6 +581,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            plugin_data=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -602,6 +614,7 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            plugin_data=None,
         ),
         TaskWithPosition(
             experiment=Experiment(
@@ -634,12 +647,13 @@ async def test_get_tasks_returns_tasks_in_queue_and_history(
             user=None,
             runtime=None,
             estimated_runtime=100,
+            plugin_data=None,
         ),
     ]
 
 
 async def test_get_task_by_id_returns_task_in_queue_or_history(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     assert (
         "0" not in task_queue_with_history._queue
@@ -658,14 +672,14 @@ async def test_get_task_by_id_returns_task_in_queue_or_history(
 
 
 async def test_get_task_by_id_raises_error_if_task_id_does_not_exist(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     with pytest.raises(TaskNotFoundError):
         assert await task_queue_with_history.get_task_by_id("fake") is None
 
 
 async def test_get_task_by_pos_returns_task_in_queue(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     task = await task_queue_with_history.get_task_by_position(2)
     assert isinstance(task, TaskWithPosition)
@@ -673,13 +687,15 @@ async def test_get_task_by_pos_returns_task_in_queue(
 
 
 async def test_get_task_by_pos_returns_none_if_position_not_in_queue(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     assert await task_queue.get_task_by_position(5) is None
     assert await task_queue.get_task_by_position(-6) is None
 
 
-async def test_get_task_by_pos_works_with_negative_indexing(task_queue: TaskQueue):
+async def test_get_task_by_pos_works_with_negative_indexing(
+    task_queue: TaskQueue[None],
+):
     last_task = await task_queue.get_task_by_position(-1)
     assert last_task and last_task.id == "4"
     last_task = await task_queue.get_task_by_position(-5)
@@ -687,7 +703,7 @@ async def test_get_task_by_pos_works_with_negative_indexing(task_queue: TaskQueu
 
 
 async def test_clear_history_removes_history_and_removes_completed_tasks_from_registry(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     assert task_queue_with_history._history == ["0", "1"]
     assert {"0", "1"}.issubset(task_queue_with_history._tasks.keys())
@@ -698,14 +714,18 @@ async def test_clear_history_removes_history_and_removes_completed_tasks_from_re
     assert not {"0", "1"}.intersection(task_queue_with_history._tasks.keys())
 
 
-async def test_pausing_queue_prevents_task_from_being_claimed(task_queue: TaskQueue):
+async def test_pausing_queue_prevents_task_from_being_claimed(
+    task_queue: TaskQueue[None],
+):
     await task_queue.pause_queue(PauseReason.EMPTY_QUEUE)
     assert task_queue.state.paused
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.get_next_call_once_available(), timeout=0.05)
 
 
-async def test_unpausing_queue_allows_tasks_to_being_claimed(task_queue: TaskQueue):
+async def test_unpausing_queue_allows_tasks_to_being_claimed(
+    task_queue: TaskQueue[None],
+):
     await task_queue.resume_queue()
     assert not task_queue.state.paused
     await task_queue.get_next_call_once_available()
@@ -745,7 +765,7 @@ async def test__pause_queue_if_queue_already_paused_then_last_reason_kept_unless
     initial_state: QueueState,
     pause_reason: PauseReason,
     expected_state: QueueState,
-    task_queue_no_runtime: TaskQueue,
+    task_queue_no_runtime: TaskQueue[None],
 ):
     task_queue_no_runtime._state = initial_state
     task_queue_no_runtime._pause_queue(reason=pause_reason)
@@ -753,7 +773,7 @@ async def test__pause_queue_if_queue_already_paused_then_last_reason_kept_unless
 
 
 async def test_claim_next_call_once_available_claims_task_and_returns(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     next_task = task_queue._tasks[task_queue._queue[0]]
     next_call = next_task.blueapi_calls[0]
@@ -766,7 +786,7 @@ async def test_claim_next_call_once_available_claims_task_and_returns(
 
 
 async def test_claim_next_call_once_available_waits_if_next_task_is_already_claimed(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     claimed_call = await task_queue.get_next_call_once_available()
     assert claimed_call and claimed_call.status == CallStatus.CLAIMED
@@ -775,7 +795,7 @@ async def test_claim_next_call_once_available_waits_if_next_task_is_already_clai
 
 
 async def test_claim_next_call_once_available_waits_if_next_task_is_already_in_progress(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     claimed_call = await task_queue.get_next_call_once_available()
     claimed_call.put_in_progress()
@@ -785,7 +805,7 @@ async def test_claim_next_call_once_available_waits_if_next_task_is_already_in_p
 
 
 async def test_wait_until_call_available_waits_if_next_task_is_claimed(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     claimed_call = await task_queue.get_next_call_once_available()
     assert claimed_call and claimed_call.status == CallStatus.CLAIMED
@@ -794,7 +814,7 @@ async def test_wait_until_call_available_waits_if_next_task_is_claimed(
 
 
 async def test_wait_until_call_available_waits_if_next_task_is_in_progress(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     claimed_call = await task_queue.get_next_call_once_available()
     claimed_call.put_in_progress()
@@ -804,7 +824,7 @@ async def test_wait_until_call_available_waits_if_next_task_is_in_progress(
 
 
 async def test_wait_until_call_available_waits_if_queue_paused(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     await task_queue.pause_queue(PauseReason.EMPTY_QUEUE)
     with pytest.raises(asyncio.TimeoutError):
@@ -812,19 +832,19 @@ async def test_wait_until_call_available_waits_if_queue_paused(
 
 
 async def test_wait_until_call_available_waits_if_queue_empty():
-    task_queue = TaskQueue(Converter(), Broadcaster())
+    task_queue = TaskQueue(Converter[None](), Broadcaster())
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
 async def test_wait_until_call_available_does_not_wait_if_conditions_met(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     await asyncio.wait_for(task_queue.wait_until_call_available(), timeout=0.05)
 
 
 async def test_complete_call_puts_call_in_history_and_updates_status_to_complete(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     call = await task_queue.get_next_call_once_available()
     call.put_in_progress()
@@ -838,7 +858,7 @@ async def test_complete_call_puts_call_in_history_and_updates_status_to_complete
 
 
 async def test_complete_call_must_receive_exact_same_object_as_was_claimed(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     call = await task_queue.get_next_call_once_available()
     similar_call = call.model_copy()
@@ -854,7 +874,7 @@ async def test_complete_call_must_receive_exact_same_object_as_was_claimed(
 
 
 async def test_complete_call_does_not_pause_queue_if_plugin_decides(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     assert task_queue.state == QueueState(
         paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=500
@@ -868,7 +888,7 @@ async def test_complete_call_does_not_pause_queue_if_plugin_decides(
 
 
 async def test_complete_call_pauses_queue_if_plugin_decides(
-    task_queue: TaskQueue, converter: Converter
+    task_queue: TaskQueue[None], converter: Converter[None]
 ):
     converter.pause_on_complete_blueapi_call = MagicMock(return_value=True)
     assert task_queue.state == QueueState(
@@ -885,7 +905,7 @@ async def test_complete_call_pauses_queue_if_plugin_decides(
 
 
 async def test_fail_call_puts_task_in_history_and_updates_status_to_complete(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     call = await task_queue.get_next_call_once_available()
     assert call.status == CallStatus.CLAIMED
@@ -898,7 +918,7 @@ async def test_fail_call_puts_task_in_history_and_updates_status_to_complete(
 
 
 async def test_fail_call_must_receive_exact_same_object_as_was_claimed(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     call = await task_queue.get_next_call_once_available()
     similar_call = call.model_copy()
@@ -910,7 +930,7 @@ async def test_fail_call_must_receive_exact_same_object_as_was_claimed(
 
 
 async def test_fail_call_with_errors_adds_errors_to_call(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     call = await task_queue.get_next_call_once_available()
     error = "This task failed"
@@ -919,7 +939,7 @@ async def test_fail_call_with_errors_adds_errors_to_call(
     assert call.errors == ["This task failed"]
 
 
-async def test_fail_call_pauses_queue_if_plugin_decides(task_queue: TaskQueue):
+async def test_fail_call_pauses_queue_if_plugin_decides(task_queue: TaskQueue[None]):
     assert task_queue.state == QueueState(
         paused=False, last_pause_reason=PauseReason.EMPTY_QUEUE, estimated_runtime=500
     )
@@ -932,7 +952,7 @@ async def test_fail_call_pauses_queue_if_plugin_decides(task_queue: TaskQueue):
 
 
 async def test_fail_call_does_not_pause_queue_if_plugin_decides(
-    task_queue: TaskQueue, converter: Converter
+    task_queue: TaskQueue[None], converter: Converter[None]
 ):
     converter.pause_on_fail_blueapi_call = MagicMock(return_value=False)
     assert task_queue.state == QueueState(
@@ -947,7 +967,7 @@ async def test_fail_call_does_not_pause_queue_if_plugin_decides(
 
 
 async def test_return_call_to_queue_changes_task_status_to_waiting(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     call = await task_queue.get_next_call_once_available()
     assert call.status == CallStatus.CLAIMED
@@ -956,7 +976,7 @@ async def test_return_call_to_queue_changes_task_status_to_waiting(
 
 
 async def test_return_task_to_queue_raises_error_if_task_has_not_been_claimed(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     call = await task_queue.get_next_call_once_available()
     call.status = CallStatus.SUCCESS
@@ -965,7 +985,7 @@ async def test_return_task_to_queue_raises_error_if_task_has_not_been_claimed(
 
 
 async def test_get_call_queue_returns_calls_in_call_queue(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     result = await task_queue_with_history.get_call_queue()
     assert result == [
@@ -1012,7 +1032,7 @@ async def test_get_call_queue_returns_calls_in_call_queue(
 
 
 async def test_get_call_history_returns_calls_in_call_history(
-    task_queue_with_history: TaskQueue,
+    task_queue_with_history: TaskQueue[None],
 ):
     result = await task_queue_with_history.get_call_history()
     assert result == [
@@ -1050,7 +1070,7 @@ async def test_get_call_history_returns_calls_in_call_history(
 
 
 async def test__sync_correctly_moves_tasks_with_all_completed_calls_into_history(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     task_queue._modifying = MagicMock()
 
@@ -1075,7 +1095,7 @@ async def test__sync_correctly_moves_tasks_with_all_completed_calls_into_history
 
 
 async def test__sync_correctly_moves_tasks_with_any_errored_calls_into_history(
-    task_queue_one_to_many: TaskQueue,
+    task_queue_one_to_many: TaskQueue[None],
 ):
     task_queue_one_to_many._modifying = MagicMock()
 
@@ -1098,7 +1118,7 @@ async def test__sync_correctly_moves_tasks_with_any_errored_calls_into_history(
 
 
 async def test_task_with_single_blueapi_calls_new_task_is_received_after_first_complete(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     first_call = await task_queue.get_next_call_once_available()
     first_call.put_in_progress()
@@ -1112,7 +1132,7 @@ async def test_task_with_single_blueapi_calls_new_task_is_received_after_first_c
 
 
 async def test_task_with_multiple_blueapi_calls_second_returned_when_first_complete(
-    task_queue_one_to_many: TaskQueue,
+    task_queue_one_to_many: TaskQueue[None],
 ):
     first_call = await task_queue_one_to_many.get_next_call_once_available()
     first_call.put_in_progress()
@@ -1128,7 +1148,7 @@ async def test_task_with_multiple_blueapi_calls_second_returned_when_first_compl
 
 
 async def test__sync_skips_subsequent_calls_if_previous_one_failed_within_a_task(
-    task_queue_one_to_many: TaskQueue,
+    task_queue_one_to_many: TaskQueue[None],
 ):
     task_queue_one_to_many._modifying = MagicMock()
 
@@ -1148,7 +1168,7 @@ async def test__sync_skips_subsequent_calls_if_previous_one_failed_within_a_task
 
 
 async def test__sync_pauses_queue_if_no_more_items(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     task_queue._modifying = MagicMock()
     task_queue.state.paused = False
@@ -1161,7 +1181,7 @@ async def test__sync_pauses_queue_if_no_more_items(
     assert task_queue.state.last_pause_reason == PauseReason.EMPTY_QUEUE
 
 
-def test__copy_contents_creates_copies(task_queue: TaskQueue):
+def test__copy_contents_creates_copies(task_queue: TaskQueue[None]):
     contents = task_queue._copy_contents()
     assert isinstance(contents["tasks"]["4"].experiment, Experiment)
     a_task = task_queue._tasks["4"]
@@ -1175,7 +1195,7 @@ def test__copy_contents_creates_copies(task_queue: TaskQueue):
     )
 
 
-def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
+def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue[None]):
     new_queue = ["10"]
     new_history = ["9"]
     new_call_queue = [
@@ -1194,7 +1214,7 @@ def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
             parent_task_id="9",
         )
     ]
-    new_tasks = TaskRegistry()
+    new_tasks = TaskRegistry[None]()
     new_tasks["9"] = Task(
         experiment=TaskRequest(
             name="task_9", params={}, instrument_session="session_9"
@@ -1210,7 +1230,7 @@ def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
         blueapi_calls=new_call_queue,
     )
 
-    new_contents: QueueContents = {
+    new_contents: QueueContents[None] = {
         "tasks": new_tasks,
         "queue": new_queue,
         "history": new_history,
@@ -1228,7 +1248,7 @@ def test__restore_from_contents_replaces_queue_contents(task_queue: TaskQueue):
 
 
 async def test__last_good_contents_updated_when_modifying_lock_exited(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     task_queue._queue = []
 
@@ -1249,11 +1269,11 @@ async def test__last_good_contents_updated_when_modifying_lock_exited(
 
 
 async def test_if_error_during_conversion_then_error_handled_and_contents_restored(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     def convert(
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[TaskWithPosition[None]],
+        history: list[TaskWithPosition[None]],
         call_history: list[BlueapiCallResponse],
     ):
         for task_id in task_queue._queue:
@@ -1272,11 +1292,11 @@ async def test_if_error_during_conversion_then_error_handled_and_contents_restor
 
 
 async def test_if_error_during_conversion_then__restore_latest_good_contents_called(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     def convert(
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[TaskWithPosition[None]],
+        history: list[TaskWithPosition[None]],
         call_history: list[BlueapiCallResponse],
     ):
         raise ValueError("Conversion failed")
@@ -1304,7 +1324,7 @@ async def test_if_error_during_conversion_then__restore_latest_good_contents_cal
     ],
 )
 async def test__sync_not_called_for_read_only_methods(
-    task_queue: TaskQueue, method_name: str, args: list[Any]
+    task_queue: TaskQueue[None], method_name: str, args: list[Any]
 ):
     task_queue._sync = MagicMock()
 
@@ -1319,27 +1339,27 @@ async def test__sync_not_called_for_read_only_methods(
 
 
 def test_get_running_task_returns_first_task_if_in_progress(
-    task_queue_in_progress: TaskQueue,
+    task_queue_in_progress: TaskQueue[None],
 ):
     current_task = task_queue_in_progress._get_running_task()
     assert current_task and current_task.status == Status.IN_PROGRESS
 
 
 def test_get_running_task_returns_none_if_no_task_in_progress(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     assert task_queue._get_running_task() is None
 
 
 async def test_get_running_task_returns_none_if_no_tasks_in_queue(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
 ):
     await task_queue.cancel_all_tasks()
     assert task_queue._get_running_task() is None
 
 
 async def test__sync_calls_converter_pre_process_with_expected_args(
-    task_queue_with_history: TaskQueue, converter: Converter
+    task_queue_with_history: TaskQueue[None], converter: Converter[None]
 ):
     task_queue_with_history._modifying = MagicMock()
     converter.pre_process = MagicMock()
@@ -1360,7 +1380,7 @@ async def test__sync_calls_converter_pre_process_with_expected_args(
 
 
 async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
-    task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
+    task_queue: TaskQueue[None], patch_get_metadata_from_tiled: MagicMock
 ):
     patch_get_metadata_from_tiled.return_value = [
         (
@@ -1386,7 +1406,7 @@ async def test_complete_call_gets_md_from_tiled_and_adds_to_call_object(
 
 
 async def test_given_multiple_scans_then_complete_call_adds_correct_ids(
-    task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
+    task_queue: TaskQueue[None], patch_get_metadata_from_tiled: MagicMock
 ):
     patch_get_metadata_from_tiled.return_value = [
         (
@@ -1424,7 +1444,7 @@ async def test_given_multiple_scans_then_complete_call_adds_correct_ids(
 
 
 async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
-    task_queue: TaskQueue, patch_get_metadata_from_tiled: MagicMock
+    task_queue: TaskQueue[None], patch_get_metadata_from_tiled: MagicMock
 ):
     patch_get_metadata_from_tiled.return_value = [
         (
@@ -1450,7 +1470,7 @@ async def test_fail_call_gets_md_from_tiled_and_adds_to_call_object(
 
 
 def test__add_runtime_estimates_to_tasks_gets_runtime_for_all_queued_tasks(
-    task_queue_in_progress: TaskQueue, mock_runtime_estimator_client: MagicMock
+    task_queue_in_progress: TaskQueue[None], mock_runtime_estimator_client: MagicMock
 ):
     task_queue_in_progress._state.estimated_runtime = None
     for task in task_queue_in_progress._tasks.values():
@@ -1475,7 +1495,7 @@ def test__add_runtime_estimates_to_tasks_gets_runtime_for_all_queued_tasks(
 
 
 def test__add_runtime_estimates_to_tasks_cathes_errors_and_logs(
-    task_queue: TaskQueue,
+    task_queue: TaskQueue[None],
     mock_runtime_estimator_client: MagicMock,
     caplog: LogCaptureFixture,
 ):
@@ -1495,7 +1515,7 @@ def test__add_runtime_estimates_to_tasks_cathes_errors_and_logs(
 
 async def test_sync_calls__sync_once():
     with patch.object(TaskQueue, "_sync") as mock_sync:
-        task_queue = TaskQueue(Converter(), Broadcaster())
+        task_queue = TaskQueue(Converter[None](), Broadcaster())
         await task_queue.sync()
 
     mock_sync.assert_called_once()

@@ -1,4 +1,5 @@
 import importlib
+from typing import Any, Generic
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
@@ -9,6 +10,7 @@ from daq_queuing_service.external_interaction.blueapi.blueapi_call import (
 )
 from daq_queuing_service.task_queue.task import (
     Experiment,
+    T,
     Task,
     TaskWithPosition,
 )
@@ -23,7 +25,7 @@ class ConverterError(Exception):
 class ValidateError(Exception): ...
 
 
-class Converter:
+class Converter(Generic[T]):
     def __init__(self): ...
 
     def validate(self, experiments: list[TaskRequest | Experiment]) -> None:
@@ -42,11 +44,11 @@ class Converter:
 
     def pre_process(
         self,
-        current_task: TaskWithPosition | None,
-        queue: list[Task],
-        history: list[TaskWithPosition],
+        current_task: TaskWithPosition[T] | None,
+        queue: list[Task[T]],
+        history: list[TaskWithPosition[T]],
         call_history: list[BlueapiCallResponse],
-    ) -> list[Task]:
+    ) -> list[Task[T]]:
         """This gets run whenever something changes in the queue, before
         'construct_blueapi_calls'. It is an opportunity to automatically modify the
         queue based on it's current state and history.
@@ -71,8 +73,8 @@ class Converter:
 
     def construct_blueapi_calls(
         self,
-        queue: list[TaskWithPosition],
-        history: list[TaskWithPosition],
+        queue: list[TaskWithPosition[T]],
+        history: list[TaskWithPosition[T]],
         call_history: list[BlueapiCallResponse],
     ) -> list[BlueapiCall]:
         """Converts the list of queued tasks into a list of blueapi calls. This is
@@ -141,7 +143,7 @@ class Converter:
                 )
 
 
-def get_converter(path: str, name: str) -> Converter:
+def get_converter(path: str, name: str) -> Converter[Any]:
     """Instantiates a converter based on a path and class name
 
     Args:
