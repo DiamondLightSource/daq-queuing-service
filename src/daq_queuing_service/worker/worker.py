@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from functools import partial
+from typing import Any
 
 from blueapi.client.event_bus import AnyEvent
 from blueapi.client.rest import (
@@ -29,7 +30,7 @@ LOGGER = logging.getLogger("Queue Worker")
 class QueueWorker:
     def __init__(
         self,
-        queue: TaskQueue,
+        queue: TaskQueue[Any],
         blueapi_client: BlueapiClientAdapter,
         poll_time_s: float = 1.0,
     ):

@@ -119,13 +119,15 @@ def protected_routes(
         except Exception as e:
             raise ValidateError(*e.args) from e
 
-        tasks = [Task(experiment=experiment, user=user) for experiment in experiments]
+        tasks = [
+            Task[T](experiment=experiment, user=user) for experiment in experiments
+        ]
         task_ids = [task.id for task in tasks]
         await queue.add_tasks(tasks, position)
         return task_ids
 
     @router.delete("/queue")
-    async def cancel_all_tasks() -> list[TaskWithPosition]:
+    async def cancel_all_tasks() -> list[TaskWithPosition[T]]:
         return await queue.cancel_all_tasks()
 
     @router.post("/queue/move")
@@ -133,25 +135,25 @@ def protected_routes(
         return await queue.move_task(task_id, new_position)
 
     @router.delete("/queue/tasks")
-    async def cancel_tasks(payload: TaskCancelRequest) -> list[TaskWithPosition]:
+    async def cancel_tasks(payload: TaskCancelRequest) -> list[TaskWithPosition[T]]:
         return await queue.cancel_tasks(payload.task_ids)
 
     @router.get("/queue/{position}")
-    async def get_task_by_position(position: int) -> TaskWithPosition | None:
+    async def get_task_by_position(position: int) -> TaskWithPosition[T] | None:
         return await queue.get_task_by_position(position)
 
     @router.get("/tasks")
-    async def get_all_tasks(status: Status | None = None) -> list[TaskWithPosition]:
+    async def get_all_tasks(status: Status | None = None) -> list[TaskWithPosition[T]]:
         return _filter_by_status(await queue.get_tasks(), status)
 
     @router.get("/tasks/{task_id}")
-    async def get_task_by_id(task_id: str) -> TaskWithPosition:
+    async def get_task_by_id(task_id: str) -> TaskWithPosition[T]:
         return await queue.get_task_by_id(task_id)
 
     @router.get("/history")
     async def get_completed_tasks(
         status: Status | None = None,
-    ) -> list[TaskWithPosition]:
+    ) -> list[TaskWithPosition[T]]:
         return _filter_by_status(await queue.get_history(), status)
 
     @router.delete("/history")

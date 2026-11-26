@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import ANY, MagicMock
 
 from httpx2 import Response
@@ -9,7 +10,7 @@ from daq_queuing_service.external_interaction.runtime_estimator.client import (
 from daq_queuing_service.task_queue.task import Task
 
 
-def test_estimate_runtime_makes_expected_request(tasks: list[Task]):
+def test_estimate_runtime_makes_expected_request(tasks: list[Task[Any]]):
     token_source = UDCTokenSource()
     client = RuntimeEstimatorClient("", token_source)
     client._pool.request = MagicMock(return_value=Response(status_code=200, json=500))
@@ -26,7 +27,7 @@ def test_estimate_runtime_makes_expected_request(tasks: list[Task]):
     assert result == 500
 
 
-def test_estimate_runtime_per_task_makes_expected_request(tasks: list[Task]):
+def test_estimate_runtime_per_task_makes_expected_request(tasks: list[Task[Any]]):
     token_source = UDCTokenSource()
     client = RuntimeEstimatorClient("", token_source)
     client._pool.request = MagicMock(

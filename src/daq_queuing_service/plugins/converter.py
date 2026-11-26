@@ -1,5 +1,5 @@
 import importlib
-from typing import Any, Generic
+from typing import Any, Generic, TypeGuard
 
 from blueapi.service.model import TaskRequest
 from blueapi.worker.event import TaskError, TaskResult
@@ -143,6 +143,10 @@ class Converter(Generic[T]):
                 )
 
 
+def _is_converter(obj: object) -> TypeGuard[Converter[Any]]:
+    return isinstance(obj, Converter)
+
+
 def get_converter(path: str, name: str) -> Converter[Any]:
     """Instantiates a converter based on a path and class name
 
@@ -158,6 +162,6 @@ def get_converter(path: str, name: str) -> Converter[Any]:
     module = importlib.import_module(path)
     converter_cls = getattr(module, name)
     converter = converter_cls()
-    if not isinstance(converter, Converter):
+    if not _is_converter(converter):
         raise TypeError(f"Converter is not of type Converter, it is {type(converter)}")
     return converter
