@@ -31,7 +31,7 @@ def _too_close_to_add(temp1: int, temp2: int, temperature_step: int) -> bool:
 def get_background_temperatures(
     list_of_temperatures: list[int],
     temperature_step: int = DEFAULT_TEMPERATURE_STEP,
-):
+) -> list[int]:
 
     sorted_temps = sorted(list_of_temperatures)
     new_temps: list[int] = []

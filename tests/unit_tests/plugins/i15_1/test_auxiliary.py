@@ -1,7 +1,10 @@
 import pytest
 from daq_config_server.models.i15_1.standards_puck import StandardsPin
 
-from daq_queuing_service.plugins.i15_1.auxiliary import AuxiliaryScan
+from daq_queuing_service.plugins.i15_1.auxiliary import (
+    AuxiliaryScan,
+    get_background_temperatures,
+)
 
 
 @pytest.mark.parametrize(
@@ -262,3 +265,20 @@ def test_attempt_to_combine_returns_none_when_auxiliaries_cannot_be_combined(
     required: AuxiliaryScan,
 ):
     assert auxiliary.attempt_to_combine_with(required) is None
+
+
+@pytest.mark.parametrize(
+    "list_of_temperatures, expected_result",
+    [
+        ([100, 199, 300], [150, 300]),
+        ([100, 200, 300], [100, 200, 300]),
+        ([101, 202, 303], [101, 202, 303]),
+        ([100, 130, 250, 140, 260, 160, 180], [130, 250]),
+        ([370, 300], [350]),
+        ([100, 199, 250], [150, 250]),
+    ],
+)
+def test_get_background_temperatures_combines_similar_temperatures_as_expected(
+    list_of_temperatures: list[int], expected_result: list[int]
+):
+    assert get_background_temperatures(list_of_temperatures, 100) == expected_result
