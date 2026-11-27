@@ -51,6 +51,7 @@ class QueueWorker:
 
     async def _wait_for_next_task(self) -> BlueapiCall:
         while True:
+            LOGGER.info("Waiting until task available in the queue")
             await self._queue.wait_until_call_available()
             result = await self._client.get_state()
             if result.value == WorkerState.IDLE:
@@ -59,6 +60,7 @@ class QueueWorker:
                 f"Waiting for BlueAPI worker to be IDLE, currently {result.value}"
             )
             await asyncio.sleep(self.poll_time_s)
+        LOGGER.info("Requesting next available task from the queue")
         return await self._queue.get_next_call_once_available()
 
     async def _process_call(self, call: BlueapiCall):
