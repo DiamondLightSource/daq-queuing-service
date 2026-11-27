@@ -355,7 +355,10 @@ class I151Converter(Converter):
             "list_of_temperatures"
         )
         if list_of_temperatures:
-            list_of_temperatures = get_background_temperatures(list_of_temperatures)
+            list_of_temperatures = get_background_temperatures(
+                list_of_temperatures,
+                take_exact_temperatures=True,
+            )
 
         assert experiment.sample
 

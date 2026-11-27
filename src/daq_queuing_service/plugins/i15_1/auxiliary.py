@@ -28,7 +28,11 @@ def is_auxiliary_experiment(experiment: Experiment) -> bool:
 def get_background_temperatures(
     list_of_temperatures: list[int],
     temperature_step: int = DEFAULT_TEMPERATURE_STEP,
+    take_exact_temperatures: bool = False,
 ):
+    if take_exact_temperatures:
+        return sorted(set(list_of_temperatures))
+
     return list(
         range(
             min(list_of_temperatures),
@@ -168,6 +172,7 @@ class AuxiliaryScan(BaseModel):
             list_of_temperatures = get_background_temperatures(
                 required_background.list_of_temperatures + self.list_of_temperatures,
                 temperature_step=temperature_step,
+                take_exact_temperatures=True,
             )
         else:
             list_of_temperatures = None

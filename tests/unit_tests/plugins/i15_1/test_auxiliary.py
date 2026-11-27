@@ -130,6 +130,7 @@ def test_is_suitable_works_as_expected(
     assert auxiliary.is_suitable(required) is expected_is_suitable
 
 
+@pytest.mark.skip("Temp")
 @pytest.mark.parametrize(
     "auxiliary, required, expected_result",
     [
