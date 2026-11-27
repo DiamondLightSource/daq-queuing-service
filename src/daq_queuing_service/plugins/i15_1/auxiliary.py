@@ -20,17 +20,51 @@ def is_auxiliary_experiment(experiment: Experiment) -> bool:
     return experiment.experiment_definition.name in list(AuxiliaryScanType)
 
 
+def _close_enough(temp1: int, temp2: int, temperature_step: int) -> bool:
+    return abs(temp1 - temp2) <= temperature_step / 2
+
+
+def _too_close_to_add(temp1: int, temp2: int, temperature_step: int) -> bool:
+    return abs(temp1 - temp2) < temperature_step
+
+
 def get_background_temperatures(
     list_of_temperatures: list[int],
     temperature_step: int = DEFAULT_TEMPERATURE_STEP,
 ):
-    return list(
-        range(
-            min(list_of_temperatures),
-            max(list_of_temperatures) + temperature_step,
-            temperature_step,
-        )
-    )
+
+    sorted_temps = sorted(list_of_temperatures)
+    new_temps: list[int] = []
+
+    for i, temp in enumerate(sorted_temps):
+        # Covered by the last temperature
+        if new_temps and _close_enough(temp, new_temps[-1], temperature_step):
+            continue
+
+        # Too close to the last temperature to add directly
+        elif not new_temps or _too_close_to_add(temp, new_temps[-1], temperature_step):
+            if i == len(sorted_temps) - 1:
+                # Last temperature in the list
+                new_temps.append(temp)
+
+            elif _close_enough(temp, sorted_temps[i + 1], temperature_step):
+                new_temps.append(sorted_temps[i + 1])
+
+            elif _too_close_to_add(temp, sorted_temps[i + 1], temperature_step):
+                # Add something that will also cover the next temperature
+                new_temps.append(int(temp + temperature_step / 2))
+
+            elif not new_temps:
+                new_temps.append(temp)
+
+            else:
+                # Add the temperature step
+                new_temps.append(new_temps[-1] + temperature_step)
+
+        else:
+            new_temps.append(temp)
+
+    return new_temps
 
 
 # Should merge with equivalent in crystallography-bluesky once
@@ -95,15 +129,10 @@ class AuxiliaryScan(BaseModel):
         if not self.list_of_temperatures:
             return False
 
-        if max(required_temperatures) > max(self.list_of_temperatures) or min(
-            required_temperatures
-        ) < min(self.list_of_temperatures):
-            return False
-
         if not all(
-            # All required temperatures should be within 50C
+            # All required temperatures should be within half the temperature step
             any(
-                abs(temp1 - temp2) <= temperature_step / 2
+                _close_enough(temp1, temp2, temperature_step)
                 for temp1 in self.list_of_temperatures
             )
             for temp2 in required_temperatures

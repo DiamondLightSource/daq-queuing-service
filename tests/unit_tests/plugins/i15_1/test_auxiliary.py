@@ -136,7 +136,7 @@ def test_is_suitable_works_as_expected(
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=10,
                 q_max=30,
-                list_of_temperatures=[150, 250, 350],
+                list_of_temperatures=[150, 200, 400],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
@@ -150,7 +150,7 @@ def test_is_suitable_works_as_expected(
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=50,  # Max time_per_pdf
                 q_max=30,  # Max q_max
-                list_of_temperatures=[100, 200, 300, 400],  # Covers whole temp range
+                list_of_temperatures=[150, 300, 400],  # Covers whole temp range
             ),
         ),
         (
@@ -186,14 +186,14 @@ def test_is_suitable_works_as_expected(
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=100,
                 q_max=30,
-                list_of_temperatures=[100, 200, 300],
+                list_of_temperatures=[300],
             ),
             AuxiliaryScan(
                 instrument_session="abc",
                 pin=StandardsPin(capillary="bs1.0", contents="Silicon"),
                 time_per_pdf=100,
                 q_max=30,
-                list_of_temperatures=[50, 150, 250, 350, 450, 550, 650],
+                list_of_temperatures=[50, 300, 610],
             ),
         ),
     ],
